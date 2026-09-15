@@ -1,0 +1,12 @@
+# FF Arena — scheduler (run via the companion .timer once per minute).
+# Copy to /etc/systemd/system/ffarena-scheduler.service
+
+[Unit]
+Description=FF Arena scheduler (php artisan schedule:run)
+After=network.target
+
+[Service]
+Type=oneshot
+User=www-data
+WorkingDirectory=/var/www/ffarena
+ExecStart=/usr/bin/php artisan schedule:run

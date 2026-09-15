@@ -1,0 +1,29 @@
+{
+    "name": "leaderboard",
+    "driver": "sqlite",
+    "recorded_at": "2026-09-14T03:51:11+00:00",
+    "php": "8.4.24",
+    "tournament_slug": "squad-showdown-32-teams",
+    "iterations": 50,
+    "service": {
+        "p50": 2.052,
+        "p90": 2.092,
+        "p95": 2.104,
+        "p99": 5.272,
+        "min": 1.855,
+        "max": 5.272,
+        "n": 50,
+        "mean": 2.113
+    },
+    "http": {
+        "p50": 7.24,
+        "p90": 7.372,
+        "p95": 7.516,
+        "p99": 32.911,
+        "min": 6.362,
+        "max": 32.911,
+        "n": 50,
+        "mean": 7.743
+    },
+    "http_error_pct": 0
+}

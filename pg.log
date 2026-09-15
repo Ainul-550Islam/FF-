@@ -1,0 +1,1120 @@
+2026-09-12 03:21:32.279 UTC [12145] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-12 03:21:32.279 UTC [12145] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-12 03:21:32.280 UTC [12145] FATAL:  could not create lock file "/var/run/postgresql/.s.PGSQL.5432.lock": Permission denied
+2026-09-12 03:21:32.281 UTC [12145] LOG:  database system is shut down
+2026-09-12 03:21:40.817 UTC [12186] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-12 03:21:40.817 UTC [12186] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-12 03:21:40.818 UTC [12186] FATAL:  could not create lock file "/var/run/postgresql/.s.PGSQL.5432.lock": Permission denied
+2026-09-12 03:21:40.819 UTC [12186] LOG:  database system is shut down
+2026-09-12 03:22:28.313 UTC [12206] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-12 03:22:28.313 UTC [12206] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-12 03:22:28.314 UTC [12206] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-12 03:22:28.316 UTC [12209] LOG:  database system was shut down at 2026-09-12 03:21:32 UTC
+2026-09-12 03:22:28.320 UTC [12206] LOG:  database system is ready to accept connections
+2026-09-12 03:22:30.405 UTC [12216] FATAL:  role "user" does not exist
+2026-09-12 03:26:11.785 UTC [12340] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:26:11.785 UTC [12340] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:26:11.785 UTC [12340] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:26:11.964 UTC [12341] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:26:11.964 UTC [12341] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:26:11.964 UTC [12341] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:26:12.058 UTC [12342] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:26:12.058 UTC [12342] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:26:12.058 UTC [12342] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:26:12.102 UTC [12343] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:26:12.102 UTC [12343] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:26:12.102 UTC [12343] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:26:22.247 UTC [12543] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 03:26:22.247 UTC [12543] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 03:26:22.247 UTC [12543] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 03:26:22.250 UTC [12543] ERROR:  current transaction is aborted, commands ignored until end of transaction block
+2026-09-12 03:26:22.250 UTC [12543] STATEMENT:  select * from "webhook_events" where "provider" = $1 and "external_event_id" = $2 limit 1
+2026-09-12 03:26:40.352 UTC [13063] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 03:26:40.352 UTC [13063] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 03:26:40.352 UTC [13063] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:26:40.373 UTC [13064] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:26:40.373 UTC [13064] DETAIL:  Key (match_id, team_id)=(267, 566) already exists.
+2026-09-12 03:26:40.373 UTC [13064] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:26:40.867 UTC [13081] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:26:40.867 UTC [13081] DETAIL:  Key (match_id, team_id)=(274, 580) already exists.
+2026-09-12 03:26:40.867 UTC [13081] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 03:26:43.067 UTC [13150] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 03:26:43.067 UTC [13150] DETAIL:  Key (team_id, game_uid)=(637, UIDDUPDB) already exists.
+2026-09-12 03:26:43.067 UTC [13150] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 03:26:44.032 UTC [13182] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 03:26:44.032 UTC [13182] DETAIL:  Key (tournament_id, captain_id)=(457, 1181) already exists.
+2026-09-12 03:26:44.032 UTC [13182] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 03:26:54.422 UTC [13205] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:26:54.422 UTC [13205] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:26:54.422 UTC [13205] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:26:54.468 UTC [13206] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:26:54.468 UTC [13206] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:26:54.468 UTC [13206] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:26:54.542 UTC [13207] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:26:54.542 UTC [13207] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:26:54.542 UTC [13207] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:26:54.617 UTC [13208] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:26:54.617 UTC [13208] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:26:54.617 UTC [13208] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:27:03.853 UTC [13408] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 03:27:03.853 UTC [13408] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 03:27:03.853 UTC [13408] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 03:27:03.855 UTC [13408] ERROR:  current transaction is aborted, commands ignored until end of transaction block
+2026-09-12 03:27:03.855 UTC [13408] STATEMENT:  select * from "webhook_events" where "provider" = $1 and "external_event_id" = $2 limit 1
+2026-09-12 03:27:22.575 UTC [13928] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 03:27:22.575 UTC [13928] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 03:27:22.575 UTC [13928] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:27:22.598 UTC [13929] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:27:22.598 UTC [13929] DETAIL:  Key (match_id, team_id)=(267, 566) already exists.
+2026-09-12 03:27:22.598 UTC [13929] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:27:23.137 UTC [13946] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:27:23.137 UTC [13946] DETAIL:  Key (match_id, team_id)=(274, 580) already exists.
+2026-09-12 03:27:23.137 UTC [13946] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 03:27:25.603 UTC [14015] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 03:27:25.603 UTC [14015] DETAIL:  Key (team_id, game_uid)=(637, UIDDUPDB) already exists.
+2026-09-12 03:27:25.603 UTC [14015] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 03:27:26.729 UTC [14047] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 03:27:26.729 UTC [14047] DETAIL:  Key (tournament_id, captain_id)=(457, 1181) already exists.
+2026-09-12 03:27:26.729 UTC [14047] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 03:27:28.376 UTC [12207] LOG:  checkpoint starting: time
+2026-09-12 03:29:25.751 UTC [14145] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:29:25.751 UTC [14145] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:29:25.751 UTC [14145] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:29:25.808 UTC [14146] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:29:25.808 UTC [14146] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:29:25.808 UTC [14146] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:29:25.850 UTC [14147] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:29:25.850 UTC [14147] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:29:25.850 UTC [14147] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:29:25.970 UTC [14148] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 03:29:25.970 UTC [14148] DETAIL:  Key (user_id)=(1) is not present in table "users".
+2026-09-12 03:29:25.970 UTC [14148] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6) returning "id"
+2026-09-12 03:29:35.046 UTC [14349] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 03:29:35.046 UTC [14349] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 03:29:35.046 UTC [14349] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 03:29:35.048 UTC [14349] ERROR:  current transaction is aborted, commands ignored until end of transaction block
+2026-09-12 03:29:35.048 UTC [14349] STATEMENT:  select * from "webhook_events" where "provider" = $1 and "external_event_id" = $2 limit 1
+2026-09-12 03:29:53.317 UTC [14869] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 03:29:53.317 UTC [14869] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 03:29:53.317 UTC [14869] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:29:53.339 UTC [14870] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:29:53.339 UTC [14870] DETAIL:  Key (match_id, team_id)=(267, 566) already exists.
+2026-09-12 03:29:53.339 UTC [14870] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:29:53.868 UTC [14887] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:29:53.868 UTC [14887] DETAIL:  Key (match_id, team_id)=(274, 580) already exists.
+2026-09-12 03:29:53.868 UTC [14887] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 03:29:56.237 UTC [14956] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 03:29:56.237 UTC [14956] DETAIL:  Key (team_id, game_uid)=(637, UIDDUPDB) already exists.
+2026-09-12 03:29:56.237 UTC [14956] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 03:29:57.221 UTC [14988] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 03:29:57.221 UTC [14988] DETAIL:  Key (tournament_id, captain_id)=(457, 1181) already exists.
+2026-09-12 03:29:57.221 UTC [14988] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 03:31:58.128 UTC [12207] LOG:  checkpoint complete: wrote 2236 buffers (13.6%); 0 WAL file(s) added, 0 removed, 1 recycled; write=269.720 s, sync=0.012 s, total=269.752 s; sync files=2566, longest=0.001 s, average=0.001 s; distance=22116 kB, estimate=22116 kB; lsn=0/34C16D0, redo lsn=0/2A87A38
+2026-09-12 03:32:24.705 UTC [15045] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 03:32:24.705 UTC [15045] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 03:32:24.705 UTC [15045] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 03:32:24.710 UTC [15045] ERROR:  current transaction is aborted, commands ignored until end of transaction block
+2026-09-12 03:32:24.710 UTC [15045] STATEMENT:  select * from "webhook_events" where "provider" = $1 and "external_event_id" = $2 limit 1
+2026-09-12 03:32:28.138 UTC [12207] LOG:  checkpoint starting: time
+2026-09-12 03:33:43.594 UTC [12207] LOG:  checkpoint complete: wrote 755 buffers (4.6%); 0 WAL file(s) added, 0 removed, 1 recycled; write=75.428 s, sync=0.003 s, total=75.456 s; sync files=830, longest=0.001 s, average=0.001 s; distance=15622 kB, estimate=21466 kB; lsn=0/3B55348, redo lsn=0/39C9418
+2026-09-12 03:37:21.259 UTC [15265] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 03:37:21.259 UTC [15265] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 03:37:21.259 UTC [15265] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 03:37:28.664 UTC [12207] LOG:  checkpoint starting: time
+2026-09-12 03:38:30.471 UTC [12207] LOG:  checkpoint complete: wrote 315 buffers (1.9%); 0 WAL file(s) added, 0 removed, 0 recycled; write=61.660 s, sync=0.140 s, total=61.807 s; sync files=1212, longest=0.003 s, average=0.001 s; distance=4626 kB, estimate=19782 kB; lsn=0/454D3D8, redo lsn=0/3E4DF50
+2026-09-12 03:38:36.275 UTC [15600] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 03:38:36.275 UTC [15600] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 03:38:36.275 UTC [15600] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 03:38:55.774 UTC [16136] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 03:38:55.774 UTC [16136] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 03:38:55.774 UTC [16136] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:38:55.799 UTC [16137] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:38:55.799 UTC [16137] DETAIL:  Key (match_id, team_id)=(267, 566) already exists.
+2026-09-12 03:38:55.799 UTC [16137] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:38:56.423 UTC [16154] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:38:56.423 UTC [16154] DETAIL:  Key (match_id, team_id)=(274, 580) already exists.
+2026-09-12 03:38:56.423 UTC [16154] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 03:38:58.925 UTC [16223] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 03:38:58.925 UTC [16223] DETAIL:  Key (team_id, game_uid)=(637, UIDDUPDB) already exists.
+2026-09-12 03:38:58.925 UTC [16223] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 03:39:00.041 UTC [16255] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 03:39:00.041 UTC [16255] DETAIL:  Key (tournament_id, captain_id)=(457, 1181) already exists.
+2026-09-12 03:39:00.041 UTC [16255] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 03:42:28.471 UTC [12207] LOG:  checkpoint starting: time
+2026-09-12 03:44:19.412 UTC [12207] LOG:  checkpoint complete: wrote 1112 buffers (6.8%); 0 WAL file(s) added, 0 removed, 1 recycled; write=110.926 s, sync=0.002 s, total=110.941 s; sync files=405, longest=0.001 s, average=0.001 s; distance=10108 kB, estimate=18815 kB; lsn=0/482D1A0, redo lsn=0/482D110
+2026-09-12 03:46:06.973 UTC [16451] FATAL:  role "user" does not exist
+2026-09-12 03:47:28.513 UTC [12207] LOG:  checkpoint starting: time
+2026-09-12 03:48:49.769 UTC [12207] LOG:  checkpoint complete: wrote 812 buffers (5.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=81.241 s, sync=0.005 s, total=81.257 s; sync files=1167, longest=0.001 s, average=0.001 s; distance=7476 kB, estimate=17681 kB; lsn=0/5066C70, redo lsn=0/4F7A458
+2026-09-12 03:50:01.211 UTC [12207] LOG:  checkpoint starting: immediate force wait
+2026-09-12 03:50:01.220 UTC [12207] LOG:  checkpoint complete: wrote 131 buffers (0.8%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.006 s, sync=0.001 s, total=0.010 s; sync files=91, longest=0.001 s, average=0.001 s; distance=7952 kB, estimate=16708 kB; lsn=0/573E720, redo lsn=0/573E6C8
+2026-09-12 03:50:08.971 UTC [12207] LOG:  checkpoint starting: immediate force wait
+2026-09-12 03:50:08.976 UTC [12207] LOG:  checkpoint complete: wrote 15 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.001 s, total=0.005 s; sync files=9, longest=0.001 s, average=0.001 s; distance=6909 kB, estimate=15728 kB; lsn=0/5DFDC00, redo lsn=0/5DFDBA8
+2026-09-12 03:50:09.032 UTC [12207] LOG:  checkpoint starting: immediate force wait
+2026-09-12 03:50:09.038 UTC [12207] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.001 s, total=0.006 s; sync files=4, longest=0.001 s, average=0.001 s; distance=24 kB, estimate=14158 kB; lsn=0/5E03C68, redo lsn=0/5E03C10
+2026-09-12 03:50:49.228 UTC [16910] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 03:50:49.228 UTC [16910] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 03:50:49.228 UTC [16910] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 03:51:11.310 UTC [17446] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 03:51:11.310 UTC [17446] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 03:51:11.310 UTC [17446] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:51:11.335 UTC [17447] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:51:11.335 UTC [17447] DETAIL:  Key (match_id, team_id)=(267, 566) already exists.
+2026-09-12 03:51:11.335 UTC [17447] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:51:11.905 UTC [17464] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:51:11.905 UTC [17464] DETAIL:  Key (match_id, team_id)=(274, 580) already exists.
+2026-09-12 03:51:11.905 UTC [17464] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 03:51:14.444 UTC [17533] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 03:51:14.444 UTC [17533] DETAIL:  Key (team_id, game_uid)=(637, UIDDUPDB) already exists.
+2026-09-12 03:51:14.444 UTC [17533] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 03:51:15.586 UTC [17565] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 03:51:15.586 UTC [17565] DETAIL:  Key (tournament_id, captain_id)=(457, 1181) already exists.
+2026-09-12 03:51:15.586 UTC [17565] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 03:52:16.078 UTC [17798] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 03:52:16.078 UTC [17798] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 03:52:16.078 UTC [17798] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 03:52:36.243 UTC [18334] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 03:52:36.243 UTC [18334] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 03:52:36.243 UTC [18334] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:52:36.269 UTC [18335] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:52:36.269 UTC [18335] DETAIL:  Key (match_id, team_id)=(267, 566) already exists.
+2026-09-12 03:52:36.269 UTC [18335] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 03:52:36.852 UTC [18352] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 03:52:36.852 UTC [18352] DETAIL:  Key (match_id, team_id)=(274, 580) already exists.
+2026-09-12 03:52:36.852 UTC [18352] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 03:52:40.162 UTC [18422] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 03:52:40.162 UTC [18422] DETAIL:  Key (team_id, game_uid)=(637, UIDDUPDB) already exists.
+2026-09-12 03:52:40.162 UTC [18422] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 03:52:41.428 UTC [18454] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 03:52:41.428 UTC [18454] DETAIL:  Key (tournament_id, captain_id)=(457, 1181) already exists.
+2026-09-12 03:52:41.428 UTC [18454] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 03:55:09.139 UTC [12207] LOG:  checkpoint starting: time
+2026-09-12 03:57:33.474 UTC [18596] ERROR:  canceling statement due to statement timeout
+2026-09-12 03:57:33.474 UTC [18596] CONTEXT:  while locking tuple (0,1) in relation "users"
+2026-09-12 03:57:33.474 UTC [18596] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 03:58:22.523 UTC [12207] LOG:  checkpoint complete: wrote 1438 buffers (8.8%); 0 WAL file(s) added, 0 removed, 1 recycled; write=193.361 s, sync=0.006 s, total=193.385 s; sync files=1951, longest=0.001 s, average=0.001 s; distance=18323 kB, estimate=18323 kB; lsn=0/7467458, redo lsn=0/6FE8AD8
+2026-09-12 04:00:09.580 UTC [12207] LOG:  checkpoint starting: time
+2026-09-12 04:00:59.754 UTC [12207] LOG:  checkpoint complete: wrote 502 buffers (3.1%); 0 WAL file(s) added, 0 removed, 1 recycled; write=50.162 s, sync=0.002 s, total=50.174 s; sync files=143, longest=0.001 s, average=0.001 s; distance=4602 kB, estimate=16951 kB; lsn=0/7467738, redo lsn=0/7467698
+2026-09-12 04:06:15.608 UTC [18598] LOG:  unexpected EOF on client connection with an open transaction
+2026-09-12 04:06:16.609 UTC [18599] ERROR:  deadlock detected
+2026-09-12 04:06:16.609 UTC [18599] DETAIL:  Process 18599 waits for RowExclusiveLock on relation 38175 of database 16386; blocked by process 18625.
+	Process 18625 waits for AccessExclusiveLock on relation 38152 of database 16386; blocked by process 18599.
+	Process 18599: delete from "tournaments" where "id" = $1
+	Process 18625: drop table "public"."account_links", "public"."anti_cheat_incidents", "public"."api_clients", "public"."api_idempotency_keys", "public"."audit_logs", "public"."cache", "public"."cache_locks", "public"."device_links", "public"."devices", "public"."dispute_evidence", "public"."disputes", "public"."failed_jobs", "public"."financial_settlements", "public"."identity_verifications", "public"."ip_intel", "public"."ip_links", "public"."job_batches", "public"."jobs", "public"."ledger_entries", "public"."live_events", "public"."login_events", "public"."match_anomalies", "public"."matches", "public"."migrations", "public"."mobile_device_tokens", "public"."moderation_events", "public"."notification_preferences", "public"."notifications", "public"."operations_heartbeats", "public"."otp_challenges", "public"."password_reset_tokens", "public"."payment_events", "public"."payment_methods", "public"."payments", "public"."payout_events", "public"."payouts", "public"."personal_access_tokens", "public"."prize_distributions", "pu
+2026-09-12 04:06:16.609 UTC [18599] HINT:  See server log for query details.
+2026-09-12 04:06:16.609 UTC [18599] STATEMENT:  delete from "tournaments" where "id" = $1
+2026-09-12 04:06:16.609 UTC [18599] LOG:  could not send data to client: Broken pipe
+2026-09-12 04:06:16.609 UTC [18599] FATAL:  connection to client lost
+2026-09-12 04:07:10.149 UTC [18689] ERROR:  canceling statement due to statement timeout
+2026-09-12 04:07:10.149 UTC [18689] CONTEXT:  while locking tuple (0,1) in relation "users"
+2026-09-12 04:07:10.149 UTC [18689] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 04:07:10.240 UTC [18694] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 04:07:10.240 UTC [18694] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-12fc71ebdd3a) already exists.
+2026-09-12 04:07:10.240 UTC [18694] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:07:10.261 UTC [18695] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 04:07:10.261 UTC [18695] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-16f328032e17) already exists.
+2026-09-12 04:07:10.261 UTC [18695] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:07:10.307 UTC [18696] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 04:07:10.307 UTC [18696] DETAIL:  Key (idempotency_key)=(idem-714121d0f48b) already exists.
+2026-09-12 04:07:10.307 UTC [18696] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:07:10.327 UTC [18697] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 04:07:10.327 UTC [18697] DETAIL:  Key (tournament_id, captain_id)=(3, 4) already exists.
+2026-09-12 04:07:10.327 UTC [18697] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 04:07:10.343 UTC [18698] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 04:07:10.343 UTC [18698] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 04:07:10.343 UTC [18698] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 04:07:23.460 UTC [18720] ERROR:  canceling statement due to statement timeout
+2026-09-12 04:07:23.460 UTC [18720] CONTEXT:  while locking tuple (0,1) in relation "users"
+2026-09-12 04:07:23.460 UTC [18720] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 04:07:23.543 UTC [18725] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 04:07:23.543 UTC [18725] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-12a1c4414eeb) already exists.
+2026-09-12 04:07:23.543 UTC [18725] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:07:23.563 UTC [18726] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 04:07:23.563 UTC [18726] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-9ff7e0c27461) already exists.
+2026-09-12 04:07:23.563 UTC [18726] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:07:23.601 UTC [18727] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 04:07:23.601 UTC [18727] DETAIL:  Key (idempotency_key)=(idem-4f9f74ab22ef) already exists.
+2026-09-12 04:07:23.601 UTC [18727] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:07:23.620 UTC [18728] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 04:07:23.620 UTC [18728] DETAIL:  Key (tournament_id, captain_id)=(3, 4) already exists.
+2026-09-12 04:07:23.620 UTC [18728] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 04:07:23.637 UTC [18729] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 04:07:23.637 UTC [18729] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 04:07:23.637 UTC [18729] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 04:07:37.058 UTC [18952] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 04:07:37.058 UTC [18952] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 04:07:37.058 UTC [18952] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 04:07:54.082 UTC [19413] ERROR:  canceling statement due to statement timeout
+2026-09-12 04:07:54.082 UTC [19413] CONTEXT:  while locking tuple (3,1) in relation "users"
+2026-09-12 04:07:54.082 UTC [19413] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 04:07:54.172 UTC [19418] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 04:07:54.172 UTC [19418] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-eb5648414059) already exists.
+2026-09-12 04:07:54.172 UTC [19418] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:07:54.204 UTC [19419] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 04:07:54.204 UTC [19419] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-8bf6b6de76f7) already exists.
+2026-09-12 04:07:54.204 UTC [19419] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:07:54.244 UTC [19420] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 04:07:54.244 UTC [19420] DETAIL:  Key (idempotency_key)=(idem-273fb1e80723) already exists.
+2026-09-12 04:07:54.244 UTC [19420] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:07:54.267 UTC [19421] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 04:07:54.267 UTC [19421] DETAIL:  Key (tournament_id, captain_id)=(301, 854) already exists.
+2026-09-12 04:07:54.267 UTC [19421] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 04:07:54.286 UTC [19422] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 04:07:54.286 UTC [19422] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 04:07:54.286 UTC [19422] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 04:07:57.304 UTC [19502] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 04:07:57.304 UTC [19502] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 04:07:57.304 UTC [19502] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 04:07:57.328 UTC [19503] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 04:07:57.328 UTC [19503] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-12 04:07:57.328 UTC [19503] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 04:07:57.894 UTC [19520] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 04:07:57.894 UTC [19520] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-12 04:07:57.894 UTC [19520] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:08:00.468 UTC [19590] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 04:08:00.468 UTC [19590] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-12 04:08:00.468 UTC [19590] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 04:08:01.578 UTC [19622] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 04:08:01.578 UTC [19622] DETAIL:  Key (tournament_id, captain_id)=(467, 1188) already exists.
+2026-09-12 04:08:01.578 UTC [19622] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 04:10:09.615 UTC [12207] LOG:  checkpoint starting: time
+2026-09-12 04:12:50.383 UTC [12207] LOG:  checkpoint complete: wrote 1611 buffers (9.8%); 0 WAL file(s) added, 0 removed, 1 recycled; write=160.724 s, sync=0.011 s, total=160.769 s; sync files=2274, longest=0.001 s, average=0.001 s; distance=16864 kB, estimate=16942 kB; lsn=0/85D5528, redo lsn=0/84DF9C8
+2026-09-12 04:13:51.195 UTC [26698] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 04:13:51.195 UTC [26698] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 04:13:51.195 UTC [26698] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 04:14:08.253 UTC [27159] ERROR:  canceling statement due to statement timeout
+2026-09-12 04:14:08.253 UTC [27159] CONTEXT:  while locking tuple (0,57) in relation "users"
+2026-09-12 04:14:08.253 UTC [27159] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 04:14:08.333 UTC [27164] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 04:14:08.333 UTC [27164] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-d694587a1b99) already exists.
+2026-09-12 04:14:08.333 UTC [27164] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:14:08.354 UTC [27165] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 04:14:08.354 UTC [27165] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-690f9e32c850) already exists.
+2026-09-12 04:14:08.354 UTC [27165] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:14:08.383 UTC [27166] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 04:14:08.383 UTC [27166] DETAIL:  Key (idempotency_key)=(idem-224f182f0bf2) already exists.
+2026-09-12 04:14:08.383 UTC [27166] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:14:08.404 UTC [27167] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 04:14:08.404 UTC [27167] DETAIL:  Key (tournament_id, captain_id)=(301, 854) already exists.
+2026-09-12 04:14:08.404 UTC [27167] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 04:14:08.421 UTC [27168] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 04:14:08.421 UTC [27168] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 04:14:08.421 UTC [27168] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 04:14:11.476 UTC [27248] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 04:14:11.476 UTC [27248] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 04:14:11.476 UTC [27248] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 04:14:11.500 UTC [27249] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 04:14:11.500 UTC [27249] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-12 04:14:11.500 UTC [27249] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 04:14:12.063 UTC [27266] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 04:14:12.063 UTC [27266] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-12 04:14:12.063 UTC [27266] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 04:14:14.624 UTC [27335] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 04:14:14.624 UTC [27335] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-12 04:14:14.624 UTC [27335] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 04:14:15.743 UTC [27367] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 04:14:15.743 UTC [27367] DETAIL:  Key (tournament_id, captain_id)=(467, 1188) already exists.
+2026-09-12 04:14:15.743 UTC [27367] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 04:15:09.475 UTC [12207] LOG:  checkpoint starting: time
+2026-09-12 04:16:19.368 UTC [27414] FATAL:  role "user" does not exist
+2026-09-12 09:08:38.061 UTC [13458] FATAL:  data directory "/home/user/pgdata" has invalid permissions
+2026-09-12 09:08:38.061 UTC [13458] DETAIL:  Permissions should be u=rwx (0700) or u=rwx,g=rx (0750).
+2026-09-12 09:08:48.008 UTC [13471] FATAL:  could not open directory "pg_notify": No such file or directory
+2026-09-12 09:08:48.010 UTC [13471] LOG:  database system is shut down
+2026-09-12 09:09:14.604 UTC [13508] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-12 09:09:14.605 UTC [13508] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-12 09:09:14.605 UTC [13508] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-12 09:09:14.608 UTC [13511] LOG:  database system was shut down at 2026-09-12 09:09:11 UTC
+2026-09-12 09:09:14.611 UTC [13508] LOG:  database system is ready to accept connections
+2026-09-12 09:09:16.715 UTC [13517] FATAL:  role "user" does not exist
+2026-09-12 09:10:29.937 UTC [13690] ERROR:  unsupported Unicode escape sequence
+2026-09-12 09:10:29.937 UTC [13690] DETAIL:  Unicode escape value could not be translated to the server's encoding SQL_ASCII.
+2026-09-12 09:10:29.937 UTC [13690] CONTEXT:  JSON data, line 1: ...ride":true,"reason":"manual review cleared \u2014...
+	unnamed portal parameter $6 = '...'
+2026-09-12 09:10:29.937 UTC [13690] STATEMENT:  insert into "payout_events" ("payout_id", "actor_id", "event", "amount_minor", "currency", "metadata", "created_at") values ($1, $2, $3, $4, $5, $6, $7) returning "id"
+2026-09-12 09:10:33.816 UTC [13796] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:10:33.816 UTC [13796] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 09:10:33.816 UTC [13796] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 09:10:50.024 UTC [14257] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:10:50.024 UTC [14257] CONTEXT:  while locking tuple (1,216) in relation "users"
+2026-09-12 09:10:50.024 UTC [14257] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 09:10:50.086 UTC [14262] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:10:50.086 UTC [14262] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-86d5084c609a) already exists.
+2026-09-12 09:10:50.086 UTC [14262] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:10:50.105 UTC [14263] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:10:50.105 UTC [14263] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-cb306a5ef0f9) already exists.
+2026-09-12 09:10:50.105 UTC [14263] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:10:50.132 UTC [14264] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 09:10:50.132 UTC [14264] DETAIL:  Key (idempotency_key)=(idem-fc21991f84e5) already exists.
+2026-09-12 09:10:50.132 UTC [14264] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:10:50.150 UTC [14265] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:10:50.150 UTC [14265] DETAIL:  Key (tournament_id, captain_id)=(301, 854) already exists.
+2026-09-12 09:10:50.150 UTC [14265] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:10:50.165 UTC [14266] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 09:10:50.165 UTC [14266] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 09:10:50.165 UTC [14266] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 09:10:52.961 UTC [14346] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 09:10:52.961 UTC [14346] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 09:10:52.961 UTC [14346] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 09:10:52.981 UTC [14347] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 09:10:52.981 UTC [14347] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-12 09:10:52.981 UTC [14347] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 09:10:53.472 UTC [14364] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 09:10:53.472 UTC [14364] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-12 09:10:53.472 UTC [14364] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:10:55.757 UTC [14434] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 09:10:55.757 UTC [14434] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-12 09:10:55.757 UTC [14434] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 09:10:56.759 UTC [14466] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:10:56.759 UTC [14466] DETAIL:  Key (tournament_id, captain_id)=(467, 1188) already exists.
+2026-09-12 09:10:56.759 UTC [14466] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 09:11:07.258 UTC [14584] ERROR:  unsupported Unicode escape sequence
+2026-09-12 09:11:07.258 UTC [14584] DETAIL:  Unicode escape value could not be translated to the server's encoding SQL_ASCII.
+2026-09-12 09:11:07.258 UTC [14584] CONTEXT:  JSON data, line 1: ...ride":true,"reason":"manual review cleared \u2014...
+	unnamed portal parameter $6 = '...'
+2026-09-12 09:11:07.258 UTC [14584] STATEMENT:  insert into "payout_events" ("payout_id", "actor_id", "event", "amount_minor", "currency", "metadata", "created_at") values ($1, $2, $3, $4, $5, $6, $7) returning "id"
+2026-09-12 09:11:11.074 UTC [14690] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:11:11.074 UTC [14690] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 09:11:11.074 UTC [14690] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 09:11:27.777 UTC [15151] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:11:27.777 UTC [15151] CONTEXT:  while locking tuple (3,1) in relation "users"
+2026-09-12 09:11:27.777 UTC [15151] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 09:11:27.862 UTC [15156] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:11:27.862 UTC [15156] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-cc9f638ba604) already exists.
+2026-09-12 09:11:27.862 UTC [15156] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:11:27.902 UTC [15157] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:11:27.902 UTC [15157] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-5a2d2225cab4) already exists.
+2026-09-12 09:11:27.902 UTC [15157] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:11:27.964 UTC [15158] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 09:11:27.964 UTC [15158] DETAIL:  Key (idempotency_key)=(idem-3da7b256c7ea) already exists.
+2026-09-12 09:11:27.964 UTC [15158] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:11:27.995 UTC [15159] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:11:27.995 UTC [15159] DETAIL:  Key (tournament_id, captain_id)=(301, 854) already exists.
+2026-09-12 09:11:27.995 UTC [15159] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:11:28.034 UTC [15160] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 09:11:28.034 UTC [15160] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 09:11:28.034 UTC [15160] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 09:11:31.311 UTC [15240] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 09:11:31.311 UTC [15240] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 09:11:31.311 UTC [15240] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 09:11:31.334 UTC [15241] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 09:11:31.334 UTC [15241] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-12 09:11:31.334 UTC [15241] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 09:11:31.871 UTC [15258] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 09:11:31.871 UTC [15258] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-12 09:11:31.871 UTC [15258] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:11:34.775 UTC [15328] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 09:11:34.775 UTC [15328] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-12 09:11:34.775 UTC [15328] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 09:11:35.927 UTC [15360] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:11:35.927 UTC [15360] DETAIL:  Key (tournament_id, captain_id)=(467, 1188) already exists.
+2026-09-12 09:11:35.927 UTC [15360] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 09:11:44.304 UTC [13508] LOG:  received fast shutdown request
+2026-09-12 09:11:44.305 UTC [13508] LOG:  aborting any active transactions
+2026-09-12 09:11:44.308 UTC [13508] LOG:  background worker "logical replication launcher" (PID 13514) exited with exit code 1
+2026-09-12 09:11:44.308 UTC [13509] LOG:  shutting down
+2026-09-12 09:11:44.308 UTC [13509] LOG:  checkpoint starting: shutdown immediate
+2026-09-12 09:11:44.442 UTC [13509] LOG:  checkpoint complete: wrote 2781 buffers (17.0%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.108 s, sync=0.008 s, total=0.135 s; sync files=2197, longest=0.002 s, average=0.001 s; distance=23734 kB, estimate=23734 kB; lsn=0/2C1C1F8, redo lsn=0/2C1C1F8
+2026-09-12 09:11:44.450 UTC [13508] LOG:  database system is shut down
+2026-09-12 09:11:49.579 UTC [15398] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-12 09:11:49.579 UTC [15398] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-12 09:11:49.580 UTC [15398] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-12 09:11:49.582 UTC [15401] LOG:  database system was shut down at 2026-09-12 09:11:45 UTC
+2026-09-12 09:11:49.586 UTC [15398] LOG:  database system is ready to accept connections
+2026-09-12 09:12:06.615 UTC [15638] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:12:06.615 UTC [15638] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 09:12:06.615 UTC [15638] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 09:12:22.609 UTC [16098] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:12:22.609 UTC [16098] CONTEXT:  while locking tuple (3,1) in relation "users"
+2026-09-12 09:12:22.609 UTC [16098] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 09:12:22.678 UTC [16103] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:12:22.678 UTC [16103] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-1bff91febdb5) already exists.
+2026-09-12 09:12:22.678 UTC [16103] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:12:22.703 UTC [16104] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:12:22.703 UTC [16104] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-3de9f1254792) already exists.
+2026-09-12 09:12:22.703 UTC [16104] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:12:22.736 UTC [16105] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 09:12:22.736 UTC [16105] DETAIL:  Key (idempotency_key)=(idem-eaaa8709c3b6) already exists.
+2026-09-12 09:12:22.736 UTC [16105] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:12:22.753 UTC [16106] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:12:22.753 UTC [16106] DETAIL:  Key (tournament_id, captain_id)=(301, 854) already exists.
+2026-09-12 09:12:22.753 UTC [16106] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:12:22.769 UTC [16107] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 09:12:22.769 UTC [16107] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 09:12:22.769 UTC [16107] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 09:12:25.485 UTC [16187] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 09:12:25.485 UTC [16187] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 09:12:25.485 UTC [16187] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 09:12:25.508 UTC [16188] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 09:12:25.508 UTC [16188] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-12 09:12:25.508 UTC [16188] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 09:12:26.017 UTC [16205] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 09:12:26.017 UTC [16205] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-12 09:12:26.017 UTC [16205] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:12:28.349 UTC [16274] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 09:12:28.349 UTC [16274] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-12 09:12:28.349 UTC [16274] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 09:12:29.338 UTC [16306] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:12:29.338 UTC [16306] DETAIL:  Key (tournament_id, captain_id)=(467, 1188) already exists.
+2026-09-12 09:12:29.338 UTC [16306] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 09:47:59.336 UTC [13338] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-12 09:47:59.336 UTC [13338] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-12 09:47:59.337 UTC [13338] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-12 09:47:59.338 UTC [13341] LOG:  database system was shut down at 2026-09-12 09:47:59 UTC
+2026-09-12 09:47:59.341 UTC [13338] LOG:  database system is ready to accept connections
+2026-09-12 09:48:07.114 UTC [13372] FATAL:  role "user" does not exist
+2026-09-12 09:49:02.307 UTC [13450] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:49:02.307 UTC [13450] CONTEXT:  while locking tuple (0,1) in relation "users"
+2026-09-12 09:49:02.307 UTC [13450] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 09:49:02.309 UTC [13450] ERROR:  current transaction is aborted, commands ignored until end of transaction block
+2026-09-12 09:49:02.309 UTC [13450] STATEMENT:  RESET statement_timeout
+2026-09-12 09:49:02.378 UTC [13455] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:49:02.378 UTC [13455] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-4a878d531a9c) already exists.
+2026-09-12 09:49:02.378 UTC [13455] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:49:02.907 UTC [13456] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:49:02.907 UTC [13456] CONTEXT:  while locking tuple (0,1) in relation "payouts"
+2026-09-12 09:49:02.907 UTC [13456] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-12 09:49:02.908 UTC [13456] ERROR:  current transaction is aborted, commands ignored until end of transaction block
+2026-09-12 09:49:02.908 UTC [13456] STATEMENT:  RESET statement_timeout
+2026-09-12 09:49:02.924 UTC [13458] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:49:02.924 UTC [13458] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-f2f0b59a0788) already exists.
+2026-09-12 09:49:02.924 UTC [13458] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:49:02.954 UTC [13459] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 09:49:02.954 UTC [13459] DETAIL:  Key (idempotency_key)=(idem-9ae34b4a5c8f) already exists.
+2026-09-12 09:49:02.954 UTC [13459] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:49:02.970 UTC [13460] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:49:02.970 UTC [13460] DETAIL:  Key (tournament_id, captain_id)=(4, 5) already exists.
+2026-09-12 09:49:02.970 UTC [13460] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:49:02.984 UTC [13461] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 09:49:02.984 UTC [13461] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 09:49:02.984 UTC [13461] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 09:49:03.054 UTC [13465] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-12 09:49:03.054 UTC [13465] DETAIL:  Key (user_id, key)=(8, idem-35a5c8042aac) already exists.
+2026-09-12 09:49:03.054 UTC [13465] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:49:32.819 UTC [13480] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:49:32.819 UTC [13480] CONTEXT:  while locking tuple (0,1) in relation "users"
+2026-09-12 09:49:32.819 UTC [13480] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 09:49:32.821 UTC [13480] ERROR:  current transaction is aborted, commands ignored until end of transaction block
+2026-09-12 09:49:32.821 UTC [13480] STATEMENT:  RESET statement_timeout
+2026-09-12 09:49:32.901 UTC [13485] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:49:32.901 UTC [13485] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-b804c40cd028) already exists.
+2026-09-12 09:49:32.901 UTC [13485] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:49:33.433 UTC [13486] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:49:33.433 UTC [13486] CONTEXT:  while locking tuple (0,1) in relation "payouts"
+2026-09-12 09:49:33.433 UTC [13486] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-12 09:49:33.434 UTC [13486] ERROR:  current transaction is aborted, commands ignored until end of transaction block
+2026-09-12 09:49:33.434 UTC [13486] STATEMENT:  RESET statement_timeout
+2026-09-12 09:49:33.451 UTC [13488] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:49:33.451 UTC [13488] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-a32ac20abc3b) already exists.
+2026-09-12 09:49:33.451 UTC [13488] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:49:33.483 UTC [13489] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 09:49:33.483 UTC [13489] DETAIL:  Key (idempotency_key)=(idem-bc38e6304b09) already exists.
+2026-09-12 09:49:33.483 UTC [13489] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:49:33.505 UTC [13490] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:49:33.505 UTC [13490] DETAIL:  Key (tournament_id, captain_id)=(4, 5) already exists.
+2026-09-12 09:49:33.505 UTC [13490] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:49:33.529 UTC [13491] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 09:49:33.529 UTC [13491] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 09:49:33.529 UTC [13491] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 09:49:33.636 UTC [13495] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-12 09:49:33.636 UTC [13495] DETAIL:  Key (user_id, key)=(8, idem-beba61bb7dd4) already exists.
+2026-09-12 09:49:33.636 UTC [13495] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:51:21.785 UTC [13534] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:51:21.785 UTC [13534] CONTEXT:  while locking tuple (0,1) in relation "users"
+2026-09-12 09:51:21.785 UTC [13534] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 09:51:21.864 UTC [13539] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:51:21.864 UTC [13539] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-42035991ae2e) already exists.
+2026-09-12 09:51:21.864 UTC [13539] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:51:22.394 UTC [13540] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:51:22.394 UTC [13540] CONTEXT:  while locking tuple (0,1) in relation "payouts"
+2026-09-12 09:51:22.394 UTC [13540] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-12 09:51:22.427 UTC [13542] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:51:22.427 UTC [13542] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-4d24521ab7fd) already exists.
+2026-09-12 09:51:22.427 UTC [13542] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:51:22.462 UTC [13543] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 09:51:22.462 UTC [13543] DETAIL:  Key (idempotency_key)=(idem-aa95f1743e32) already exists.
+2026-09-12 09:51:22.462 UTC [13543] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:51:22.483 UTC [13544] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:51:22.483 UTC [13544] DETAIL:  Key (tournament_id, captain_id)=(4, 5) already exists.
+2026-09-12 09:51:22.483 UTC [13544] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:51:22.503 UTC [13545] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 09:51:22.503 UTC [13545] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 09:51:22.503 UTC [13545] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 09:51:22.592 UTC [13549] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-12 09:51:22.592 UTC [13549] DETAIL:  Key (user_id, key)=(8, idem-9e2e13d38d49) already exists.
+2026-09-12 09:51:22.592 UTC [13549] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:52:07.761 UTC [13783] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:52:07.761 UTC [13783] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 09:52:07.761 UTC [13783] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 09:52:27.427 UTC [14244] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:52:27.427 UTC [14244] CONTEXT:  while locking tuple (1,14) in relation "users"
+2026-09-12 09:52:27.427 UTC [14244] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 09:52:27.542 UTC [14249] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:52:27.542 UTC [14249] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-f1ce7a8a148e) already exists.
+2026-09-12 09:52:27.542 UTC [14249] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:52:28.101 UTC [14250] ERROR:  canceling statement due to statement timeout
+2026-09-12 09:52:28.101 UTC [14250] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-12 09:52:28.101 UTC [14250] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-12 09:52:28.175 UTC [14252] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 09:52:28.175 UTC [14252] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-ca82187107ee) already exists.
+2026-09-12 09:52:28.175 UTC [14252] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:52:28.231 UTC [14253] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 09:52:28.231 UTC [14253] DETAIL:  Key (idempotency_key)=(idem-d13a4619fd68) already exists.
+2026-09-12 09:52:28.231 UTC [14253] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:52:28.265 UTC [14254] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:52:28.265 UTC [14254] DETAIL:  Key (tournament_id, captain_id)=(302, 855) already exists.
+2026-09-12 09:52:28.265 UTC [14254] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:52:28.291 UTC [14255] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 09:52:28.291 UTC [14255] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 09:52:28.291 UTC [14255] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 09:52:28.409 UTC [14259] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-12 09:52:28.409 UTC [14259] DETAIL:  Key (user_id, key)=(858, idem-cc584fcfbcb4) already exists.
+2026-09-12 09:52:28.409 UTC [14259] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 09:52:32.357 UTC [14337] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 09:52:32.357 UTC [14337] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 09:52:32.357 UTC [14337] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 09:52:32.382 UTC [14338] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 09:52:32.382 UTC [14338] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-12 09:52:32.382 UTC [14338] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 09:52:33.032 UTC [14355] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 09:52:33.032 UTC [14355] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-12 09:52:33.032 UTC [14355] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 09:52:35.877 UTC [14424] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 09:52:35.877 UTC [14424] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-12 09:52:35.877 UTC [14424] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 09:52:37.200 UTC [14456] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 09:52:37.200 UTC [14456] DETAIL:  Key (tournament_id, captain_id)=(468, 1190) already exists.
+2026-09-12 09:52:37.200 UTC [14456] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 09:52:59.464 UTC [13339] LOG:  checkpoint starting: time
+2026-09-12 09:54:52.319 UTC [21571] FATAL:  role "user" does not exist
+2026-09-12 10:30:54.094 UTC [13324] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-12 10:30:54.094 UTC [13324] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-12 10:30:54.095 UTC [13324] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-12 10:30:54.097 UTC [13327] LOG:  database system was shut down at 2026-09-12 10:30:53 UTC
+2026-09-12 10:30:54.100 UTC [13324] LOG:  database system is ready to accept connections
+2026-09-12 10:30:57.011 UTC [13354] FATAL:  role "user" does not exist
+2026-09-12 10:31:55.466 UTC [13690] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 10:31:55.466 UTC [13690] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 10:31:55.466 UTC [13690] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 10:32:20.428 UTC [14151] ERROR:  canceling statement due to statement timeout
+2026-09-12 10:32:20.428 UTC [14151] CONTEXT:  while locking tuple (0,196) in relation "users"
+2026-09-12 10:32:20.428 UTC [14151] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 10:32:20.516 UTC [14156] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 10:32:20.516 UTC [14156] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-1f3457d4e48f) already exists.
+2026-09-12 10:32:20.516 UTC [14156] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 10:32:21.052 UTC [14157] ERROR:  canceling statement due to statement timeout
+2026-09-12 10:32:21.052 UTC [14157] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-12 10:32:21.052 UTC [14157] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-12 10:32:21.097 UTC [14159] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 10:32:21.097 UTC [14159] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-eb2509e50f2a) already exists.
+2026-09-12 10:32:21.097 UTC [14159] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 10:32:21.122 UTC [14160] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 10:32:21.122 UTC [14160] DETAIL:  Key (idempotency_key)=(idem-233cca33b389) already exists.
+2026-09-12 10:32:21.122 UTC [14160] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 10:32:21.141 UTC [14161] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 10:32:21.141 UTC [14161] DETAIL:  Key (tournament_id, captain_id)=(302, 855) already exists.
+2026-09-12 10:32:21.141 UTC [14161] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 10:32:21.157 UTC [14162] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 10:32:21.157 UTC [14162] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 10:32:21.157 UTC [14162] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 10:32:21.245 UTC [14166] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-12 10:32:21.245 UTC [14166] DETAIL:  Key (user_id, key)=(858, idem-142026816126) already exists.
+2026-09-12 10:32:21.245 UTC [14166] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 10:32:24.959 UTC [14244] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 10:32:24.959 UTC [14244] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 10:32:24.959 UTC [14244] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 10:32:24.994 UTC [14245] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 10:32:24.994 UTC [14245] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-12 10:32:24.994 UTC [14245] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 10:32:25.615 UTC [14262] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 10:32:25.615 UTC [14262] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-12 10:32:25.615 UTC [14262] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 10:32:28.804 UTC [14331] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 10:32:28.804 UTC [14331] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-12 10:32:28.804 UTC [14331] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 10:32:30.139 UTC [14363] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 10:32:30.139 UTC [14363] DETAIL:  Key (tournament_id, captain_id)=(468, 1190) already exists.
+2026-09-12 10:32:30.139 UTC [14363] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 10:33:26.359 UTC [20864] FATAL:  role "user" does not exist
+2026-09-12 11:12:44.026 UTC [13337] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-12 11:12:44.026 UTC [13337] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-12 11:12:44.027 UTC [13337] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-12 11:12:44.029 UTC [13340] LOG:  database system was shut down at 2026-09-12 11:12:43 UTC
+2026-09-12 11:12:44.032 UTC [13337] LOG:  database system is ready to accept connections
+2026-09-12 11:12:46.568 UTC [13367] FATAL:  role "user" does not exist
+2026-09-12 11:13:29.428 UTC [13685] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 11:13:29.428 UTC [13685] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 11:13:29.428 UTC [13685] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 11:13:44.280 UTC [14145] ERROR:  canceling statement due to statement timeout
+2026-09-12 11:13:44.280 UTC [14145] CONTEXT:  while locking tuple (3,1) in relation "users"
+2026-09-12 11:13:44.280 UTC [14145] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 11:13:44.334 UTC [14151] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 11:13:44.334 UTC [14151] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-0c62f58e7352) already exists.
+2026-09-12 11:13:44.334 UTC [14151] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 11:13:44.853 UTC [14152] ERROR:  canceling statement due to statement timeout
+2026-09-12 11:13:44.853 UTC [14152] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-12 11:13:44.853 UTC [14152] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-12 11:13:44.883 UTC [14154] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 11:13:44.883 UTC [14154] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-fffc2bf7ccc4) already exists.
+2026-09-12 11:13:44.883 UTC [14154] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 11:13:44.909 UTC [14155] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 11:13:44.909 UTC [14155] DETAIL:  Key (idempotency_key)=(idem-7b32509dbc66) already exists.
+2026-09-12 11:13:44.909 UTC [14155] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 11:13:44.926 UTC [14156] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 11:13:44.926 UTC [14156] DETAIL:  Key (tournament_id, captain_id)=(302, 855) already exists.
+2026-09-12 11:13:44.926 UTC [14156] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 11:13:44.941 UTC [14157] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 11:13:44.941 UTC [14157] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 11:13:44.941 UTC [14157] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 11:13:45.000 UTC [14161] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-12 11:13:45.000 UTC [14161] DETAIL:  Key (user_id, key)=(858, idem-780d4a808cef) already exists.
+2026-09-12 11:13:45.000 UTC [14161] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 11:13:47.500 UTC [14238] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 11:13:47.500 UTC [14238] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 11:13:47.500 UTC [14238] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 11:13:47.522 UTC [14239] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 11:13:47.522 UTC [14239] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-12 11:13:47.522 UTC [14239] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 11:13:47.953 UTC [14257] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 11:13:47.953 UTC [14257] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-12 11:13:47.953 UTC [14257] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 11:13:49.995 UTC [14326] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 11:13:49.995 UTC [14326] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-12 11:13:49.995 UTC [14326] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 11:13:50.978 UTC [14358] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 11:13:50.978 UTC [14358] DETAIL:  Key (tournament_id, captain_id)=(468, 1190) already exists.
+2026-09-12 11:13:50.978 UTC [14358] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 11:15:37.487 UTC [20908] FATAL:  role "user" does not exist
+2026-09-12 15:40:54.506 UTC [13317] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-12 15:40:54.507 UTC [13317] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-12 15:40:54.507 UTC [13317] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-12 15:40:54.509 UTC [13320] LOG:  database system was shut down at 2026-09-12 15:40:53 UTC
+2026-09-12 15:40:54.513 UTC [13317] LOG:  database system is ready to accept connections
+2026-09-12 15:41:01.175 UTC [13346] FATAL:  role "user" does not exist
+2026-09-12 15:43:04.348 UTC [13707] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 15:43:04.348 UTC [13707] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-12 15:43:04.348 UTC [13707] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-12 15:43:20.022 UTC [14169] ERROR:  canceling statement due to statement timeout
+2026-09-12 15:43:20.022 UTC [14169] CONTEXT:  while locking tuple (3,1) in relation "users"
+2026-09-12 15:43:20.022 UTC [14169] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-12 15:43:20.090 UTC [14174] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 15:43:20.090 UTC [14174] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-6f5c70a791e4) already exists.
+2026-09-12 15:43:20.090 UTC [14174] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 15:43:20.614 UTC [14175] ERROR:  canceling statement due to statement timeout
+2026-09-12 15:43:20.614 UTC [14175] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-12 15:43:20.614 UTC [14175] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-12 15:43:20.645 UTC [14177] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-12 15:43:20.645 UTC [14177] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-d7d9eb43a9f9) already exists.
+2026-09-12 15:43:20.645 UTC [14177] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 15:43:20.672 UTC [14178] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-12 15:43:20.672 UTC [14178] DETAIL:  Key (idempotency_key)=(idem-6ca63aaaf122) already exists.
+2026-09-12 15:43:20.672 UTC [14178] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 15:43:20.690 UTC [14179] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 15:43:20.690 UTC [14179] DETAIL:  Key (tournament_id, captain_id)=(302, 855) already exists.
+2026-09-12 15:43:20.690 UTC [14179] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 15:43:20.704 UTC [14180] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-12 15:43:20.704 UTC [14180] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-12 15:43:20.704 UTC [14180] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-12 15:43:20.772 UTC [14184] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-12 15:43:20.772 UTC [14184] DETAIL:  Key (user_id, key)=(858, idem-11f4c0f0a3cf) already exists.
+2026-09-12 15:43:20.772 UTC [14184] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-12 15:43:23.455 UTC [14261] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-12 15:43:23.455 UTC [14261] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-12 15:43:23.455 UTC [14261] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 15:43:23.477 UTC [14262] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 15:43:23.477 UTC [14262] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-12 15:43:23.477 UTC [14262] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-12 15:43:23.985 UTC [14279] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-12 15:43:23.985 UTC [14279] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-12 15:43:23.985 UTC [14279] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-12 15:43:26.596 UTC [14348] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-12 15:43:26.596 UTC [14348] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-12 15:43:26.596 UTC [14348] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-12 15:43:27.656 UTC [14380] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-12 15:43:27.656 UTC [14380] DETAIL:  Key (tournament_id, captain_id)=(468, 1190) already exists.
+2026-09-12 15:43:27.656 UTC [14380] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-12 15:44:05.054 UTC [20815] FATAL:  role "user" does not exist
+2026-09-13 03:20:58.616 UTC [13358] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-13 03:20:58.617 UTC [13358] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-13 03:20:58.617 UTC [13358] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-13 03:20:58.619 UTC [13361] LOG:  database system was shut down at 2026-09-13 03:20:58 UTC
+2026-09-13 03:20:58.622 UTC [13358] LOG:  database system is ready to accept connections
+2026-09-13 03:21:01.087 UTC [13387] FATAL:  role "user" does not exist
+2026-09-13 03:22:26.057 UTC [13684] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 03:22:26.057 UTC [13684] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-13 03:22:26.057 UTC [13684] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-13 03:22:40.182 UTC [14145] ERROR:  canceling statement due to statement timeout
+2026-09-13 03:22:40.182 UTC [14145] CONTEXT:  while locking tuple (3,1) in relation "users"
+2026-09-13 03:22:40.182 UTC [14145] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-13 03:22:40.242 UTC [14150] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 03:22:40.242 UTC [14150] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-cffce4ec665f) already exists.
+2026-09-13 03:22:40.242 UTC [14150] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 03:22:40.764 UTC [14151] ERROR:  canceling statement due to statement timeout
+2026-09-13 03:22:40.764 UTC [14151] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-13 03:22:40.764 UTC [14151] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-13 03:22:40.793 UTC [14153] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 03:22:40.793 UTC [14153] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-bc5ec3117a89) already exists.
+2026-09-13 03:22:40.793 UTC [14153] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 03:22:40.819 UTC [14154] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-13 03:22:40.819 UTC [14154] DETAIL:  Key (idempotency_key)=(idem-8db11d5f5751) already exists.
+2026-09-13 03:22:40.819 UTC [14154] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 03:22:40.836 UTC [14155] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-13 03:22:40.836 UTC [14155] DETAIL:  Key (tournament_id, captain_id)=(302, 855) already exists.
+2026-09-13 03:22:40.836 UTC [14155] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-13 03:22:40.850 UTC [14156] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-13 03:22:40.850 UTC [14156] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-13 03:22:40.850 UTC [14156] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-13 03:22:40.914 UTC [14160] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-13 03:22:40.914 UTC [14160] DETAIL:  Key (user_id, key)=(858, idem-f16415ce08b5) already exists.
+2026-09-13 03:22:40.914 UTC [14160] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-13 03:22:43.221 UTC [14237] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-13 03:22:43.221 UTC [14237] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-13 03:22:43.221 UTC [14237] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-13 03:22:43.241 UTC [14238] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-13 03:22:43.241 UTC [14238] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-13 03:22:43.241 UTC [14238] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-13 03:22:43.686 UTC [14255] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-13 03:22:43.686 UTC [14255] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-13 03:22:43.686 UTC [14255] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 03:22:45.691 UTC [14324] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-13 03:22:45.691 UTC [14324] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-13 03:22:45.691 UTC [14324] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-13 03:22:46.591 UTC [14356] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-13 03:22:46.591 UTC [14356] DETAIL:  Key (tournament_id, captain_id)=(468, 1190) already exists.
+2026-09-13 03:22:46.591 UTC [14356] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-13 03:59:25.280 UTC [13359] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-13 03:59:25.280 UTC [13359] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-13 03:59:25.281 UTC [13359] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-13 03:59:25.282 UTC [13362] LOG:  database system was shut down at 2026-09-13 03:59:25 UTC
+2026-09-13 03:59:25.285 UTC [13359] LOG:  database system is ready to accept connections
+2026-09-13 03:59:27.754 UTC [13388] FATAL:  role "user" does not exist
+2026-09-13 03:59:45.975 UTC [13360] LOG:  checkpoint starting: immediate force wait
+2026-09-13 03:59:46.157 UTC [13360] LOG:  checkpoint complete: wrote 2418 buffers (14.8%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.040 s, sync=0.136 s, total=0.182 s; sync files=1656, longest=0.001 s, average=0.001 s; distance=20548 kB, estimate=20548 kB; lsn=0/28FFAD8, redo lsn=0/28FFA80
+2026-09-13 04:00:18.778 UTC [13753] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 04:00:18.778 UTC [13753] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-13 04:00:18.778 UTC [13753] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-13 04:00:32.914 UTC [14214] ERROR:  canceling statement due to statement timeout
+2026-09-13 04:00:32.914 UTC [14214] CONTEXT:  while locking tuple (3,4) in relation "users"
+2026-09-13 04:00:32.914 UTC [14214] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-13 04:00:32.974 UTC [14219] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 04:00:32.974 UTC [14219] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-005923154e16) already exists.
+2026-09-13 04:00:32.974 UTC [14219] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 04:00:33.496 UTC [14220] ERROR:  canceling statement due to statement timeout
+2026-09-13 04:00:33.496 UTC [14220] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-13 04:00:33.496 UTC [14220] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-13 04:00:33.526 UTC [14222] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 04:00:33.526 UTC [14222] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-f3b192fd78db) already exists.
+2026-09-13 04:00:33.526 UTC [14222] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 04:00:33.549 UTC [14223] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-13 04:00:33.549 UTC [14223] DETAIL:  Key (idempotency_key)=(idem-cd622f49a502) already exists.
+2026-09-13 04:00:33.549 UTC [14223] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 04:00:33.565 UTC [14224] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-13 04:00:33.565 UTC [14224] DETAIL:  Key (tournament_id, captain_id)=(302, 855) already exists.
+2026-09-13 04:00:33.565 UTC [14224] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-13 04:00:33.578 UTC [14225] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-13 04:00:33.578 UTC [14225] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-13 04:00:33.578 UTC [14225] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-13 04:00:33.639 UTC [14229] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-13 04:00:33.639 UTC [14229] DETAIL:  Key (user_id, key)=(858, idem-e2e85c3a54a5) already exists.
+2026-09-13 04:00:33.639 UTC [14229] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-13 04:00:36.062 UTC [14306] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-13 04:00:36.062 UTC [14306] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-13 04:00:36.062 UTC [14306] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-13 04:00:36.081 UTC [14307] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-13 04:00:36.081 UTC [14307] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-13 04:00:36.081 UTC [14307] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-13 04:00:36.533 UTC [14324] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-13 04:00:36.533 UTC [14324] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-13 04:00:36.533 UTC [14324] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 04:00:38.785 UTC [14393] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-13 04:00:38.785 UTC [14393] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-13 04:00:38.785 UTC [14393] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-13 04:00:39.738 UTC [14425] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-13 04:00:39.738 UTC [14425] DETAIL:  Key (tournament_id, captain_id)=(468, 1190) already exists.
+2026-09-13 04:00:39.738 UTC [14425] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-13 04:34:43.539 UTC [13313] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-13 04:34:43.539 UTC [13313] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-13 04:34:43.540 UTC [13313] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-13 04:34:43.542 UTC [13316] LOG:  database system was shut down at 2026-09-13 04:34:43 UTC
+2026-09-13 04:34:43.546 UTC [13313] LOG:  database system is ready to accept connections
+2026-09-13 04:34:45.997 UTC [13343] FATAL:  role "user" does not exist
+2026-09-13 04:35:25.091 UTC [13417] ERROR:  null value in column "organizer_id" of relation "tournaments" violates not-null constraint
+2026-09-13 04:35:25.091 UTC [13417] DETAIL:  Failing row contains (3, null, Smoke Test Open Cup, null, squad, Bermuda, 100.00, 5000.00, 8, 4, null, 2026-09-14 04:35:25, draft, 2026-09-13 04:35:25, 2026-09-13 04:35:25, null, null, single_elim, null, 24).
+2026-09-13 04:35:25.091 UTC [13417] STATEMENT:  insert into "tournaments" ("name", "game_mode", "map", "format", "team_slots", "team_size", "entry_fee", "prize_pool", "starts_at", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-13 04:35:37.100 UTC [13433] ERROR:  null value in column "organizer_id" of relation "tournaments" violates not-null constraint
+2026-09-13 04:35:37.100 UTC [13433] DETAIL:  Failing row contains (4, null, Smoke Test Open Cup, null, squad, Bermuda, 100.00, 5000.00, 8, 4, null, 2026-09-14 04:35:37, draft, 2026-09-13 04:35:37, 2026-09-13 04:35:37, null, null, single_elim, null, 24).
+2026-09-13 04:35:37.100 UTC [13433] STATEMENT:  insert into "tournaments" ("name", "game_mode", "map", "format", "team_slots", "team_size", "entry_fee", "prize_pool", "starts_at", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-13 05:00:19.572 UTC [13322] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-13 05:00:19.573 UTC [13322] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-13 05:00:19.573 UTC [13322] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-13 05:00:19.575 UTC [13325] LOG:  database system was shut down at 2026-09-13 05:00:19 UTC
+2026-09-13 05:00:19.578 UTC [13322] LOG:  database system is ready to accept connections
+2026-09-13 05:00:22.067 UTC [13351] FATAL:  role "user" does not exist
+2026-09-13 05:01:30.711 UTC [14038] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 05:01:30.711 UTC [14038] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-13 05:01:30.711 UTC [14038] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-13 05:01:43.303 UTC [14498] ERROR:  canceling statement due to statement timeout
+2026-09-13 05:01:43.303 UTC [14498] CONTEXT:  while locking tuple (3,4) in relation "users"
+2026-09-13 05:01:43.303 UTC [14498] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-13 05:01:43.357 UTC [14503] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 05:01:43.357 UTC [14503] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-ba98e7438d80) already exists.
+2026-09-13 05:01:43.357 UTC [14503] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 05:01:43.878 UTC [14504] ERROR:  canceling statement due to statement timeout
+2026-09-13 05:01:43.878 UTC [14504] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-13 05:01:43.878 UTC [14504] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-13 05:01:43.909 UTC [14506] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 05:01:43.909 UTC [14506] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-f07a1b4f0cea) already exists.
+2026-09-13 05:01:43.909 UTC [14506] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 05:01:43.937 UTC [14507] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-13 05:01:43.937 UTC [14507] DETAIL:  Key (idempotency_key)=(idem-d98d41036ab4) already exists.
+2026-09-13 05:01:43.937 UTC [14507] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 05:01:43.953 UTC [14508] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-13 05:01:43.953 UTC [14508] DETAIL:  Key (tournament_id, captain_id)=(302, 855) already exists.
+2026-09-13 05:01:43.953 UTC [14508] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-13 05:01:43.965 UTC [14509] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-13 05:01:43.965 UTC [14509] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-13 05:01:43.965 UTC [14509] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-13 05:01:44.026 UTC [14513] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-13 05:01:44.026 UTC [14513] DETAIL:  Key (user_id, key)=(858, idem-7c963ba5d6f4) already exists.
+2026-09-13 05:01:44.026 UTC [14513] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-13 05:01:46.160 UTC [14590] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-13 05:01:46.160 UTC [14590] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-13 05:01:46.160 UTC [14590] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-13 05:01:46.178 UTC [14591] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-13 05:01:46.178 UTC [14591] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-13 05:01:46.178 UTC [14591] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-13 05:01:46.574 UTC [14608] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-13 05:01:46.574 UTC [14608] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-13 05:01:46.574 UTC [14608] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 05:01:48.417 UTC [14677] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-13 05:01:48.417 UTC [14677] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-13 05:01:48.417 UTC [14677] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-13 05:01:49.232 UTC [14709] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-13 05:01:49.232 UTC [14709] DETAIL:  Key (tournament_id, captain_id)=(468, 1190) already exists.
+2026-09-13 05:01:49.232 UTC [14709] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-13 08:20:20.383 UTC [13316] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-13 08:20:20.384 UTC [13316] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-13 08:20:20.384 UTC [13316] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-13 08:20:20.386 UTC [13319] LOG:  database system was shut down at 2026-09-13 08:20:20 UTC
+2026-09-13 08:20:20.388 UTC [13316] LOG:  database system is ready to accept connections
+2026-09-13 08:20:22.857 UTC [13345] FATAL:  role "user" does not exist
+2026-09-13 08:21:11.604 UTC [14023] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 08:21:11.604 UTC [14023] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-13 08:21:11.604 UTC [14023] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-13 08:21:25.979 UTC [14484] ERROR:  canceling statement due to statement timeout
+2026-09-13 08:21:25.979 UTC [14484] CONTEXT:  while locking tuple (3,1) in relation "users"
+2026-09-13 08:21:25.979 UTC [14484] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-13 08:21:26.099 UTC [14489] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 08:21:26.099 UTC [14489] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-20cb5b1162d3) already exists.
+2026-09-13 08:21:26.099 UTC [14489] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 08:21:26.626 UTC [14490] ERROR:  canceling statement due to statement timeout
+2026-09-13 08:21:26.626 UTC [14490] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-13 08:21:26.626 UTC [14490] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-13 08:21:26.660 UTC [14492] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-13 08:21:26.660 UTC [14492] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-9dce6e63527e) already exists.
+2026-09-13 08:21:26.660 UTC [14492] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 08:21:26.693 UTC [14493] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-13 08:21:26.693 UTC [14493] DETAIL:  Key (idempotency_key)=(idem-0e0e6551ea1c) already exists.
+2026-09-13 08:21:26.693 UTC [14493] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 08:21:26.711 UTC [14494] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-13 08:21:26.711 UTC [14494] DETAIL:  Key (tournament_id, captain_id)=(302, 855) already exists.
+2026-09-13 08:21:26.711 UTC [14494] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-13 08:21:26.725 UTC [14495] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-13 08:21:26.725 UTC [14495] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-13 08:21:26.725 UTC [14495] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-13 08:21:26.787 UTC [14499] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-13 08:21:26.787 UTC [14499] DETAIL:  Key (user_id, key)=(858, idem-a3ccfeeb97fd) already exists.
+2026-09-13 08:21:26.787 UTC [14499] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-13 08:21:29.199 UTC [14576] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-13 08:21:29.199 UTC [14576] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-13 08:21:29.199 UTC [14576] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-13 08:21:29.218 UTC [14577] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-13 08:21:29.218 UTC [14577] DETAIL:  Key (match_id, team_id)=(267, 570) already exists.
+2026-09-13 08:21:29.218 UTC [14577] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-13 08:21:29.686 UTC [14594] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-13 08:21:29.686 UTC [14594] DETAIL:  Key (match_id, team_id)=(274, 584) already exists.
+2026-09-13 08:21:29.686 UTC [14594] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-13 08:21:31.899 UTC [14663] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-13 08:21:31.899 UTC [14663] DETAIL:  Key (team_id, game_uid)=(641, UIDDUPDB) already exists.
+2026-09-13 08:21:31.899 UTC [14663] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-13 08:21:32.827 UTC [14695] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-13 08:21:32.827 UTC [14695] DETAIL:  Key (tournament_id, captain_id)=(468, 1190) already exists.
+2026-09-13 08:21:32.827 UTC [14695] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-14 01:31:45.351 UTC [13650] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-14 01:31:45.351 UTC [13650] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-14 01:31:45.352 UTC [13650] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-14 01:31:45.353 UTC [13653] LOG:  database system was shut down at 2026-09-14 01:31:45 UTC
+2026-09-14 01:31:45.356 UTC [13650] LOG:  database system is ready to accept connections
+2026-09-14 01:31:47.799 UTC [13679] FATAL:  role "user" does not exist
+2026-09-14 01:36:03.201 UTC [14321] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-14 01:36:03.201 UTC [14321] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-14 01:36:03.201 UTC [14321] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-14 01:36:18.131 UTC [14798] ERROR:  canceling statement due to statement timeout
+2026-09-14 01:36:18.131 UTC [14798] CONTEXT:  while locking tuple (0,51) in relation "users"
+2026-09-14 01:36:18.131 UTC [14798] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-14 01:36:18.186 UTC [14803] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-14 01:36:18.186 UTC [14803] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-4d84cbade777) already exists.
+2026-09-14 01:36:18.186 UTC [14803] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:36:18.709 UTC [14804] ERROR:  canceling statement due to statement timeout
+2026-09-14 01:36:18.709 UTC [14804] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-14 01:36:18.709 UTC [14804] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-14 01:36:18.740 UTC [14806] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-14 01:36:18.740 UTC [14806] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-9f1d88015fc0) already exists.
+2026-09-14 01:36:18.740 UTC [14806] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:36:18.768 UTC [14807] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-14 01:36:18.768 UTC [14807] DETAIL:  Key (idempotency_key)=(idem-dcbf25001eb6) already exists.
+2026-09-14 01:36:18.768 UTC [14807] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:36:18.785 UTC [14808] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-14 01:36:18.785 UTC [14808] DETAIL:  Key (tournament_id, captain_id)=(315, 882) already exists.
+2026-09-14 01:36:18.785 UTC [14808] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-14 01:36:18.802 UTC [14809] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-14 01:36:18.802 UTC [14809] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-14 01:36:18.802 UTC [14809] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-14 01:36:18.865 UTC [14813] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-14 01:36:18.865 UTC [14813] DETAIL:  Key (user_id, key)=(885, idem-591ee7bf8942) already exists.
+2026-09-14 01:36:18.865 UTC [14813] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-14 01:36:21.182 UTC [14890] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-14 01:36:21.182 UTC [14890] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-14 01:36:21.182 UTC [14890] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-14 01:36:21.204 UTC [14891] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-14 01:36:21.204 UTC [14891] DETAIL:  Key (match_id, team_id)=(267, 584) already exists.
+2026-09-14 01:36:21.204 UTC [14891] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-14 01:36:21.668 UTC [14908] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-14 01:36:21.668 UTC [14908] DETAIL:  Key (match_id, team_id)=(274, 598) already exists.
+2026-09-14 01:36:21.668 UTC [14908] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:36:23.794 UTC [14977] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-14 01:36:23.794 UTC [14977] DETAIL:  Key (team_id, game_uid)=(655, UIDDUPDB) already exists.
+2026-09-14 01:36:23.794 UTC [14977] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-14 01:36:24.744 UTC [15009] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-14 01:36:24.744 UTC [15009] DETAIL:  Key (tournament_id, captain_id)=(481, 1217) already exists.
+2026-09-14 01:36:24.744 UTC [15009] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-14 01:36:45.448 UTC [13651] LOG:  checkpoint starting: time
+2026-09-14 01:38:19.868 UTC [22251] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-14 01:38:19.868 UTC [22251] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-14 01:38:19.868 UTC [22251] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-14 01:38:34.620 UTC [22731] ERROR:  canceling statement due to statement timeout
+2026-09-14 01:38:34.620 UTC [22731] CONTEXT:  while locking tuple (2,226) in relation "users"
+2026-09-14 01:38:34.620 UTC [22731] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-14 01:38:34.676 UTC [22736] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-14 01:38:34.676 UTC [22736] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-0336ddbfe717) already exists.
+2026-09-14 01:38:34.676 UTC [22736] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:38:35.197 UTC [22737] ERROR:  canceling statement due to statement timeout
+2026-09-14 01:38:35.197 UTC [22737] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-14 01:38:35.197 UTC [22737] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-14 01:38:35.227 UTC [22739] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-14 01:38:35.227 UTC [22739] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-4f408f35199b) already exists.
+2026-09-14 01:38:35.227 UTC [22739] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:38:35.252 UTC [22740] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-14 01:38:35.252 UTC [22740] DETAIL:  Key (idempotency_key)=(idem-79d5be413a14) already exists.
+2026-09-14 01:38:35.252 UTC [22740] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:38:35.269 UTC [22741] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-14 01:38:35.269 UTC [22741] DETAIL:  Key (tournament_id, captain_id)=(315, 882) already exists.
+2026-09-14 01:38:35.269 UTC [22741] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-14 01:38:35.282 UTC [22742] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-14 01:38:35.282 UTC [22742] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-14 01:38:35.282 UTC [22742] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-14 01:38:35.339 UTC [22746] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-14 01:38:35.339 UTC [22746] DETAIL:  Key (user_id, key)=(885, idem-10af86644442) already exists.
+2026-09-14 01:38:35.339 UTC [22746] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-14 01:38:37.848 UTC [22824] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-14 01:38:37.848 UTC [22824] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-14 01:38:37.848 UTC [22824] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-14 01:38:37.869 UTC [22825] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-14 01:38:37.869 UTC [22825] DETAIL:  Key (match_id, team_id)=(267, 584) already exists.
+2026-09-14 01:38:37.869 UTC [22825] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-14 01:38:38.309 UTC [22842] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-14 01:38:38.309 UTC [22842] DETAIL:  Key (match_id, team_id)=(274, 598) already exists.
+2026-09-14 01:38:38.309 UTC [22842] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:38:40.341 UTC [22911] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-14 01:38:40.341 UTC [22911] DETAIL:  Key (team_id, game_uid)=(655, UIDDUPDB) already exists.
+2026-09-14 01:38:40.341 UTC [22911] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-14 01:38:41.320 UTC [22943] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-14 01:38:41.320 UTC [22943] DETAIL:  Key (tournament_id, captain_id)=(481, 1217) already exists.
+2026-09-14 01:38:41.320 UTC [22943] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-14 01:41:15.051 UTC [13651] LOG:  checkpoint complete: wrote 2254 buffers (13.8%); 0 WAL file(s) added, 0 removed, 1 recycled; write=269.583 s, sync=0.009 s, total=269.604 s; sync files=2766, longest=0.001 s, average=0.001 s; distance=17765 kB, estimate=17765 kB; lsn=0/311C0C0, redo lsn=0/2648040
+2026-09-14 01:46:29.755 UTC [30458] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-14 01:46:29.755 UTC [30458] DETAIL:  Key (provider, external_event_id)=(bkash, evt-smoke-1) already exists.
+2026-09-14 01:46:29.755 UTC [30458] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "attempts", "received_at", "payload_encrypted", "metadata", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"
+2026-09-14 01:46:45.174 UTC [13651] LOG:  checkpoint starting: time
+2026-09-14 01:46:45.615 UTC [30962] ERROR:  canceling statement due to statement timeout
+2026-09-14 01:46:45.615 UTC [30962] CONTEXT:  while locking tuple (3,82) in relation "users"
+2026-09-14 01:46:45.615 UTC [30962] STATEMENT:  select * from "users" where "id" = $1 limit 1 for update
+2026-09-14 01:46:45.677 UTC [30967] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-14 01:46:45.677 UTC [30967] DETAIL:  Key (provider, external_event_id)=(bkash, evt-race-39133be6837c) already exists.
+2026-09-14 01:46:45.677 UTC [30967] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:46:46.199 UTC [30968] ERROR:  canceling statement due to statement timeout
+2026-09-14 01:46:46.199 UTC [30968] CONTEXT:  while locking tuple (0,12) in relation "payouts"
+2026-09-14 01:46:46.199 UTC [30968] STATEMENT:  select * from "payouts" where "id" = $1 limit 1 for update
+2026-09-14 01:46:46.229 UTC [30970] ERROR:  duplicate key value violates unique constraint "webhook_events_provider_event_unique"
+2026-09-14 01:46:46.229 UTC [30970] DETAIL:  Key (provider, external_event_id)=(bkash, evt-uniq-84e97298aff1) already exists.
+2026-09-14 01:46:46.229 UTC [30970] STATEMENT:  insert into "webhook_events" ("provider", "external_event_id", "event_type", "signature_status", "status", "received_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:46:46.258 UTC [30971] ERROR:  duplicate key value violates unique constraint "payments_idempotency_key_unique"
+2026-09-14 01:46:46.258 UTC [30971] DETAIL:  Key (idempotency_key)=(idem-1512ea051167) already exists.
+2026-09-14 01:46:46.258 UTC [30971] STATEMENT:  insert into "payments" ("tournament_id", "team_id", "idempotency_key", "amount_minor", "currency", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:46:46.274 UTC [30972] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-14 01:46:46.274 UTC [30972] DETAIL:  Key (tournament_id, captain_id)=(336, 924) already exists.
+2026-09-14 01:46:46.274 UTC [30972] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-14 01:46:46.288 UTC [30973] ERROR:  insert or update on table "notifications" violates foreign key constraint "notifications_user_id_foreign"
+2026-09-14 01:46:46.288 UTC [30973] DETAIL:  Key (user_id)=(99999999) is not present in table "users".
+2026-09-14 01:46:46.288 UTC [30973] STATEMENT:  insert into "notifications" ("user_id", "type", "title", "body", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6)
+2026-09-14 01:46:46.350 UTC [30977] ERROR:  duplicate key value violates unique constraint "api_idempotency_user_key_unique"
+2026-09-14 01:46:46.350 UTC [30977] DETAIL:  Key (user_id, key)=(927, idem-745531cf8269) already exists.
+2026-09-14 01:46:46.350 UTC [30977] STATEMENT:  insert into "api_idempotency_keys" ("user_id", "key", "method", "path", "request_fingerprint", "created_at", "expires_at") values ($1, $2, $3, $4, $5, $6, $7)
+2026-09-14 01:46:48.710 UTC [31054] ERROR:  duplicate key value violates unique constraint "scores_match_placement_unique"
+2026-09-14 01:46:48.710 UTC [31054] DETAIL:  Key (match_id, placement)=(266, 1) already exists.
+2026-09-14 01:46:48.710 UTC [31054] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-14 01:46:48.731 UTC [31055] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-14 01:46:48.731 UTC [31055] DETAIL:  Key (match_id, team_id)=(267, 605) already exists.
+2026-09-14 01:46:48.731 UTC [31055] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "placement_points", "kill_points", "bonus_points", "penalty_points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-09-14 01:46:49.186 UTC [31072] ERROR:  duplicate key value violates unique constraint "scores_match_team_unique"
+2026-09-14 01:46:49.186 UTC [31072] DETAIL:  Key (match_id, team_id)=(274, 619) already exists.
+2026-09-14 01:46:49.186 UTC [31072] STATEMENT:  insert into "scores" ("match_id", "team_id", "kills", "placement", "points", "status", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, $8)
+2026-09-14 01:46:51.266 UTC [31141] ERROR:  duplicate key value violates unique constraint "team_members_team_uid_unique"
+2026-09-14 01:46:51.266 UTC [31141] DETAIL:  Key (team_id, game_uid)=(676, UIDDUPDB) already exists.
+2026-09-14 01:46:51.266 UTC [31141] STATEMENT:  insert into "team_members" ("team_id", "player_name", "game_uid", "updated_at", "created_at") values ($1, $2, $3, $4, $5) returning "id"
+2026-09-14 01:46:52.166 UTC [31173] ERROR:  duplicate key value violates unique constraint "teams_tournament_captain_unique"
+2026-09-14 01:46:52.166 UTC [31173] DETAIL:  Key (tournament_id, captain_id)=(502, 1259) already exists.
+2026-09-14 01:46:52.166 UTC [31173] STATEMENT:  insert into "teams" ("tournament_id", "captain_id", "name", "captain_name", "phone", "game_uid", "status", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning "id"
+2026-09-14 03:29:05.518 UTC [13463] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-14 03:29:05.518 UTC [13463] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-14 03:29:05.519 UTC [13463] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-14 03:29:05.521 UTC [13466] LOG:  database system was shut down at 2026-09-14 03:29:05 UTC
+2026-09-14 03:29:05.524 UTC [13463] LOG:  database system is ready to accept connections
+2026-09-14 03:29:09.280 UTC [13504] FATAL:  role "user" does not exist
+2026-09-14 03:34:05.621 UTC [13464] LOG:  checkpoint starting: time
+2026-09-14 03:37:15.273 UTC [13464] LOG:  checkpoint complete: wrote 1896 buffers (11.6%); 1 WAL file(s) added, 0 removed, 0 recycled; write=189.630 s, sync=0.002 s, total=189.653 s; sync files=613, longest=0.001 s, average=0.001 s; distance=8801 kB, estimate=8801 kB; lsn=0/1D86E48, redo lsn=0/1D86DB8
+2026-09-14 03:42:22.036 UTC [14010] FATAL:  role "root" does not exist
+2026-09-14 03:42:35.203 UTC [14017] ERROR:  relation "teams" does not exist
+2026-09-14 03:42:35.203 UTC [14017] STATEMENT:  TRUNCATE teams, tournaments, users, team_members, notifications, audit_logs, live_events, webhook_events, risk_events, risk_profiles RESTART IDENTITY CASCADE
+2026-09-14 03:42:44.050 UTC [14050] ERROR:  duplicate key value violates unique constraint "notification_preferences_user_id_unique"
+2026-09-14 03:42:44.050 UTC [14050] DETAIL:  Key (user_id)=(1) already exists.
+2026-09-14 03:42:44.050 UTC [14050] STATEMENT:  insert into "notification_preferences" ("user_id", "updated_at", "created_at") values ($1, $2, $3) returning "id"
+2026-09-14 03:44:05.339 UTC [13464] LOG:  checkpoint starting: time
+2026-09-14 03:44:47.397 UTC [13464] LOG:  checkpoint complete: wrote 422 buffers (2.6%); 0 WAL file(s) added, 0 removed, 1 recycled; write=42.038 s, sync=0.006 s, total=42.059 s; sync files=1558, longest=0.001 s, average=0.001 s; distance=3903 kB, estimate=8311 kB; lsn=0/21964F8, redo lsn=0/2156B48
+2026-09-14 03:49:05.410 UTC [13464] LOG:  checkpoint starting: time
+2026-09-14 03:49:21.959 UTC [13464] LOG:  checkpoint complete: wrote 166 buffers (1.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=16.542 s, sync=0.002 s, total=16.549 s; sync files=331, longest=0.001 s, average=0.001 s; distance=530 kB, estimate=7533 kB; lsn=0/21DB4E0, redo lsn=0/21DB450
+2026-09-14 03:49:53.518 UTC [14414] FATAL:  role "user" does not exist
+2026-09-14 03:50:00.733 UTC [14425] LOG:  incomplete startup packet
+2026-09-14 03:54:06.015 UTC [13464] LOG:  checkpoint starting: time
+2026-09-14 03:55:53.275 UTC [13464] LOG:  checkpoint complete: wrote 894 buffers (5.5%); 0 WAL file(s) added, 0 removed, 1 recycled; write=107.215 s, sync=0.009 s, total=107.261 s; sync files=2707, longest=0.001 s, average=0.001 s; distance=17170 kB, estimate=17170 kB; lsn=0/343DD30, redo lsn=0/329FE90
+2026-09-14 03:59:06.291 UTC [13464] LOG:  checkpoint starting: time
+2026-09-14 03:59:36.171 UTC [13464] LOG:  checkpoint complete: wrote 299 buffers (1.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=29.877 s, sync=0.001 s, total=29.880 s; sync files=108, longest=0.001 s, average=0.001 s; distance=2253 kB, estimate=15678 kB; lsn=0/34D3558, redo lsn=0/34D34C8
+2026-09-14 05:28:34.583 UTC [13387] LOG:  starting PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-09-14 05:28:34.583 UTC [13387] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-09-14 05:28:34.584 UTC [13387] LOG:  listening on Unix socket "/tmp/pgsock/.s.PGSQL.5432"
+2026-09-14 05:28:34.587 UTC [13390] LOG:  database system was shut down at 2026-09-14 05:28:34 UTC
+2026-09-14 05:28:34.591 UTC [13387] LOG:  database system is ready to accept connections
+2026-09-14 05:28:37.071 UTC [13416] FATAL:  role "user" does not exist
+2026-09-14 05:28:40.520 UTC [13429] FATAL:  role "user" does not exist
+2026-09-14 05:33:14.440 UTC [13851] ERROR:  duplicate key value violates unique constraint "notification_preferences_user_id_unique"
+2026-09-14 05:33:14.440 UTC [13851] DETAIL:  Key (user_id)=(1) already exists.
+2026-09-14 05:33:14.440 UTC [13851] STATEMENT:  insert into "notification_preferences" ("user_id", "updated_at", "created_at") values ($1, $2, $3) returning "id"
+2026-09-14 05:33:34.827 UTC [13388] LOG:  checkpoint starting: time
+2026-09-14 05:38:04.275 UTC [13388] LOG:  checkpoint complete: wrote 3036 buffers (18.5%); 0 WAL file(s) added, 0 removed, 3 recycled; write=269.257 s, sync=0.055 s, total=269.449 s; sync files=16336, longest=0.001 s, average=0.001 s; distance=55629 kB, estimate=55629 kB; lsn=0/7B83E98, redo lsn=0/4B41F30
+2026-09-14 05:38:28.760 UTC [14586] ERROR:  duplicate key value violates unique constraint "notification_preferences_user_id_unique"
+2026-09-14 05:38:28.760 UTC [14586] DETAIL:  Key (user_id)=(1) already exists.
+2026-09-14 05:38:28.760 UTC [14586] STATEMENT:  insert into "notification_preferences" ("user_id", "updated_at", "created_at") values ($1, $2, $3) returning "id"
+2026-09-14 05:38:30.110 UTC [14612] ERROR:  duplicate key value violates unique constraint "notification_preferences_user_id_unique"
+2026-09-14 05:38:30.110 UTC [14612] DETAIL:  Key (user_id)=(1) already exists.
+2026-09-14 05:38:30.110 UTC [14612] STATEMENT:  insert into "notification_preferences" ("user_id", "updated_at", "created_at") values ($1, $2, $3) returning "id"
+2026-09-14 05:38:34.447 UTC [13388] LOG:  checkpoint starting: time
+2026-09-14 05:41:14.746 UTC [13388] LOG:  checkpoint complete: wrote 1619 buffers (9.9%); 0 WAL file(s) added, 0 removed, 5 recycled; write=160.023 s, sync=0.042 s, total=160.300 s; sync files=12634, longest=0.001 s, average=0.001 s; distance=74626 kB, estimate=74626 kB; lsn=0/C892208, redo lsn=0/94228A0

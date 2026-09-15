@@ -1,0 +1,40 @@
+# FF Arena mobile — static analysis configuration (Phase 18).
+#
+# Extends the standard flutter_lints ruleset and adds a few mobile-specific
+# rules relevant to security and correctness:
+#   - avoid_print / avoid_print: debug logging must go through the app's
+#     redacting logger, never straight to the console (token safety).
+#   - Security-sensitive strings are handled by the core layer.
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - .dart_tool/**
+    - android/**
+    - ios/**
+  errors:
+    missing_required_param: error
+    missing_return: error
+
+linter:
+  rules:
+    - avoid_print
+    - avoid_relative_lib_imports
+    - avoid_slow_async_io
+    - cancel_subscriptions
+    - close_sinks
+    - directives_ordering
+    - empty_statements
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_final_locals
+    - prefer_is_empty
+    - prefer_single_quotes
+    - sort_constructors_first
+    - unawaited_futures
+    - unnecessary_brace_in_string_interps
+    - unnecessary_const
+    - use_key_in_widget_constructors
+    - use_super_parameters

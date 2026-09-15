@@ -1,0 +1,124 @@
+{
+    "name": "api.pgsql",
+    "driver": "pgsql",
+    "recorded_at": "2026-09-14T03:58:10+00:00",
+    "php": "8.4.24",
+    "iterations": 50,
+    "rate_limit_override_per_minute": 100000,
+    "endpoints": {
+        "health": {
+            "stats": {
+                "p50": 3.034,
+                "p90": 3.211,
+                "p95": 3.291,
+                "p99": 22.572,
+                "min": 2.515,
+                "max": 22.572,
+                "n": 50,
+                "mean": 3.401
+            },
+            "iterations": 50,
+            "ok": 50,
+            "throttled": 0,
+            "errors": 0,
+            "status_codes": {
+                "200": 50
+            }
+        },
+        "tournaments_list": {
+            "stats": {
+                "p50": 8.085,
+                "p90": 8.666,
+                "p95": 10.037,
+                "p99": 16.184,
+                "min": 7.259,
+                "max": 16.184,
+                "n": 50,
+                "mean": 8.306
+            },
+            "iterations": 50,
+            "ok": 50,
+            "throttled": 0,
+            "errors": 0,
+            "status_codes": {
+                "200": 50
+            }
+        },
+        "leaderboard": {
+            "stats": {
+                "p50": 7.336,
+                "p90": 7.83,
+                "p95": 8.019,
+                "p99": 9.723,
+                "min": 6.272,
+                "max": 9.723,
+                "n": 50,
+                "mean": 7.346
+            },
+            "iterations": 50,
+            "ok": 50,
+            "throttled": 0,
+            "errors": 0,
+            "status_codes": {
+                "200": 50
+            }
+        },
+        "me": {
+            "stats": {
+                "p50": 4.156,
+                "p90": 4.718,
+                "p95": 4.927,
+                "p99": 12.941,
+                "min": 3.542,
+                "max": 12.941,
+                "n": 50,
+                "mean": 4.343
+            },
+            "iterations": 50,
+            "ok": 50,
+            "throttled": 0,
+            "errors": 0,
+            "status_codes": {
+                "200": 50
+            }
+        },
+        "wallet": {
+            "stats": {
+                "p50": 3.694,
+                "p90": 4.148,
+                "p95": 4.388,
+                "p99": 6.056,
+                "min": 3.094,
+                "max": 6.056,
+                "n": 50,
+                "mean": 3.748
+            },
+            "iterations": 50,
+            "ok": 50,
+            "throttled": 0,
+            "errors": 0,
+            "status_codes": {
+                "200": 50
+            }
+        },
+        "wallet_ledger": {
+            "stats": {
+                "p50": 4.394,
+                "p90": 4.876,
+                "p95": 4.963,
+                "p99": 5.576,
+                "min": 4.037,
+                "max": 5.576,
+                "n": 50,
+                "mean": 4.465
+            },
+            "iterations": 50,
+            "ok": 50,
+            "throttled": 0,
+            "errors": 0,
+            "status_codes": {
+                "200": 50
+            }
+        }
+    }
+}

@@ -1,0 +1,21 @@
+{
+    "name": "registration",
+    "driver": "sqlite",
+    "recorded_at": "2026-09-14T03:52:59+00:00",
+    "php": "8.4.24",
+    "requested": 100,
+    "ok": 100,
+    "failed": 0,
+    "waitlisted": 0,
+    "throughput_per_sec": 3.95,
+    "stats": {
+        "p50": 18.576,
+        "p90": 20.05,
+        "p95": 21.236,
+        "p99": 21.549,
+        "min": 15.818,
+        "max": 52.963,
+        "n": 100,
+        "mean": 18.908
+    }
+}

@@ -1,0 +1,29 @@
+# Flutter / Dart build artifacts
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Platform build outputs (never commit native build trees)
+android/.gradle/
+android/app/build/
+android/local.properties
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+
+# Secrets — never commit. Copy these to a local-only file and fill in real
+# values per environment. They are read via --dart-define at build time.
+lib/config/secrets.dart
+*.keystore
+*.jks
+key.properties
+google-services.json
+GoogleService-Info.plist
+ServiceAccountKey.json
+
+# IDE
+.idea/
+*.iml
+.vscode/

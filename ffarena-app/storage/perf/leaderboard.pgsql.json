@@ -1,0 +1,29 @@
+{
+    "name": "leaderboard.pgsql",
+    "driver": "pgsql",
+    "recorded_at": "2026-09-14T03:54:22+00:00",
+    "php": "8.4.24",
+    "tournament_slug": "squad-showdown-32-teams",
+    "iterations": 50,
+    "service": {
+        "p50": 3.393,
+        "p90": 3.73,
+        "p95": 4.308,
+        "p99": 7.872,
+        "min": 3.023,
+        "max": 7.872,
+        "n": 50,
+        "mean": 3.514
+    },
+    "http": {
+        "p50": 8.966,
+        "p90": 9.428,
+        "p95": 10.371,
+        "p99": 37.755,
+        "min": 7.537,
+        "max": 37.755,
+        "n": 50,
+        "mean": 9.495
+    },
+    "http_error_pct": 0
+}

@@ -1,0 +1,13 @@
+# FF Arena — scheduler timer (one host only!).
+# Copy to /etc/systemd/system/ffarena-scheduler.timer
+#   systemctl enable --now ffarena-scheduler.timer
+
+[Unit]
+Description=Run FF Arena scheduler every minute
+
+[Timer]
+OnCalendar=*:*:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

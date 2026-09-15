@@ -1,0 +1,100 @@
+# FF Arena — optional container deployment (reference only).
+# The actual production layout is nginx + PHP-FPM + supervisor/systemd.
+# Use this compose file as a starting point for containerised deploys;
+# keep .env out of the image and out of version control.
+#
+# Phase 19/G1: PostgreSQL is the production datastore. The database is reachable
+# ONLY on the internal network — its port is never published to the host.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-ffarena}
+      POSTGRES_USER: ${DB_USERNAME:-ffarena}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-ffarena} -d $${POSTGRES_DB:-ffarena}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Intentionally no `ports:` — PostgreSQL must never be exposed publicly.
+    networks:
+      - internal
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_CONNECTION: ${DB_CONNECTION:-pgsql}
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      queue:
+        condition: service_started
+    networks:
+      - internal
+
+  queue:
+    build: .
+    restart: unless-stopped
+    command: php artisan queue:work --tries=3 --timeout=90 --backoff=30
+    env_file: .env
+    environment:
+      DB_CONNECTION: ${DB_CONNECTION:-pgsql}
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  scheduler:
+    build: .
+    restart: unless-stopped
+    command: sh -c "while true; do php artisan schedule:run; sleep 60; done"
+    env_file: .env
+    environment:
+      DB_CONNECTION: ${DB_CONNECTION:-pgsql}
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  web:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - app-storage:/var/www/html/storage:ro
+    depends_on:
+      - app
+    networks:
+      - internal
+
+volumes:
+  app-storage:
+  postgres-data:
+
+networks:
+  internal:
+    driver: bridge

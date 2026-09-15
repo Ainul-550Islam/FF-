@@ -1,0 +1,36 @@
+name: ffarena_mobile
+description: FF Arena native mobile client (Phase 18). Consumes the Laravel /api/v1 platform; the backend stays authoritative.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  # Lightweight HTTP + localization formatting. No heavy state-management
+  # framework: the app uses built-in ChangeNotifier/ValueNotifier.
+  http: ^1.2.2
+  intl: ^0.20.2
+  # Secure token storage — Android Keystore / iOS Keychain.
+  flutter_secure_storage: ^9.2.2
+  # Google Sign-In (only active when a client id is configured).
+  google_sign_in: ^6.2.1
+  # External links (privacy policy / terms / support).
+  url_launcher: ^6.3.0
+  # App documents directory for the offline read-only cache.
+  path_provider: ^2.1.4
+  cupertino_icons: ^1.0.8
+  firebase_core: ^4.14.0
+  firebase_messaging: ^16.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

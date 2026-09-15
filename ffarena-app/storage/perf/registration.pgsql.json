@@ -1,0 +1,21 @@
+{
+    "name": "registration.pgsql",
+    "driver": "pgsql",
+    "recorded_at": "2026-09-14T03:58:39+00:00",
+    "php": "8.4.24",
+    "requested": 100,
+    "ok": 100,
+    "failed": 0,
+    "waitlisted": 0,
+    "throughput_per_sec": 4.24,
+    "stats": {
+        "p50": 15.367,
+        "p90": 16.635,
+        "p95": 17.067,
+        "p99": 19.774,
+        "min": 12.869,
+        "max": 49.73,
+        "n": 100,
+        "mean": 15.703
+    }
+}

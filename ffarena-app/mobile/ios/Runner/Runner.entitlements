@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Phase 19 — push notifications (FCM/APNs). -->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- Phase 19 — iOS Universal Links. Replace the placeholder domain with
+	     the production web origin (must match apple-app-site-association). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:ffarena.example.com</string>
+	</array>
+</dict>
+</plist>
