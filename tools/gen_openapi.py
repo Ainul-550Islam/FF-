@@ -13,12 +13,13 @@ Usage:
     python3 tools/gen_openapi.py --validate # validate the existing file only
 """
 
+import os
 import json
 import re
 import subprocess
 import sys
 
-ROOT = "/home/user/ffarena-app"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = f"{ROOT}/storage/api-docs/openapi.json"
 
 BEARER = [{"bearerAuth": []}]

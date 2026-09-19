@@ -1,18 +1,14 @@
 @extends('layouts.app')
-@section('title', 'Verify Email — FF Arena')
+@section('title','Verify Email')
 @section('content')
-    <div class="card" style="max-width: 520px; margin: 50px auto">
-        <h2>Verify your email</h2>
-        <p class="muted">
-            A verification link was sent to <strong>{{ auth()->user()->email }}</strong>.
-            Click the link in the email to verify your address.
-        </p>
-        <form method="POST" action="{{ route('verification.resend') }}">
+<div style="max-width: 420px; margin: 40px auto; text-align: center;">
+    <h1 style="font-size: 24px; font-weight: 800;">Verify your email</h1>
+    <p class="text-muted">We sent verification link to your email. <span data-internet-status class="internet-status online"></span></p>
+    <div class="card" style="margin-top: 16px;">
+        <form method="POST" action="{{ route('verification.send') ?? '#' }}">
             @csrf
-            <button type="submit" class="btn btn-cyan mt-2">Resend verification link</button>
+            <button type="submit" class="btn btn-primary" data-require-online>Resend Verification Email</button>
         </form>
-        <p class="muted mt-4" style="font-size: .85rem">
-            <a href="{{ route('home') }}">Back to home</a>
-        </p>
     </div>
+</div>
 @endsection

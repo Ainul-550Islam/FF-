@@ -1,0 +1,183 @@
+# FF Arena — Final Hardening — TLS Production Compose
+# Extends production compose with TLS certificates, secure headers, log aggregation
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: ffarena-postgres-prod-tls
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-ffarena}
+      POSTGRES_USER: ${DB_USERNAME:-ffarena}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deploy/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-ffarena} -d $${POSTGRES_DB:-ffarena}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - internal
+    # No ports — never exposed publicly
+
+  redis:
+    image: redis:7-alpine
+    container_name: ffarena-redis-prod-tls
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      --tls-port 6380
+      --port 0
+      --tls-cert-file /tls/redis.crt
+      --tls-key-file /tls/redis.key
+      --tls-ca-cert-file /tls/ca.crt
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    volumes:
+      - redis-data:/data
+      - ./deploy/redis.tls.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./certs:/tls:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "--tls", "--cacert", "/tls/ca.crt", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - internal
+    # No ports — private network only, TLS
+
+  app:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: ffarena:${APP_VERSION:-latest}
+    container_name: ffarena-app-prod-tls
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: false
+      APP_URL: ${APP_URL:?APP_URL must be HTTPS in production}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-*}
+      SESSION_SECURE_COOKIE: true
+      SESSION_HTTP_ONLY: true
+      SESSION_SAME_SITE: lax
+      LOG_CHANNEL: daily
+      LOG_LEVEL: warning
+      LOG_DAILY_DAYS: 14
+      LOG_CENTRAL_ENABLED: ${LOG_CENTRAL_ENABLED:-false}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_SSLMODE: require
+      REDIS_HOST: redis
+      REDIS_PORT: 6380
+      REDIS_TLS: true
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      BROADCAST_CONNECTION: reverb
+      REVERB_HOST: reverb
+      REVERB_PORT: 8080
+      REVERB_SCHEME: https
+      REVERB_SCALING_ENABLED: true
+      REVERB_SCALING_SERVER_HOST: redis
+    volumes:
+      - app-storage:/var/www/html/storage
+      - app-cache:/var/www/html/bootstrap/cache
+      - ./certs:/certs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+      - external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://127.0.0.1:443/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+  reverb:
+    image: ffarena:${APP_VERSION:-latest}
+    container_name: ffarena-reverb-prod-tls
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_ENV: production
+      BROADCAST_CONNECTION: reverb
+      REVERB_SERVER_HOST: 0.0.0.0
+      REVERB_SERVER_PORT: 8080
+      REVERB_HOST: reverb
+      REVERB_SCHEME: https
+      REVERB_SCALING_ENABLED: true
+      REVERB_SCALING_SERVER_HOST: redis
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080 --debug=false
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+      - external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  nginx:
+    image: nginx:alpine
+    container_name: ffarena-nginx-prod-tls
+    restart: unless-stopped
+    volumes:
+      - ./deploy/nginx.tls.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - app-storage:/var/www/html/storage:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - internal
+      - external
+    ports:
+      - "80:80"
+      - "443:443"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://127.0.0.1:443/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  internal:
+    driver: bridge
+    internal: true
+  external:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  app-storage:
+  app-cache:

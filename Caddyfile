@@ -1,0 +1,263 @@
+# Caddyfile - Reverse Proxy with TLS Certificate Pinning and HSTS Preload Compliance
+# Production hardening for FF Arena - Laravel + Go + Rust microservices
+
+{
+    # Global options
+    admin off
+    auto_https off
+
+    # Logging with redaction
+    log {
+        output stdout
+        format json {
+            time_format iso8601
+        }
+        level INFO
+    }
+
+    # TLS options - enforce TLS 1.2+
+    servers {
+        protocols h1 h2 h3
+    }
+}
+
+# HSTS preload compliance snippet
+# Requirements for https://hstspreload.org/:
+# - Serve valid certificate
+# - Redirect HTTP to HTTPS on same host
+# - HSTS header on HTTPS: max-age >= 31536000, includeSubDomains, preload
+# - All subdomains served over HTTPS
+(hsts_preload) {
+    header {
+        # HSTS with preload - 1 year, includeSubDomains, preload
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # Prevent MIME sniffing
+        X-Content-Type-Options "nosniff"
+        # Prevent clickjacking - DENY
+        X-Frame-Options "DENY"
+        # Disable XSS auditor (use CSP)
+        X-XSS-Protection "0"
+        # No referrer
+        Referrer-Policy "no-referrer"
+        # Strict CSP with nonce support - will be overridden by backend with dynamic nonce
+        Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+        # Prevent Adobe products
+        X-Permitted-Cross-Domain-Policies "none"
+        # Cross-Origin policies
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Embedder-Policy "require-corp"
+        Cross-Origin-Resource-Policy "same-origin"
+        # Permissions Policy
+        Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), speaker=()"
+        # Remove server header
+        -Server
+        # Vary for CORS
+        Vary "Origin"
+    }
+}
+
+# TLS certificate pinning for outbound provider connections
+# This is for Caddy as forward proxy or for verification in Go services
+# In Go, implement pinning via http.Client with custom VerifyPeerCertificate
+(tls_pinning) {
+    # For outbound connections to bKash, Nagad, Rocket
+    # Pinning is implemented in Go client via tls.Config VerifyPeerCertificate
+    # See services/payment-gateway-go/internal/providers/client/http_client.go
+    # This Caddyfile is for inbound reverse proxy, pinning for outbound is in Go code
+}
+
+# Laravel API - Main application
+https://api.ffarena.com {
+    import hsts_preload
+
+    # TLS - use valid cert from Let's Encrypt or custom
+    tls {
+        # In production, use:
+        # tls {
+        #     ca https://acme-v02.api.letsencrypt.org/directory
+        # }
+        # For custom cert:
+        # tls /path/to/cert.pem /path/to/key.pem
+        protocols tls1.2 tls1.3
+        ciphers TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305 TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+        curves x25519 secp256r1 secp384r1
+    }
+
+    # Rate limiting - 60 req/min per IP for API
+    # Use Caddy rate_limit plugin or implement in Laravel
+
+    # Reverse proxy to Laravel
+    reverse_proxy localhost:8000 {
+        # Health checks
+        health_uri /health/live
+        health_interval 10s
+        health_timeout 5s
+
+        # Headers
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Request-ID {http.request.header.X-Request-ID}
+        header_up X-Trace-ID {http.request.header.X-Trace-ID}
+
+        # Timeouts
+        dial_timeout 5s
+        read_timeout 15s
+        write_timeout 15s
+
+        # Keepalive
+        keepalive 60s
+    }
+
+    # Logging with redaction
+    log {
+        output stdout
+        format json
+        level INFO
+    }
+
+    # Handle /health without auth
+    @health {
+        path /health /health/live /health/ready
+    }
+    handle @health {
+        reverse_proxy localhost:8000
+    }
+}
+
+# Go Payment Gateway
+https://payment.ffarena.com {
+    import hsts_preload
+
+    tls {
+        protocols tls1.2 tls1.3
+        ciphers TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305 TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+    }
+
+    # Strict CORS - only allow ffarena.com domains
+    @cors_preflight {
+        method OPTIONS
+    }
+    handle @cors_preflight {
+        header {
+            Access-Control-Allow-Origin "{http.request.header.Origin}"
+            Access-Control-Allow-Methods "GET, POST, OPTIONS"
+            Access-Control-Allow-Headers "Authorization, Content-Type, X-Request-ID, Idempotency-Key, X-Idempotency-Key, X-Signature, X-Service-ID, X-Timestamp, X-Nonce, X-Provider-Signature, traceparent, X-Trace-ID"
+            Access-Control-Expose-Headers "X-Request-ID, X-Trace-ID, X-Span-ID"
+            Access-Control-Max-Age "86400"
+            Vary "Origin"
+        }
+        respond "" 204
+    }
+
+    reverse_proxy localhost:8081 {
+        health_uri /health/live
+        health_interval 10s
+        health_timeout 5s
+
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Request-ID {http.request.header.X-Request-ID}
+        header_up X-Trace-ID {http.request.header.X-Trace-ID}
+
+        dial_timeout 5s
+        read_timeout 15s
+        write_timeout 15s
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}
+
+# Rust Security Service
+https://security.ffarena.com {
+    import hsts_preload
+
+    tls {
+        protocols tls1.2 tls1.3
+    }
+
+    reverse_proxy localhost:8082 {
+        health_uri /health/live
+        health_interval 10s
+        health_timeout 5s
+
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Request-ID {http.request.header.X-Request-ID}
+
+        dial_timeout 5s
+        read_timeout 10s
+        write_timeout 10s
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}
+
+# Main website
+https://ffarena.com, https://www.ffarena.com {
+    import hsts_preload
+
+    tls {
+        protocols tls1.2 tls1.3
+    }
+
+    # Redirect www to non-www or vice versa - choose one
+    @www {
+        host www.ffarena.com
+    }
+    redir @www https://ffarena.com{uri} permanent
+
+    reverse_proxy localhost:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+
+        dial_timeout 5s
+        read_timeout 15s
+        write_timeout 15s
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}
+
+# HTTP to HTTPS redirect - required for HSTS preload
+http://api.ffarena.com, http://payment.ffarena.com, http://security.ffarena.com, http://ffarena.com, http://www.ffarena.com {
+    redir https://{host}{uri} permanent
+}
+
+# Sandbox
+https://sandbox.ffarena.com, https://api.sandbox.ffarena.com, https://payment.sandbox.ffarena.com {
+    import hsts_preload
+
+    tls {
+        protocols tls1.2 tls1.3
+    }
+
+    # In sandbox, allow more permissive CORS for testing
+    reverse_proxy localhost:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}

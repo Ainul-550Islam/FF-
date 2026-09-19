@@ -38,3 +38,4 @@ linter:
     - unnecessary_const
     - use_key_in_widget_constructors
     - use_super_parameters
+

@@ -1,26 +1,15 @@
 @extends('layouts.app')
-@section('title', 'Phone Login — FF Arena')
+@section('title','Phone Login')
 @section('content')
-    <div class="card" style="max-width: 460px; margin: 50px auto">
-        <h2>Login with your phone</h2>
-        <p class="muted">Enter your Bangladeshi mobile number. We will send a verification code.</p>
-
-        <form method="POST" action="{{ route('phone.request') }}" novalidate>
+<div style="max-width: 420px; margin: 40px auto;">
+    <h1 style="font-size: 24px; font-weight: 800;">Login with phone</h1>
+    <p class="text-muted">Enter phone to receive OTP. <span data-internet-status class="internet-status online"></span></p>
+    <div class="card" style="margin-top: 16px;">
+        <form method="POST" action="{{ route('auth.phone.request') }}">
             @csrf
-            <div class="field">
-                <label for="phone">Mobile number</label>
-                <input type="tel" id="phone" name="phone" value="{{ old('phone') }}"
-                       placeholder="01712345678" autocomplete="tel" inputmode="tel" required autofocus
-                       @if ($errors->has('phone')) aria-invalid="true" aria-describedby="phone-error" @endif>
-                @error('phone')
-                    <span class="form-error" id="phone-error">{{ $message }}</span>
-                @enderror
-            </div>
-            <button type="submit" class="btn btn-primary btn-block mt-3">Send verification code</button>
+            <div class="form-group"><label class="form-label required">Phone</label><input type="tel" name="phone" class="form-input" placeholder="+8801XXXXXXXXX" required></div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;" data-require-online>Send OTP</button>
         </form>
-
-        <p class="muted mt-4" style="font-size: .85rem">
-            <a href="{{ route('login') }}">Login with email instead</a>
-        </p>
     </div>
+</div>
 @endsection

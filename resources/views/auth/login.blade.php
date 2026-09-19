@@ -1,55 +1,65 @@
 @extends('layouts.app')
 
-@section('content')
-    <div class="card" style="max-width: 460px; margin: 50px auto">
-        <h2>Login</h2>
+@section('title', 'Login - FF Arena')
 
-        <form method="POST" action="{{ route('login') }}" novalidate>
+@section('content')
+<div style="max-width: 420px; margin: 40px auto;">
+    <div style="text-align: center; margin-bottom: 24px;">
+        <div class="brand-icon" style="width: 56px; height: 56px; margin: 0 auto 16px; font-size: 24px;">FF</div>
+        <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 800;">Welcome back</h1>
+        <p class="text-muted" style="font-size: 14px;">Login to your FF Arena account. <span data-internet-status class="internet-status online" style="margin-left: 8px;"></span></p>
+    </div>
+
+    <div class="card">
+        <form method="POST" action="{{ route('login') }}">
             @csrf
 
-            <div class="field">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" value="{{ old('email') }}"
-                       autocomplete="email" inputmode="email" required autofocus
-                       @if ($errors->has('email')) aria-invalid="true" aria-describedby="email-error" @endif>
-                @error('email')
-                    <span class="form-error" id="email-error">{{ $message }}</span>
-                @enderror
+            <div class="form-group">
+                <label for="email" class="form-label required">Email</label>
+                <input type="email" id="email" name="email" value="{{ old('email') }}" class="form-input @error('email') is-invalid @enderror" required autocomplete="email" autofocus>
+                @error('email') <div class="form-error">{{ $message }}</div> @enderror
             </div>
 
-            <div class="field">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password"
-                       autocomplete="current-password" required
-                       @if ($errors->has('password')) aria-invalid="true" aria-describedby="password-error" @endif>
-                @error('password')
-                    <span class="form-error" id="password-error">{{ $message }}</span>
-                @enderror
+            <div class="form-group">
+                <label for="password" class="form-label required">Password</label>
+                <div style="position: relative;">
+                    <input type="password" id="password" name="password" class="form-input @error('password') is-invalid @enderror" required autocomplete="current-password" style="padding-right: 70px;">
+                    <button type="button" data-password-toggle data-target="#password" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; font-weight: 600;">Show</button>
+                </div>
+                @error('password') <div class="form-error">{{ $message }}</div> @enderror
             </div>
 
-            <div class="field">
-                <label class="checkbox">
-                    <input type="checkbox" name="remember" value="1" @checked(old('remember'))>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px;">
+                    <input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }} style="width: 16px; height: 16px;">
                     Remember me
                 </label>
+                <a href="{{ route('password.request') }}" style="font-size: 13px; color: var(--primary); text-decoration: none;">Forgot password?</a>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block">Login</button>
+            <button type="submit" class="btn btn-primary" style="width: 100%;" data-require-online>Login</button>
+
+            <div style="text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-muted);">
+                Don't have an account? <a href="{{ route('register') }}" style="color: var(--primary); text-decoration: none; font-weight: 600;">Register</a>
+            </div>
+
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <div style="text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Or continue with</div>
+                <div style="display: grid; gap: 8px;">
+                    <a href="{{ route('auth.google.redirect') }}" class="btn btn-secondary" style="width: 100%;" data-require-online>
+                        <span aria-hidden="true">G</span> Continue with Google
+                    </a>
+                    <a href="{{ route('auth.phone') }}" class="btn btn-ghost" style="width: 100%;" data-require-online>
+                        <span aria-hidden="true">📱</span> Login with Phone OTP
+                    </a>
+                </div>
+            </div>
         </form>
 
-        <p class="divider-block" aria-hidden="true"></p>
-        <p class="muted text-center mb-2">or</p>
-
-        <div class="stack">
-            @if (config('services.google.client_id') && config('services.google.client_secret'))
-                <a href="{{ route('google.redirect') }}" class="btn btn-block">Continue with Google</a>
-            @endif
-            <a href="{{ route('phone.login') }}" class="btn btn-block">Login with phone</a>
+        <div style="margin-top: 16px; padding: 12px; background: var(--bg-elevated); border-radius: 8px; border: 1px solid var(--border); display: flex; gap: 10px; align-items: center;">
+            <span data-internet-status class="internet-status online"></span>
+            <span style="font-size: 12px; color: var(--text-muted);">Login requires internet. Offline detection active - if offline, login is blocked for security.</span>
         </div>
-
-        <p class="muted mt-4" style="font-size: .85rem">
-            <a href="{{ route('password.request') }}">Forgot password?</a> ·
-            No account? <a href="{{ route('register') }}">Register here</a>
-        </p>
     </div>
+</div>
 @endsection

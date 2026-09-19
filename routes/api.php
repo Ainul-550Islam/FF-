@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AppMetaController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\DisputeController;
+use App\Http\Controllers\Api\V1\GoPaymentController;
 use App\Http\Controllers\Api\V1\LeaderboardController;
 use App\Http\Controllers\Api\V1\LiveController;
 use App\Http\Controllers\Api\V1\MatchController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PlayerController;
+use App\Http\Controllers\Api\V1\RustSecurityController;
 use App\Http\Controllers\Api\V1\SupportController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TokenController;
@@ -177,4 +179,28 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     // ------------------------------------------------------------------
     Route::post('webhooks/inbound/{provider}', [WebhookInboundController::class, 'handle'])
         ->middleware('throttle:api_webhook')->name('webhooks.inbound');
+
+    // ------------------------------------------------------------------
+    // Go Payment Gateway proxy (optional, G1 safe fallback)
+    // ------------------------------------------------------------------
+    Route::middleware(['bearer', 'auth:sanctum', 'api.token', 'throttle:api'])->group(function () {
+        Route::get('go/payments/methods', [GoPaymentController::class, 'methods'])->name('go.payments.methods');
+        Route::post('go/payments', [GoPaymentController::class, 'store'])->name('go.payments.store');
+        Route::get('go/payments/{payment}', [GoPaymentController::class, 'show'])->name('go.payments.show');
+        Route::get('go/payments/health', [GoPaymentController::class, 'health'])->name('go.payments.health');
+    });
+
+    // ------------------------------------------------------------------
+    // Rust Security Service proxy (optional, G1 safe fallback)
+    // ------------------------------------------------------------------
+    Route::middleware(['bearer', 'auth:sanctum', 'api.token', 'throttle:api'])->group(function () {
+        Route::post('rust/security/evaluate', [RustSecurityController::class, 'evaluate'])->name('rust.security.evaluate');
+        Route::post('rust/security/device', [RustSecurityController::class, 'evaluateDevice'])->name('rust.security.device');
+        Route::post('rust/security/ip', [RustSecurityController::class, 'evaluateIp'])->name('rust.security.ip');
+        Route::post('rust/security/identity', [RustSecurityController::class, 'evaluateIdentity'])->name('rust.security.identity');
+        Route::post('rust/security/risk-score', [RustSecurityController::class, 'riskScore'])->name('rust.security.risk_score');
+        Route::get('rust/security/providers', [RustSecurityController::class, 'providers'])->name('rust.security.providers');
+        Route::get('rust/security/health', [RustSecurityController::class, 'health'])->name('rust.security.health');
+    });
 });
+

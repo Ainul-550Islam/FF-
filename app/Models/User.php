@@ -2,236 +2,206 @@
 
 namespace App\Models;
 
-use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, CanResetPassword;
+    use HasFactory, HasApiTokens, Notifiable;
 
-    /**
-     * Sensitive fields (role, wallet_balance, account_status, verification
-     * state) are intentionally excluded from mass assignment. `role` must be
-     * set explicitly (see AuthController) and can only ever be 'player' or
-     * 'organizer' at registration time. Profile fields below are the only
-     * user-editable attributes and are still validated server-side.
-     */
     protected $fillable = [
         'name',
+        'username',
+        'display_name',
         'email',
         'password',
-        'username',
+        'is_admin',
+        'is_staff',
+        'is_active',
         'phone',
-        'game_uid',
+        'phone_verified_at',
+        'email_verified_at',
+        'avatar_path',
         'bio',
+        'date_of_birth',
+        'gender',
         'country',
-        'region',
-        'avatar',
-        'language',
         'timezone',
-        'privacy',
+        'locale',
+        'last_seen_at',
+        'username_changed_at',
+        'is_banned',
+        'banned_at',
+        'ban_reason',
     ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
 
-    protected function casts(): array
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'phone_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'is_admin' => 'boolean',
+        'is_staff' => 'boolean',
+        'is_active' => 'boolean',
+        'is_banned' => 'boolean',
+        'date_of_birth' => 'date',
+        'last_seen_at' => 'datetime',
+        'username_changed_at' => 'datetime',
+        'banned_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'avatar_url',
+        'initials',
+        'display_name_or_name',
+    ];
+
+    public function wallets()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasMany(Wallet::class);
+    }
+
+    public function ledgerEntries()
+    {
+        return $this->hasMany(LedgerEntry::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function payouts()
+    {
+        return $this->hasMany(Payout::class);
+    }
+
+    public function personalAccessTokens()
+    {
+        return $this->morphMany(\Laravel\Sanctum\PersonalAccessToken::class, 'tokenable');
+    }
+
+    // Profile / Avatar helpers
+    public function getAvatarUrlAttribute(): string
+    {
+        if ($this->avatar_path) {
+            // Private disk served via controller for security, fallback to storage url
+            if (Storage::disk('local')->exists($this->avatar_path)) {
+                return route('avatar.show', ['user' => $this->id], false);
+            }
+            // Public disk fallback
+            if (Storage::disk('public')->exists($this->avatar_path)) {
+                return Storage::disk('public')->url($this->avatar_path);
+            }
+        }
+        // Gravatar fallback or initial avatar
+        $hash = md5(strtolower(trim($this->email ?? $this->id)));
+        return "https://www.gravatar.com/avatar/{$hash}?d=identicon&s=200";
+    }
+
+    public function getInitialsAttribute(): string
+    {
+        $name = $this->display_name ?: $this->name ?: $this->email;
+        $parts = preg_split('/\s+/', trim($name));
+        if (count($parts) >= 2) {
+            return strtoupper(substr($parts[0], 0, 1) . substr(end($parts), 0, 1));
+        }
+        return strtoupper(substr($name, 0, 2));
+    }
+
+    public function getDisplayNameOrNameAttribute(): string
+    {
+        return $this->display_name ?: $this->name ?: Str::before($this->email, '@');
+    }
+
+    public function hasAvatar(): bool
+    {
+        return !empty($this->avatar_path) && (
+            Storage::disk('local')->exists($this->avatar_path) ||
+            Storage::disk('public')->exists($this->avatar_path)
+        );
     }
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return (bool) $this->is_admin;
     }
 
-    public function isOrganizer(): bool
-    {
-        return $this->role === 'organizer';
-    }
-
-    /**
-     * Moderators are platform staff who can work the dispute/moderation
-     * queue and review/resolve disputes. The role is granted only by admins
-     * (never self-assigned and never mass-assignable).
-     */
-    public function isModerator(): bool
-    {
-        return $this->role === 'moderator';
-    }
-
-    /**
-     * Platform staff (admins + moderators) — distinct from tournament
-     * organizers, who are staff only within their own tournaments.
-     */
     public function isStaff(): bool
     {
-        return $this->isAdmin() || $this->isModerator();
-    }
-
-    public function tournaments()
-    {
-        return $this->hasMany(Tournament::class, 'organizer_id');
-    }
-
-    public function teams()
-    {
-        return $this->hasMany(Team::class, 'captain_id');
-    }
-
-    /**
-     * The user's wallet (Phase 08). Created lazily by WalletService.
-     */
-    public function wallet()
-    {
-        return $this->hasOne(Wallet::class);
-    }
-
-    /**
-     * Prize payouts received by this user (Phase 09).
-     */
-    public function payouts()
-    {
-        return $this->hasMany(Payout::class, 'recipient_user_id');
-    }
-
-    // ------------------------------------------------------------------
-    // Phase 10 — anti-fraud / trust & safety relations
-    // ------------------------------------------------------------------
-
-    /**
-     * The user's server-side risk profile.
-     */
-    public function riskProfile()
-    {
-        return $this->hasOne(RiskProfile::class);
-    }
-
-    /**
-     * Risk events attributable to this account (append-only).
-     */
-    public function riskEvents()
-    {
-        return $this->hasMany(RiskEvent::class);
-    }
-
-    /**
-     * Pseudonymous device associations.
-     */
-    public function deviceLinks()
-    {
-        return $this->hasMany(DeviceLink::class);
-    }
-
-    /**
-     * Hashed IP observations for this account.
-     */
-    public function ipLinks()
-    {
-        return $this->hasMany(IpLink::class);
-    }
-
-    /**
-     * Account restrictions applied to this user.
-     */
-    public function restrictions()
-    {
-        return $this->hasMany(Restriction::class);
-    }
-
-    /**
-     * The user's identity-verification record.
-     */
-    public function identityVerification()
-    {
-        return $this->hasOne(IdentityVerification::class);
-    }
-
-    /**
-     * Account-similarity links involving this user (either direction),
-     * eagerly loading both sides.
-     */
-    public function linkedAccounts()
-    {
-        return AccountLink::query()
-            ->with(['user', 'linkedUser'])
-            ->where(function ($q) {
-                $q->where('user_id', $this->id)->orWhere('linked_user_id', $this->id);
-            });
-    }
-
-    /**
-     * Anti-cheat incidents where this user is the accused or reporter.
-     */
-    public function antiCheatIncidents()
-    {
-        return $this->hasMany(AntiCheatIncident::class, 'accused_user_id');
-    }
-
-    // ------------------------------------------------------------------
-    // Phase 14 — account ecosystem relations + helpers
-    // ------------------------------------------------------------------
-
-    /**
-     * Provider-linked identities (google, phone) on this account.
-     */
-    public function identities()
-    {
-        return $this->hasMany(UserIdentity::class);
-    }
-
-    /**
-     * Phone OTP challenges issued for this account.
-     */
-    public function otpChallenges()
-    {
-        return $this->hasMany(OtpChallenge::class);
-    }
-
-    /**
-     * Security/login history (append-only).
-     */
-    public function loginEvents()
-    {
-        return $this->hasMany(LoginEvent::class)->orderByDesc('id');
-    }
-
-    /**
-     * Saved payment methods owned by this account.
-     */
-    /**
-     * Registered mobile push devices (Phase 18). Owner-only.
-     */
-    public function mobileDevices()
-    {
-        return $this->hasMany(MobileDevice::class);
-    }
-
-    public function paymentMethods()
-    {
-        return $this->hasMany(PaymentMethod::class);
-    }
-
-    public function hasVerifiedEmail(): bool
-    {
-        return $this->email_verified_at !== null;
+        return (bool) ($this->is_staff || $this->is_admin);
     }
 
     public function isActive(): bool
     {
-        // `null` (e.g. a freshly-constructed or legacy row that has not been
-        // reloaded since the column was added) means "not deactivated", so we
-        // treat it as active. Only an explicit lifecycle status blocks access.
-        return $this->account_status === null || $this->account_status === 'active';
+        return (bool) ($this->is_active ?? true) && !$this->is_banned;
     }
 
-    public function isDeactivated(): bool
+    public function isBanned(): bool
     {
-        return $this->account_status === 'deactivated';
+        return (bool) $this->is_banned;
+    }
+
+    public function canChangeUsername(): bool
+    {
+        if (!$this->username_changed_at) {
+            return true;
+        }
+        return $this->username_changed_at->diffInDays(now()) >= 30;
+    }
+
+    public function daysUntilUsernameChange(): int
+    {
+        if (!$this->username_changed_at) {
+            return 0;
+        }
+        $next = $this->username_changed_at->addDays(30);
+        if ($next->isPast()) {
+            return 0;
+        }
+        return (int) now()->diffInDays($next);
+    }
+
+    public function getPrimaryWallet(): ?Wallet
+    {
+        return $this->wallets()->where('currency', 'BDT')->first()
+            ?? $this->wallets()->first();
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true)->where(function ($q) {
+            $q->whereNull('is_banned')->orWhere('is_banned', false);
+        });
+    }
+
+    public function scopeAdmins($query)
+    {
+        return $query->where('is_admin', true);
+    }
+
+    public function scopeStaff($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('is_staff', true)->orWhere('is_admin', true);
+        });
+    }
+
+    public function updateLastSeen(): void
+    {
+        $this->forceFill(['last_seen_at' => now()])->saveQuietly();
+    }
+
+    public function routeNotificationForMail()
+    {
+        return $this->email;
     }
 }

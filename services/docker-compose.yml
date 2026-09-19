@@ -1,0 +1,136 @@
+# FF Arena — R9 Production Stack (services/)
+# Local/staging verification
+# PostgreSQL 15 + Redis 7 + Go payment + Rust security
+# No public DB ports, healthchecks, dependency conditions, restart policies
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ffarena-postgres-services-r9
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ffarena}
+      POSTGRES_USER: ${POSTGRES_USER:-ffarena}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ffarena}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ffarena} -d ${POSTGRES_DB:-ffarena}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ffarena
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: ffarena-redis-services-r9
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-ffarena-redis-secret}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-ffarena-redis-secret}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - ffarena
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  payment-gateway-go:
+    build:
+      context: ./payment-gateway-go
+      dockerfile: Dockerfile
+    container_name: ffarena-payment-go-services-r9
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: 8081
+      APP_ENV: production
+      DB_DRIVER: postgres
+      DATABASE_URL: postgres://${POSTGRES_USER:-ffarena}:${POSTGRES_PASSWORD:-ffarena}@postgres:5432/${POSTGRES_DB:-ffarena}?sslmode=disable
+      REDIS_URL: redis://:${REDIS_PASSWORD:-ffarena-redis-secret}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-change-me-jwt-secret}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-change-me-webhook-secret}
+      SERVICE_ID: payment-gateway-go
+      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET:-change-me-hmac-secret}
+      RATE_LIMIT_PER_MIN: 60
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ffarena
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  security-rust:
+    build:
+      context: ./security-rust
+      dockerfile: Dockerfile
+    container_name: ffarena-security-rust-services-r9
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: 8082
+      APP_ENV: production
+      REDIS_URL: redis://:${REDIS_PASSWORD:-ffarena-redis-secret}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-change-me-jwt-secret}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-change-me-webhook-secret}
+      SERVICE_ID: security-rust
+      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET:-change-me-hmac-secret}
+      RATE_LIMIT_PER_MIN: 60
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ffarena
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  ffarena:
+    driver: bridge
+    name: ffarena_r9
+
+volumes:
+  pgdata:
+    driver: local
+    name: ffarena_pgdata_r9
+  redis_data:
+    driver: local
+    name: ffarena_redis_data_r9

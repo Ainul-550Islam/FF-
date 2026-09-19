@@ -5,6 +5,7 @@ use App\Exceptions\ApiExceptionHandler;
 use App\Http\Middleware\AssignAuditRequestId;
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureBearerToken;
+use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureIdempotency;
 use App\Http\Middleware\EnsureTokenIsValid;
 use App\Http\Middleware\EnsureUserIsAdmin;
@@ -29,6 +30,14 @@ return Application::configure(basePath: dirname(__DIR__))
             // web/api middleware groups (no session, no CSRF) and stay
             // reachable during maintenance mode.
             require base_path('routes/health.php');
+
+            // Gameberry routes - LudoStar style features - 250+ dice, 6-step league Bronze Titan, private tables code/link, gold at stake etc
+            if (file_exists(base_path('routes/gameberry.php'))) {
+                require base_path('routes/gameberry.php');
+            }
+            if (file_exists(base_path('routes/api_gameberry.php'))) {
+                require base_path('routes/api_gameberry.php');
+            }
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -50,6 +59,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
             'staff' => EnsureUserIsStaff::class,
+            'active' => EnsureActiveAccount::class,
+            'feature' => EnsureFeatureEnabled::class,
 
             // Phase 15 — API middleware.
             'bearer' => EnsureBearerToken::class,

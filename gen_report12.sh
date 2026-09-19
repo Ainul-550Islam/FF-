@@ -1,7 +1,7 @@
 #!/bin/bash
 # Generate PHASE12_REALTIME_REPORT.md with full file contents + verification results.
 set -e
-cd /home/user/ffarena-app
+cd $(cd "$(dirname "$0")" && pwd)
 
 OUT=PHASE12_REALTIME_REPORT.md
 

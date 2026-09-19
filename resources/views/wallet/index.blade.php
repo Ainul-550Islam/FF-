@@ -1,149 +1,28 @@
 @extends('layouts.app')
-@section('title', 'My Wallet — FF Arena')
+@section('title','Wallet')
 @section('content')
-    <header class="page-head">
-        <h1 class="page-title">👛 My Wallet</h1>
-    </header>
-
-    <div class="grid cols-2" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))">
-        <div class="stat">
-            <div class="muted">Balance</div>
-            <div class="num" style="color: var(--green)">৳{{ number_format($wallet->balance_minor / 100, 2) }}</div>
-        </div>
-        <div class="stat">
-            <div class="muted">Currency</div>
-            <div class="num">{{ $wallet->currency }}</div>
-        </div>
-    </div>
-
-    <section class="card" aria-labelledby="identity-heading">
-        <h3 id="identity-heading">🪪 Identity Verification</h3>
-        <div class="row-between">
-            <div>
-                <x-status-pill :status="$identity->statusPill()" :label="$identity->statusLabel()" />
-                @if ($identity->expires_at && $identity->status === 'verified')
-                    <span class="muted" style="font-size: .8rem"> · expires {{ $identity->expires_at->format('d M Y') }}</span>
-                @endif
-                @if ($identity->notes)
-                    <p class="muted mt-1" style="font-size: .8rem">{{ $identity->notes }}</p>
-                @endif
-            </div>
-            @if (in_array($identity->status, ['unverified', 'rejected', 'expired'], true))
-                <form method="POST" action="{{ route('security.identity.request') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-sm btn-cyan">Request Verification</button>
-                </form>
-            @endif
-        </div>
-    </section>
-
-    <div class="grid cols-2">
-        <section class="card" aria-labelledby="transactions-heading">
-            <h3 id="transactions-heading">🧾 Wallet Transactions</h3>
-            @if ($ledger->isEmpty())
-                <x-empty-state title="No wallet transactions yet" icon="🧾">
-                    Deposits, entry payments and prize payouts will appear here.
-                </x-empty-state>
-            @else
-                <div class="table-wrap">
-                    <table>
-                        <caption class="sr-only">Wallet ledger entries</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col">Date</th>
-                                <th scope="col">Type</th>
-                                <th scope="col">Amount</th>
-                                <th scope="col">Description</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($ledger as $entry)
-                                <tr>
-                                    <td class="muted" style="font-size: .8rem">{{ $entry->created_at->format('d M, h:i A') }}</td>
-                                    <td><x-status-pill :status="$entry->isCredit() ? 'confirmed' : 'finished'" :label="strtoupper($entry->type)" /></td>
-                                    <td style="{{ $entry->isCredit() ? 'color: var(--green)' : 'color: var(--red)' }}">
-                                        {{ $entry->isCredit() ? '+' : '−' }}৳{{ number_format($entry->amount_minor / 100, 2) }}
-                                    </td>
-                                    <td class="muted" style="font-size: .85rem">{{ $entry->description }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-        </section>
-
-        <section class="card" aria-labelledby="payments-heading">
-            <h3 id="payments-heading">💳 Payment History</h3>
-            @if ($payments->isEmpty())
-                <x-empty-state title="No payments yet" icon="💳">
-                    Entry-fee payments will appear here.
-                </x-empty-state>
-            @else
-                <div class="table-wrap">
-                    <table>
-                        <caption class="sr-only">Entry-fee payments</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col">Tournament</th>
-                                <th scope="col">Team</th>
-                                <th scope="col">Amount</th>
-                                <th scope="col">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($payments as $payment)
-                                <tr>
-                                    <td>{{ $payment->tournament?->name ?? '—' }}</td>
-                                    <td>{{ $payment->team?->name ?? '—' }}</td>
-                                    <td>৳{{ number_format($payment->amount_minor / 100, 2) }}</td>
-                                    <td>
-                                        <x-status-pill :status="$payment->statusPill()" :label="strtoupper($payment->status)" />
-                                        @if ($payment->refund)
-                                            <span class="muted" style="font-size: .8rem">(refunded)</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-        </section>
-
-        <section class="card" aria-labelledby="payouts-heading">
-            <h3 id="payouts-heading">🏆 Prize Payouts</h3>
-            @if ($payouts->isEmpty())
-                <x-empty-state title="No prize payouts yet" icon="🏆">
-                    Winnings will appear here after tournaments settle.
-                </x-empty-state>
-            @else
-                <div class="table-wrap">
-                    <table>
-                        <caption class="sr-only">Prize payouts</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col">Tournament</th>
-                                <th scope="col">Rank</th>
-                                <th scope="col">Amount</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Paid</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($payouts as $payout)
-                                <tr>
-                                    <td>{{ $payout->tournament?->name ?? '—' }}</td>
-                                    <td>#{{ $payout->rank }}</td>
-                                    <td style="color: var(--green)">+৳{{ number_format($payout->amount_minor / 100, 2) }}</td>
-                                    <td><x-status-pill :status="$payout->statusPill()" :label="$payout->statusLabel()" /></td>
-                                    <td class="muted" style="font-size: .8rem">{{ $payout->processed_at?->format('d M, h:i A') ?? '—' }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-        </section>
-    </div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+<div><h1 style="margin: 0; font-size: 28px; font-weight: 800;">Wallet</h1><p class="text-muted">Balance, ledger, payouts <span data-internet-status class="internet-status online"></span></p></div>
+<a href="{{ route('payment.methods') }}" class="btn btn-primary" data-require-online>Deposit</a>
+</div>
+<div class="grid grid-3">
+@foreach($wallets ?? [] as $wallet)
+<div class="card"><div class="text-muted" style="font-size: 12px; text-transform: uppercase;">{{ $wallet->currency }} Wallet</div><div style="font-size: 28px; font-weight: 800;">{{ number_format($wallet->balance_minor/100,2) }} {{ $wallet->currency }}</div><div style="margin-top: 8px;"><x-status-pill :status="$wallet->is_locked ? 'danger' : 'success'" :label="$wallet->is_locked ? 'Locked' : 'Active'" /></div></div>
+@endforeach
+@if(empty($wallets) || $wallets->count()==0)
+<div class="card"><div class="text-muted">No wallet yet - will be created on first deposit</div></div>
+@endif
+</div>
+<div class="card" style="margin-top: 24px;">
+<div class="card-header"><h2 class="card-title">Recent Ledger</h2><span data-internet-status class="internet-status online"></span></div>
+@if(($ledger ?? collect())->count())
+<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Ref</th></tr></thead><tbody>
+@foreach($ledger as $entry)
+<tr><td>{{ $entry->created_at->format('M d, H:i') }}</td><td><x-status-pill :status="$entry->direction" :label="ucfirst($entry->direction)" /></td><td class="{{ $entry->direction==='credit'?'text-success':'text-danger' }}">{{ $entry->direction==='credit'?'+':'-' }}{{ number_format($entry->amount_minor/100,2) }}</td><td>{{ number_format($entry->balance_after_minor/100,2) }}</td><td class="font-mono" style="font-size: 12px;">{{ $entry->reference_type }}:{{ $entry->reference_id }}</td></tr>
+@endforeach
+</tbody></table></div>
+@else
+<x-empty-state title="No transactions" text="Ledger entries will appear after deposits, payouts, tournament fees" />
+@endif
+</div>
 @endsection

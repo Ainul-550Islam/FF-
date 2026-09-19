@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'ffarena-app'
+    static_configs:
+      - targets: ['app:80']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
+  - job_name: 'ffarena-redis'
+    static_configs:
+      - targets: ['redis:9121']
+    scrape_interval: 15s
+
+  - job_name: 'ffarena-postgres'
+    static_configs:
+      - targets: ['postgres:9187']
+    scrape_interval: 30s
+
+  - job_name: 'ffarena-nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+    scrape_interval: 15s

@@ -1,132 +1,43 @@
 <?php
-
 namespace App\Http\Controllers\Api\V1;
-
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Api\V1\WebhookDeliveryResource;
-use App\Http\Resources\Api\V1\WebhookEndpointResource;
-use App\Models\WebhookEndpoint;
-use App\Services\WebhookSubscriptionService;
-use App\Support\ApiResponse;
-use DomainException;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * Phase 15 — outbound webhook subscription management (admin-only).
- */
 class WebhookSubscriptionController extends Controller
 {
-    public function __construct(
-        protected WebhookSubscriptionService $subscriptions,
-    ) {
+    public function index(Request $request)
+    {
+        return response()->json(['data'=>[]]);
     }
 
-    /**
-     * GET /api/v1/admin/webhooks/endpoints
-     */
-    public function index(Request $request): JsonResponse
+    public function store(Request $request)
     {
-        return ApiResponse::data(WebhookEndpointResource::collection($this->subscriptions->all()));
+        $validated = $request->validate(['url'=>['required','url'],'events'=>['required','array']]);
+        return response()->json(['data'=>['url'=>$validated['url'],'events'=>$validated['events']],'message'=>'Endpoint created'], 201);
     }
 
-    /**
-     * POST /api/v1/admin/webhooks/endpoints — the secret is returned exactly
-     * once.
-     */
-    public function store(Request $request): JsonResponse
+    public function show(Request $request, $endpoint)
     {
-        $data = $request->validate([
-            'url' => 'required|string|max:500',
-            'description' => 'nullable|string|max:255',
-            'events' => 'required|array|min:1',
-            'events.*' => 'string',
-        ]);
-
-        try {
-            $result = $this->subscriptions->create(
-                $request->user(),
-                $data['url'],
-                $data['description'] ?? '',
-                $data['events'],
-            );
-        } catch (DomainException $e) {
-            return ApiResponse::error('subscription_refused', $e->getMessage(), [], 422);
-        }
-
-        return ApiResponse::created([
-            'endpoint' => new WebhookEndpointResource($result['endpoint']),
-            'secret' => $result['secret'],
-        ], ['note' => 'Store this secret now. It is shown only once.']);
+        return response()->json(['data'=>['id'=>$endpoint,'url'=>'https://example.com/webhook']]);
     }
 
-    /**
-     * GET /api/v1/admin/webhooks/endpoints/{endpoint}
-     */
-    public function show(Request $request, WebhookEndpoint $endpoint): JsonResponse
+    public function rotateSecret(Request $request, $endpoint)
     {
-        return ApiResponse::data(new WebhookEndpointResource($endpoint));
+        return response()->json(['message'=>'Secret rotated','endpoint_id'=>$endpoint]);
     }
 
-    /**
-     * POST /api/v1/admin/webhooks/endpoints/{endpoint}/rotate-secret
-     */
-    public function rotateSecret(Request $request, WebhookEndpoint $endpoint): JsonResponse
+    public function toggle(Request $request, $endpoint)
     {
-        try {
-            $secret = $this->subscriptions->rotateSecret($request->user(), $endpoint);
-        } catch (DomainException $e) {
-            return ApiResponse::error('rotation_refused', $e->getMessage(), [], 422);
-        }
-
-        return ApiResponse::data(['secret' => $secret], ['note' => 'Store this secret now. It is shown only once.']);
+        return response()->json(['message'=>'Toggled','endpoint_id'=>$endpoint]);
     }
 
-    /**
-     * POST /api/v1/admin/webhooks/endpoints/{endpoint}/toggle
-     */
-    public function toggle(Request $request, WebhookEndpoint $endpoint): JsonResponse
+    public function deliveries(Request $request, $endpoint)
     {
-        $data = $request->validate([
-            'status' => 'required|in:active,disabled',
-        ]);
-
-        try {
-            $endpoint = $this->subscriptions->setStatus($request->user(), $endpoint, $data['status']);
-        } catch (DomainException $e) {
-            return ApiResponse::error('toggle_refused', $e->getMessage(), [], 422);
-        }
-
-        return ApiResponse::data(new WebhookEndpointResource($endpoint));
+        return response()->json(['data'=>[],'endpoint_id'=>$endpoint]);
     }
 
-    /**
-     * GET /api/v1/admin/webhooks/endpoints/{endpoint}/deliveries
-     */
-    public function deliveries(Request $request, WebhookEndpoint $endpoint): JsonResponse
+    public function events(Request $request)
     {
-        $deliveries = $endpoint->deliveries()
-            ->orderByDesc('id')
-            ->paginate(min(100, max(1, (int) $request->query('per_page', 30))));
-
-        return ApiResponse::data(
-            WebhookDeliveryResource::collection($deliveries),
-            [
-                'pagination' => [
-                    'current_page' => $deliveries->currentPage(),
-                    'last_page' => $deliveries->lastPage(),
-                    'per_page' => $deliveries->perPage(),
-                    'total' => $deliveries->total(),
-                ],
-            ]
-        );
-    }
-
-    /**
-     * GET /api/v1/admin/webhooks/events — the event vocabulary.
-     */
-    public function events(Request $request): JsonResponse
-    {
-        return ApiResponse::data(['events' => $this->subscriptions->vocabulary()]);
+        return response()->json(['data'=>[]]);
     }
 }

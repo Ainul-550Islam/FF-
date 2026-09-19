@@ -1,0 +1,74 @@
+openapi: 3.0.0
+info:
+  title: FF Arena Security Rust
+  version: 1.0.0
+  description: Fraud detection with device, ip, external, identity providers
+servers:
+  - url: http://localhost:8082
+paths:
+  /health:
+    get:
+      summary: Health
+      responses:
+        '200':
+          description: OK
+  /health/live:
+    get:
+      summary: Liveness
+      responses:
+        '200':
+          description: OK
+  /health/ready:
+    get:
+      summary: Readiness
+      responses:
+        '200':
+          description: OK
+  /metrics:
+    get:
+      summary: Metrics
+      responses:
+        '200':
+          description: OK
+  /api/v1/fraud/evaluate:
+    post:
+      summary: Evaluate fraud risk
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                ip:
+                  type: string
+                user_agent:
+                  type: string
+                device_id:
+                  type: string
+      responses:
+        '200':
+          description: Evaluation
+  /api/v1/fraud/overall/{user_id}:
+    get:
+      summary: Overall evaluation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Overall
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

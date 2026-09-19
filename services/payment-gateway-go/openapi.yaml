@@ -1,0 +1,456 @@
+openapi: 3.0.0
+info:
+  title: FF Arena Go Payment Gateway - R10 Real Sandbox Integration
+  version: 1.0.0
+  description: |
+    Production payment gateway with bKash, Nagad, Rocket, Manual providers.
+    R10 implements real sandbox integrations with official provider APIs.
+    
+    bKash: Tokenized Checkout v1.2.0-beta - sandbox https://tokenized.sandbox.bka.sh
+    Nagad: RSA-SHA256 signature, encrypted sensitive data - sandbox http://sandbox.mynagad.com:10060
+    Rocket: M2M API requires DBBL merchant account - capability detection
+    
+    Security: X-Service-ID, X-Timestamp, X-Nonce, X-Signature, X-Request-ID, Bearer auth
+    Idempotency: X-Idempotency-Key, Idempotency-Key header required for POST
+    Webhook: Signature verification, timestamp validation, replay protection
+
+servers:
+  - url: http://localhost:8081
+    description: Local development
+  - url: https://payment-gateway.sandbox.ffarena.com
+    description: Sandbox
+  - url: https://payment-gateway.ffarena.com
+    description: Production
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns service health including provider health, no secrets
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok, degraded, down]
+                  service:
+                    type: string
+                  version:
+                    type: string
+                  checks:
+                    type: object
+                  providers:
+                    type: object
+                    description: Provider health without secrets
+
+  /health/live:
+    get:
+      summary: Liveness probe
+      responses:
+        '200':
+          description: OK
+
+  /health/ready:
+    get:
+      summary: Readiness probe
+      description: Returns 200 if ready, 503 if down. Checks database and providers
+      responses:
+        '200':
+          description: Ready
+        '503':
+          description: Not ready
+
+  /metrics:
+    get:
+      summary: Metrics
+      description: Provider metrics without sensitive data
+      responses:
+        '200':
+          description: Metrics
+
+  /api/v1/payments/methods:
+    get:
+      summary: List payment methods
+      description: Returns available payment providers based on feature flags
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Methods
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  methods:
+                    type: array
+                    items:
+                      type: string
+                    example: ["bkash", "nagad", "manual"]
+                  count:
+                    type: integer
+
+  /api/v1/payments:
+    post:
+      summary: Create payment
+      description: |
+        Creates payment via provider sandbox. Flow:
+        Laravel -> Go Gateway -> Provider Auth -> Provider Create -> Persist -> Return
+        
+        Requires Idempotency-Key header. Same key returns same result.
+        Provider-specific status mapped to internal state machine.
+      security:
+        - bearerAuth: []
+        - serviceAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 100
+          description: Idempotency key for exactly-once processing
+        - name: X-Request-ID
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: X-Service-ID
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Timestamp
+          in: header
+          required: true
+          schema:
+            type: integer
+        - name: X-Nonce
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, amount_minor, currency, provider, external_id]
+              properties:
+                user_id:
+                  type: integer
+                  example: 1
+                amount_minor:
+                  type: integer
+                  description: Amount in minor units (e.g., 1000 = 10.00 BDT)
+                  minimum: 1
+                  example: 1000
+                currency:
+                  type: string
+                  enum: [BDT, USD, EUR]
+                  example: BDT
+                provider:
+                  type: string
+                  enum: [bkash, nagad, rocket, manual]
+                  example: bkash
+                external_id:
+                  type: string
+                  description: Unique merchant invoice number
+                  minLength: 3
+                  maxLength: 100
+                  example: INV-12345
+                idempotency_key:
+                  type: string
+                  example: idem-abc123
+                callback_url:
+                  type: string
+                  format: uri
+                  example: https://example.com/callback
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  external_id:
+                    type: string
+                  provider_reference:
+                    type: string
+                    description: Provider payment ID
+                  status:
+                    type: string
+                    enum: [created, pending, processing, authorized, succeeded, failed, expired, cancelled, refunding, refunded]
+                  payment_url:
+                    type: string
+                    description: Provider payment URL for redirect
+                    format: uri
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized - service auth failed
+        '409':
+          description: Idempotency conflict - same key different fingerprint
+        '429':
+          description: Rate limited
+
+  /api/v1/payments/{id}:
+    get:
+      summary: Query payment status
+      description: Queries provider for authoritative status and reconciles
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment status
+        '404':
+          description: Not found
+
+  /api/v1/payments/refund:
+    post:
+      summary: Refund payment
+      description: |
+        Refund flow: succeeded -> refunding -> provider refund -> refunded/failed
+        Idempotent, retry safe, no duplicate refunds
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_id, external_id, amount_minor, currency]
+              properties:
+                payment_id:
+                  type: string
+                external_id:
+                  type: string
+                amount_minor:
+                  type: integer
+                currency:
+                  type: string
+                idempotency_key:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Refund initiated
+        '400':
+          description: Not refundable
+
+  /api/v1/wallets/credit:
+    post:
+      summary: Credit wallet
+      description: Credits wallet with idempotency, ledger append-only, SELECT FOR UPDATE locking
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Credited
+
+  /api/v1/wallets/debit:
+    post:
+      summary: Debit wallet
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Debited
+
+  /api/v1/wallets/balance:
+    get:
+      summary: Get wallet balance
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Balance
+
+  /api/v1/payouts:
+    post:
+      summary: Create payout
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/webhooks/inbound/{provider}:
+    post:
+      summary: Inbound webhook - legacy
+      description: Receives provider callbacks with signature verification
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [bkash, nagad, rocket]
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Invalid signature
+
+  /api/v1/webhooks/v2/inbound/{provider}:
+    post:
+      summary: Inbound webhook V2 - real provider callbacks
+      description: |
+        Full webhook engine:
+        - raw body preservation
+        - signature verification
+        - timestamp validation (5min tolerance)
+        - event ID extraction
+        - replay protection
+        - duplicate detection
+        - transactional processing
+        - state transition validation
+        Never credits wallet before auth and commit
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Signature
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: X-Timestamp
+          in: header
+          required: false
+          schema:
+            type: integer
+        - name: X-Event-ID
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Processed or duplicate
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [processed, duplicate]
+                  event_id:
+                    type: string
+                  processed:
+                    type: boolean
+        '400':
+          description: Malformed or invalid timestamp
+        '401':
+          description: Invalid signature
+
+  /api/v1/providers/health:
+    get:
+      summary: Provider health
+      description: Returns provider health without secrets
+      responses:
+        '200':
+          description: Provider health
+
+  /api/v1/reconciliation/payment/{id}:
+    post:
+      summary: Trigger reconciliation for payment
+      description: Compares internal vs provider, detects mismatches, safe transitions only
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reconciliation triggered
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    serviceAuth:
+      type: apiKey
+      in: header
+      name: X-Signature
+      description: HMAC service authentication with X-Service-ID, X-Timestamp, X-Nonce, X-Signature
+
+  schemas:
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: integer
+        provider:
+          type: string
+        external_id:
+          type: string
+        provider_reference:
+          type: string
+        amount_minor:
+          type: integer
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [created, pending, processing, authorized, succeeded, failed, expired, cancelled, refunding, refunded]
+        idempotency_key:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string

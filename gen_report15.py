@@ -2,7 +2,7 @@
 """Generate PHASE15_PUBLIC_API_MOBILE_WEBHOOK_REPORT.md."""
 import os
 
-ROOT = "/home/user/ffarena-app"
+ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, "PHASE15_PUBLIC_API_MOBILE_WEBHOOK_REPORT.md")
 
 NEW_FILES = [

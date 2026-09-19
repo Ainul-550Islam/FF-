@@ -1,114 +1,74 @@
-# FF Arena — Incident Response
+# FF Arena — Incident Response (Final Hardening)
 
-Escalation and response guide for operational and security incidents.
+## Overview
 
----
+Incident response plan for production security incidents, outages, data breaches.
 
-## 1. Severity levels
+## Roles
 
-| Level | Definition | Response time |
-|---|---|---|
-| Sev-1 | Payments/payouts down, data corruption, security breach, total outage | immediate |
-| Sev-2 | Partial outage (one surface), high error rate | < 30 min |
-| Sev-3 | Degraded (slow, flapping webhooks) | < 4 h |
-| Sev-4 | Cosmetic / non-blocking | next working day |
+- Incident Commander: CTO / Lead Engineer
+- Security Lead: Security Engineer
+- Communications: Support Lead
+- Engineering: Backend, Mobile, DevOps
 
----
+## Detection
 
-## 2. Roles
+- Monitoring: Prometheus + Grafana alerts, /health/ready failures, error rate spikes, failed_jobs queue depth, Redis failures, DB connectivity
+- Logging: security channel warnings, audit channel anomalies, errors channel spikes
+- Alerts: Slack webhook LOG_SLACK_WEBHOOK_URL, PagerDuty if configured, email
 
-| Role | Responsibility |
-|---|---|
-| Incident commander | coordinates, decides mitigations, communicates |
-| Engineering | diagnosis + fix |
-| Operations | infra (queue, cache, DB, storage, backups) |
-| Support/Moderation | user-facing comms (Phase 13 moderation queue) |
-| Security (admin) | account compromise, fraud, data exposure |
+## Classification
 
----
+- P1 Critical: Data breach, payment data exposure, auth bypass, production down
+- P2 High: Service degradation, queue backup, Redis down with fallback, payment callback failures
+- P3 Medium: Non-critical feature failure, mobile version enforcement needed
+- P4 Low: Warning, not configured, performance degradation
 
-## 3. Initial triage (any incident)
+## Response Steps
 
-1. Check `https://<host>/health/ready` and `php artisan ffarena:health --production`.
-2. Open `/admin/ops` (admin) — readiness, queue backlog, failed jobs, webhook
-   failures, scheduler heartbeat, last backup.
-3. Correlate errors by `X-Request-ID` in `storage/logs/*.log`.
-4. Capture the window (start time, affected surfaces) before changing anything.
+1. **Detect** — Alert via monitoring, logs, user report
+2. **Triage** — Classify P1-P4, assign Incident Commander
+3. **Contain** — Isolate affected system, rotate secrets if breach, enable maintenance mode if needed `php artisan down`
+4. **Investigate** — Gather request_id, correlation_id, logs from central aggregation, no secrets in logs, check audit trail
+5. **Mitigate** — Deploy fix, rollback if needed via `deploy/rollback.sh`, clear cache, restart workers
+6. **Recover** — Verify health checks /health/live and /health/ready PASS, run deployment gate `php artisan deploy:gate`, run security checklist `php artisan security:checklist`
+7. **Post-mortem** — Document timeline, root cause, remediation, prevention, update runbooks
 
----
+## Communication
 
-## 4. Security incident
+- Internal: Slack #incidents, email security@ffarena.com
+- External: Status page, user notifications via in-app notification (never wallet balance in push), support URL
 
-- Suspected account compromise / token leak: revoke the token (admin accounts
-  page), rotate `APP_KEY` if it may be exposed, force session revocation,
-  write an `auth.suspicious_login`-style audit entry.
-- Data exposure: contain the endpoint, preserve logs, do NOT delete audit rows
-  (append-only by design).
+## Tools
 
----
+- Logs: `storage/logs/` + central aggregation (Papertrail, ELK, Loki)
+- Metrics: `/metrics` Prometheus, Grafana dashboards
+- Health: `/health/live`, `/health/ready`
+- Deployment: `deploy/deploy.sh`, `deploy/rollback.sh`, `.last_successful_version`
+- Backup: `php artisan backup:verify`, `storage/backups/`
+- Config validation: `php artisan config:validate-production`, `php artisan security:checklist`, `php artisan deploy:gate`, `php artisan security:scan-secrets`
 
-## 5. Payment incident
+## Secrets Rotation on Breach
 
-- Never trust provider callbacks until internal state validates (Phase 08/15
-  state machine enforces this).
-- Replay lost webhooks: inbound events are idempotent by `external_event_id`
-  and recorded in `webhook_events`.
-- Do not manually flip a payment to `verified` — use the admin verification
-  flow which performs the reconciliation checks.
+If secret leaked:
 
----
+1. Immediately rotate secret in provider dashboard
+2. Update secret in Vault / secret store
+3. Deploy with new secret
+4. Revoke old secret after verification
+5. Audit log rotation event via security channel
+6. Check logs for secret exposure — redact if found, verify RedactSensitiveDataProcessor working
 
-## 6. Database outage
+## Contact
 
-- `health/ready` reports 503; the readiness `database` check is red.
-- Check disk space and connection. Restore from backup only after
-  `ffarena:backup:verify` passes (see `docs/DISASTER_RECOVERY.md`).
+- Security: security@ffarena.com
+- Support: support@ffarena.com
+- On-call: via PagerDuty or Slack
 
----
+## Runbooks
 
-## 7. Queue outage
-
-- `php artisan ffarena:queue:health` reports backlog and failed counts.
-- `php artisan queue:failed` + `/admin/ops/failed-jobs` inspect failed jobs.
-- Retry with `/admin/ops` (audited) or `php artisan queue:retry all`.
-- Delivery failures never roll back business state; retry the queued job.
-
----
-
-## 8. Webhook outage
-
-- Inbound: providers retry on their side; our events are idempotent.
-- Outbound: `SendWebhookDelivery` retries with exponential backoff and
-  disables an endpoint after 6 consecutive failures; inspect
-  `webhook_deliveries` and re-enable the endpoint when the receiver is back.
-
----
-
-## 9. Data corruption
-
-- Stop writes (`php artisan down`).
-- Verify latest backup; restore into a side path first.
-- Investigate `audit_logs` for the mutating action that preceded corruption.
-
----
-
-## 10. Account compromise
-
-- Deactivate the account (admin accounts page) — Phase 14 `EnsureActiveAccount`
-  blocks it immediately; revoke API tokens (admin ops + token revocation).
-- Review `login_events` / `audit_logs` for the actor's recent actions.
-
----
-
-## 11. Cheating / fraud escalation
-
-- Phase 10 anti-fraud signals feed `risk_events`; restrict via the admin
-  security page (audited). Evidence handling follows Phase 07 dispute rules —
-  never expose private evidence publicly.
-
----
-
-## 12. Post-incident
-
-- Write a timeline; fix the monitoring gap (add an alert hook — see
-  `docs/OBSERVABILITY.md`); keep the audit trail intact.
+- Database down: check `pg_isready`, restore from backup if needed, never restore over production without confirmation
+- Redis down: check `redis-cli ping`, fallback to database cache, queue sync fallback, monitor queue depth
+- Queue backup: check `php artisan queue:metrics`, restart workers `supervisorctl restart queue:*`, check failed_jobs
+- TLS cert expiry: check `TLS_CERT_PATH`, renew via Let's Encrypt, reload nginx `nginx -s reload`
+- Payment callback failures: check webhook signature verification, timestamp validation, idempotency, TLS

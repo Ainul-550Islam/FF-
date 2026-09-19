@@ -19,6 +19,7 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:bgN0yS08tC5r/rDRWdX8EeqxrkOIJezGxtmpEqXSGhI="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
@@ -32,5 +33,12 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="REDIS_HOST" value="127.0.0.1"/>
+        <env name="REDIS_PORT" value="6379"/>
+        <env name="REDIS_DB" value="15"/>
+        <env name="REDIS_CACHE_DB" value="14"/>
+        <env name="REDIS_QUEUE_DB" value="13"/>
+        <env name="REDIS_PREFIX" value="ffarena-testing-database-"/>
+        <env name="CACHE_PREFIX" value="ffarena-testing-cache-"/>
     </php>
 </phpunit>

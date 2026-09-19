@@ -1,0 +1,872 @@
+openapi: 3.0.3
+info:
+  title: FF Arena Public API
+  description: Production tournament platform API for mobile/SPA clients. Sanctum bearer auth, scopes, idempotency, rate limits, webhooks, realtime, wallet, payouts, support, disputes.
+  version: 1.0.0
+  contact:
+    name: FF Arena
+    url: https://ffarena.example.com
+servers:
+  - url: https://api.ffarena.example.com/api/v1
+    description: Production
+  - url: http://localhost/api/v1
+    description: Local
+security:
+  - bearerAuth: []
+tags:
+  - name: App
+  - name: Auth
+  - name: Tournaments
+  - name: Matches
+  - name: Teams
+  - name: Players
+  - name: Leaderboards
+  - name: Me
+  - name: Notifications
+  - name: Wallet
+  - name: Payments
+  - name: Payouts
+  - name: Devices
+  - name: Support
+  - name: Disputes
+  - name: Tokens
+  - name: Webhooks
+  - name: Realtime
+paths:
+  /app/meta:
+    get:
+      summary: App metadata
+      operationId: getAppMeta
+      security: []
+      tags: [App]
+      responses:
+        '200':
+          description: App meta
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: {type: string}
+                  name: {type: string}
+  /auth/register:
+    post:
+      summary: Register new user
+      operationId: register
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, password_confirmation]
+              properties:
+                name: {type: string}
+                email: {type: string, format: email}
+                password: {type: string, minLength: 8}
+                password_confirmation: {type: string}
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: {type: string}
+                  user: {$ref: '#/components/schemas/User'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: Too many requests}
+  /auth/login:
+    post:
+      summary: Login
+      operationId: login
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string}
+      responses:
+        '200':
+          description: Token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: {type: string}
+                  user: {$ref: '#/components/schemas/User'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /auth/google:
+    post:
+      summary: Google login
+      operationId: googleLogin
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id_token: {type: string}
+      responses:
+        '200': {description: Token}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /auth/otp/request:
+    post:
+      summary: Request OTP
+      operationId: otpRequest
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: {type: string}
+      responses:
+        '200': {description: OTP sent}
+  /auth/otp/verify:
+    post:
+      summary: Verify OTP
+      operationId: otpVerify
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: {type: string}
+                code: {type: string}
+      responses:
+        '200': {description: Verified}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /tournaments:
+    get:
+      summary: List tournaments
+      operationId: listTournaments
+      security: []
+      tags: [Tournaments]
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: per_page, in: query, schema: {type: integer}}
+        - {name: status, in: query, schema: {type: string}}
+      responses:
+        '200':
+          description: List
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Tournament'}
+                  meta: {$ref: '#/components/schemas/PaginationMeta'}
+  /tournaments/{tournament}:
+    get:
+      summary: Show tournament
+      operationId: showTournament
+      security: []
+      tags: [Tournaments]
+      parameters:
+        - {name: tournament, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200':
+          description: Tournament
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Tournament'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /tournaments/{tournament}/matches:
+    get:
+      summary: Tournament matches
+      operationId: listTournamentMatches
+      security: []
+      tags: [Tournaments]
+      parameters:
+        - {name: tournament, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Matches}
+  /tournaments/{tournament}/leaderboard:
+    get:
+      summary: Tournament leaderboard
+      operationId: tournamentLeaderboard
+      security: []
+      tags: [Tournaments]
+      parameters:
+        - {name: tournament, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Leaderboard}
+  /tournaments/{tournament}/bracket:
+    get:
+      summary: Tournament bracket
+      operationId: tournamentBracket
+      security: []
+      tags: [Tournaments]
+      parameters:
+        - {name: tournament, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Bracket}
+  /tournaments/{tournament}/live:
+    get:
+      summary: Tournament live events
+      operationId: tournamentLive
+      tags: [Realtime]
+      parameters:
+        - {name: tournament, in: path, required: true, schema: {type: integer}}
+        - {name: cursor, in: query, schema: {type: integer}}
+      responses:
+        '200': {description: Live events}
+  /tournaments/{tournament}/registrations:
+    post:
+      summary: Register team to tournament
+      operationId: registerTournament
+      tags: [Tournaments]
+      parameters:
+        - {name: tournament, in: path, required: true, schema: {type: integer}}
+        - {name: Idempotency-Key, in: header, schema: {type: string, format: uuid}, description: Idempotency key}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+                captain_name: {type: string}
+      responses:
+        '200': {description: Registered}
+        '201': {description: Created}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /tournaments/{tournament}/check-in:
+    post:
+      summary: Check-in
+      operationId: checkIn
+      tags: [Tournaments]
+      parameters:
+        - {name: tournament, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Checked in}
+  /tournaments/{tournament}/waitlist:
+    get:
+      summary: Waitlist
+      operationId: waitlist
+      tags: [Tournaments]
+      parameters:
+        - {name: tournament, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Waitlist}
+  /matches/{match}:
+    get:
+      summary: Show match
+      operationId: showMatch
+      security: []
+      tags: [Matches]
+      parameters:
+        - {name: match, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Match}
+  /matches/{match}/scores:
+    post:
+      summary: Submit score
+      operationId: submitScore
+      tags: [Matches]
+      parameters:
+        - {name: match, in: path, required: true, schema: {type: integer}}
+        - {name: Idempotency-Key, in: header, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_id: {type: integer}
+                kills: {type: integer}
+                placement: {type: integer}
+      responses:
+        '200': {description: Score submitted}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /players/{user}:
+    get:
+      summary: Show player
+      operationId: showPlayer
+      security: []
+      tags: [Players]
+      parameters:
+        - {name: user, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Player}
+  /players/{user}/ranking:
+    get:
+      summary: Player ranking
+      operationId: playerRanking
+      security: []
+      tags: [Players]
+      parameters:
+        - {name: user, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Ranking}
+  /leaderboards:
+    get:
+      summary: Global leaderboards
+      operationId: listLeaderboards
+      security: []
+      tags: [Leaderboards]
+      responses:
+        '200': {description: Leaderboards}
+  /leaderboards/{tournament}:
+    get:
+      summary: Tournament leaderboard
+      operationId: showLeaderboard
+      security: []
+      tags: [Leaderboards]
+      parameters:
+        - {name: tournament, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Leaderboard}
+  /me:
+    get:
+      summary: Current user
+      operationId: getMe
+      tags: [Me]
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/User'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /me/profile:
+    put:
+      summary: Update profile
+      operationId: updateProfile
+      tags: [Me]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+                timezone: {type: string}
+                language: {type: string}
+      responses:
+        '200': {description: Updated}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /me/security:
+    get:
+      summary: Security settings
+      operationId: getSecurity
+      tags: [Me]
+      responses:
+        '200': {description: Security}
+  /me/sessions:
+    get:
+      summary: List sessions
+      operationId: listSessions
+      tags: [Me]
+      responses:
+        '200': {description: Sessions}
+  /me/wallet:
+    get:
+      summary: Wallet
+      operationId: getWallet
+      tags: [Wallet]
+      responses:
+        '200': {description: Wallet}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /me/wallet/ledger:
+    get:
+      summary: Wallet ledger
+      operationId: getLedger
+      tags: [Wallet]
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+      responses:
+        '200': {description: Ledger}
+  /me/payouts:
+    get:
+      summary: List payouts
+      operationId: listPayouts
+      tags: [Payouts]
+      responses:
+        '200': {description: Payouts}
+  /me/notifications:
+    get:
+      summary: List notifications
+      operationId: listNotifications
+      tags: [Notifications]
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+      responses:
+        '200': {description: Notifications}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /me/notifications/unread-count:
+    get:
+      summary: Unread count
+      operationId: unreadCount
+      tags: [Notifications]
+      responses:
+        '200':
+          description: Count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unread: {type: integer}
+  /me/notifications/{notification}/read:
+    post:
+      summary: Mark read
+      operationId: markRead
+      tags: [Notifications]
+      parameters:
+        - {name: notification, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Marked}
+  /me/notifications/read-all:
+    post:
+      summary: Mark all read
+      operationId: markAllRead
+      tags: [Notifications]
+      responses:
+        '200': {description: All marked}
+  /me/notification-preferences:
+    get:
+      summary: Notification preferences
+      operationId: getNotificationPreferences
+      tags: [Notifications]
+      responses:
+        '200': {description: Preferences}
+    patch:
+      summary: Update preferences
+      operationId: updateNotificationPreferences
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: {type: boolean}
+                push: {type: boolean}
+                sms: {type: boolean}
+      responses:
+        '200': {description: Updated}
+  /me/teams:
+    get:
+      summary: My teams
+      operationId: listMyTeams
+      tags: [Teams]
+      responses:
+        '200': {description: Teams}
+  /teams/{team}:
+    get:
+      summary: Show team
+      operationId: showTeam
+      tags: [Teams]
+      parameters:
+        - {name: team, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Team}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /teams/{team}/roster:
+    get:
+      summary: Team roster
+      operationId: teamRoster
+      tags: [Teams]
+      parameters:
+        - {name: team, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Roster}
+    post:
+      summary: Add member
+      operationId: addRosterMember
+      tags: [Teams]
+      parameters:
+        - {name: team, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: {type: integer}
+                role: {type: string}
+      responses:
+        '200': {description: Added}
+  /teams/{team}/roster/{member}:
+    delete:
+      summary: Remove member
+      operationId: removeRosterMember
+      tags: [Teams]
+      parameters:
+        - {name: team, in: path, required: true, schema: {type: integer}}
+        - {name: member, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Removed}
+  /payments/methods:
+    get:
+      summary: Payment methods
+      operationId: paymentMethods
+      tags: [Payments]
+      responses:
+        '200': {description: Methods}
+  /payments:
+    post:
+      summary: Create payment
+      operationId: createPayment
+      tags: [Payments]
+      parameters:
+        - {name: Idempotency-Key, in: header, schema: {type: string, format: uuid}, description: Idempotency for payment creation}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount: {type: integer}
+                amount_minor: {type: integer}
+                currency: {type: string, enum: [BDT, USD]}
+                provider: {type: string, enum: [manual, bkash, nagad, rocket]}
+                tournament_id: {type: integer}
+      responses:
+        '201': {description: Payment created}
+        '200': {description: Idempotent return}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /payments/{payment}:
+    get:
+      summary: Show payment
+      operationId: showPayment
+      tags: [Payments]
+      parameters:
+        - {name: payment, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Payment}
+  /me/devices:
+    get:
+      summary: List devices
+      operationId: listDevices
+      tags: [Devices]
+      responses:
+        '200': {description: Devices}
+    post:
+      summary: Register device
+      operationId: registerDevice
+      tags: [Devices]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: {type: string}
+                platform: {type: string, enum: [android, ios, web]}
+      responses:
+        '201': {description: Device registered}
+  /me/devices/{device}:
+    delete:
+      summary: Delete device
+      operationId: deleteDevice
+      tags: [Devices]
+      parameters:
+        - {name: device, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Deleted}
+  /me/support:
+    get:
+      summary: List support tickets
+      operationId: listSupport
+      tags: [Support]
+      responses:
+        '200': {description: Tickets}
+    post:
+      summary: Create ticket
+      operationId: createSupport
+      tags: [Support]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject: {type: string}
+                body: {type: string}
+      responses:
+        '201': {description: Created}
+  /me/support/{ticket}:
+    get:
+      summary: Show ticket
+      operationId: showSupport
+      tags: [Support]
+      parameters:
+        - {name: ticket, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Ticket}
+  /me/support/{ticket}/messages:
+    get:
+      summary: Ticket messages
+      operationId: listSupportMessages
+      tags: [Support]
+      parameters:
+        - {name: ticket, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Messages}
+    post:
+      summary: Reply to ticket
+      operationId: replySupport
+      tags: [Support]
+      parameters:
+        - {name: ticket, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body: {type: string}
+      responses:
+        '200': {description: Replied}
+  /me/disputes:
+    get:
+      summary: List disputes
+      operationId: listDisputes
+      tags: [Disputes]
+      responses:
+        '200': {description: Disputes}
+  /disputes/{dispute}:
+    get:
+      summary: Show dispute
+      operationId: showDispute
+      tags: [Disputes]
+      parameters:
+        - {name: dispute, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Dispute}
+  /me/tokens:
+    get:
+      summary: List tokens
+      operationId: listTokens
+      tags: [Tokens]
+      responses:
+        '200': {description: Tokens}
+    post:
+      summary: Create token
+      operationId: createToken
+      tags: [Tokens]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+                abilities: {type: array, items: {type: string}}
+      responses:
+        '201': {description: Token created}
+  /me/tokens/{tokenId}:
+    delete:
+      summary: Revoke token
+      operationId: revokeToken
+      tags: [Tokens]
+      parameters:
+        - {name: tokenId, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Revoked}
+  /me/live:
+    get:
+      summary: My live feed
+      operationId: myLive
+      tags: [Realtime]
+      parameters:
+        - {name: cursor, in: query, schema: {type: integer}}
+      responses:
+        '200': {description: Live events}
+  /webhooks/inbound/{provider}:
+    post:
+      summary: Inbound provider webhook
+      operationId: webhookInbound
+      security: []
+      tags: [Webhooks]
+      parameters:
+        - {name: provider, in: path, required: true, schema: {type: string, enum: [bkash, nagad, manual, rocket]}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200': {description: OK}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Sanctum personal access token with abilities scopes
+  schemas:
+    User:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        email: {type: string, format: email}
+        username: {type: string}
+        role: {type: string, enum: [player, organizer, admin, moderator, staff]}
+        language: {type: string, enum: [en, bn]}
+        timezone: {type: string}
+    Tournament:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        slug: {type: string}
+        status: {type: string, enum: [draft, open, closed, ongoing, completed, cancelled]}
+        team_slots: {type: integer}
+        prize_pool: {type: number}
+        format: {type: string, enum: [single_elimination, double_elimination, round_robin, swiss, group_stage, league, free_for_all, multi_stage, hybrid]}
+        starts_at: {type: string, format: date-time}
+    Team:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        status: {type: string}
+        tournament_id: {type: integer}
+    Match:
+      type: object
+      properties:
+        id: {type: integer}
+        tournament_id: {type: integer}
+        round: {type: integer}
+        match_number: {type: integer}
+        team_a_id: {type: integer, nullable: true}
+        team_b_id: {type: integer, nullable: true}
+        winner_team_id: {type: integer, nullable: true}
+        status: {type: string, enum: [pending, ongoing, completed, bye, cancelled]}
+    Payment:
+      type: object
+      properties:
+        id: {type: integer}
+        amount_minor: {type: integer}
+        currency: {type: string}
+        status: {type: string, enum: [pending, completed, failed, refunded]}
+        provider: {type: string}
+        external_id: {type: string, nullable: true}
+        idempotency_key: {type: string}
+    Wallet:
+      type: object
+      properties:
+        id: {type: integer}
+        user_id: {type: integer}
+        balance_minor: {type: integer}
+        currency: {type: string}
+    Payout:
+      type: object
+      properties:
+        id: {type: integer}
+        amount_minor: {type: integer}
+        status: {type: string, enum: [pending, approved, completed, failed, cancelled]}
+        gateway: {type: string}
+    Notification:
+      type: object
+      properties:
+        id: {type: integer}
+        type: {type: string}
+        title: {type: string}
+        body: {type: string, nullable: true}
+        read_at: {type: string, format: date-time, nullable: true}
+    LiveEvent:
+      type: object
+      properties:
+        id: {type: integer}
+        tournament_id: {type: integer}
+        type: {type: string}
+        payload: {type: object}
+        created_at: {type: string, format: date-time}
+    SupportTicket:
+      type: object
+      properties:
+        id: {type: integer}
+        subject: {type: string}
+        status: {type: string}
+    Dispute:
+      type: object
+      properties:
+        id: {type: integer}
+        reason: {type: string}
+        status: {type: string}
+    PaginationMeta:
+      type: object
+      properties:
+        current_page: {type: integer}
+        last_page: {type: integer}
+        per_page: {type: integer}
+        total: {type: integer}
+    Error:
+      type: object
+      properties:
+        message: {type: string}
+        errors: {type: object, additionalProperties: {type: array, items: {type: string}}}
+  responses:
+    Unauthorized:
+      description: Unauthenticated
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: {type: string}
+              errors: {type: object}
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema: {type: integer}
+          description: Seconds to retry
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}

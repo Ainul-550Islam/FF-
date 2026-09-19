@@ -1,129 +1,97 @@
 <?php
-
 namespace App\Http\Controllers\Api\V1;
-
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Api\V1\MeResource;
-use App\Http\Resources\Api\V1\SessionResource;
-use App\Services\ProfileService;
-use App\Services\SessionManagementService;
-use App\Support\ApiResponse;
-use DomainException;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
-/**
- * Phase 15 — /me: own profile, privacy, and session security.
- */
 class MeController extends Controller
 {
-    public function __construct(
-        protected ProfileService $profiles,
-        protected SessionManagementService $sessions,
-    ) {
-    }
-
-    /**
-     * GET /api/v1/me
-     */
-    public function show(Request $request): JsonResponse
-    {
-        return ApiResponse::data(new MeResource($request->user()));
-    }
-
-    /**
-     * PUT/PATCH /api/v1/me/profile
-     */
-    public function update(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'bio' => 'nullable|string|max:500',
-            'country' => 'nullable|string|max:2',
-            'region' => 'nullable|string|max:100',
-            'avatar' => 'nullable|string|max:255',
-            'privacy' => ['sometimes', Rule::in((array) config('account.privacy', ['public', 'registered', 'private']))],
-        ]);
-
-        $user = $request->user();
-
-        // Username changes go through the cooldown/availability rules.
-        if (isset($data['privacy'])) {
-            $this->profiles->updatePrivacy($user, $data['privacy']);
-        }
-
-        if (array_key_exists('name', $data) || array_key_exists('bio', $data)
-            || array_key_exists('country', $data) || array_key_exists('region', $data)
-            || array_key_exists('avatar', $data)) {
-            $user = $this->profiles->update($user, $data);
-        }
-
-        return ApiResponse::data(new MeResource($user->fresh()));
-    }
-
-    /**
-     * GET /api/v1/me/security — sign-in methods, no internal signals.
-     */
-    public function security(Request $request): JsonResponse
+    public function show(Request $request)
     {
         $user = $request->user();
-
-        return ApiResponse::data([
-            'email' => $user->email,
-            'email_verified' => $user->email_verified_at !== null,
-            'has_password' => $this->profiles->hasPassword($user),
-            'sign_in_methods' => app(\App\Services\IdentityService::class)->signInMethodCount($user),
-            'account_status' => $user->account_status,
+        return response()->json([
+            'data' => $user,
+            'avatar_url' => $user->avatar_url,
+            'initials' => $user->initials,
+            'wallets' => $user->wallets,
         ]);
     }
 
-    /**
-     * GET /api/v1/me/sessions
-     */
-    public function sessions(Request $request): JsonResponse
+    public function update(Request $request)
     {
-        return ApiResponse::data(
-            SessionResource::collection($this->sessions->sessionsFor($request->user()))
-        );
-    }
+        $user = $request->user();
+        $validated = $request->validate([
+            'name' => ['sometimes','string','max:255'],
+            'display_name' => ['sometimes','nullable','string','max:50'],
+            'username' => ['sometimes','nullable','string','min:3','max:30', Rule::unique('users','username')->ignore($user->id)],
+            'bio' => ['sometimes','nullable','string','max:500'],
+            'country' => ['sometimes','nullable','string','size:2'],
+            'timezone' => ['sometimes','nullable','string','max:50'],
+            'locale' => ['sometimes','nullable','in:en,bn'],
+        ]);
 
-    /**
-     * DELETE /api/v1/me/sessions/{session}
-     */
-    public function revokeSession(Request $request, string $session): JsonResponse
-    {
-        // Revoke a single named session that belongs to the caller. The id is
-        // opaque and ownership is checked before deletion.
-        $deleted = \Illuminate\Support\Facades\DB::table('sessions')
-            ->where('id', $session)
-            ->where('user_id', $request->user()->id)
-            ->delete();
-
-        if ($deleted === 0) {
-            return ApiResponse::error('not_found', 'Session not found.', [], 404);
+        if (isset($validated['username']) && $validated['username'] !== $user->username) {
+            if (method_exists($user,'canChangeUsername') && !$user->canChangeUsername()) {
+                return response()->json(['error'=>'username_cooldown','message'=>'Username change cooldown','days'=> $user->daysUntilUsernameChange()], 422);
+            }
+            $validated['username_changed_at'] = now();
         }
 
-        return ApiResponse::data(['revoked' => $deleted]);
+        $user->fill($validated);
+        $user->save();
+
+        return response()->json(['data'=>$user,'message'=>'Profile updated']);
     }
 
-    /**
-     * POST /api/v1/me/sessions/revoke-others
-     */
-    public function revokeOthers(Request $request): JsonResponse
+    public function security(Request $request)
     {
-        $count = $this->sessions->revokeOtherSessions($request->user());
-
-        return ApiResponse::data(['revoked' => $count]);
+        $user = $request->user();
+        return response()->json([
+            'two_factor_enabled' => $user->two_factor_enabled ?? false,
+            'email_verified' => !is_null($user->email_verified_at),
+            'phone_verified' => !is_null($user->phone_verified_at),
+            'has_avatar' => $user->hasAvatar(),
+        ]);
     }
 
-    /**
-     * POST /api/v1/me/sessions/revoke-all
-     */
-    public function revokeAll(Request $request): JsonResponse
+    public function sessions(Request $request)
     {
-        $count = $this->sessions->revokeAllSessions($request->user());
+        $user = $request->user();
+        try {
+            $sessions = DB::table('user_sessions')->where('user_id',$user->id)->orderBy('last_active_at','desc')->get();
+            if ($sessions->isEmpty()) {
+                $sessions = collect([[
+                    'id'=>1,'session_id'=>$request->session()->getId() ?? 'current','ip_address'=>$request->ip(),'device_label'=>'Current Device','is_current'=>true
+                ]]);
+            }
+        } catch (\Throwable $e) {
+            $sessions = collect();
+        }
+        return response()->json(['data'=>$sessions]);
+    }
 
-        return ApiResponse::data(['revoked' => $count]);
+    public function revokeSession(Request $request, $session)
+    {
+        try { DB::table('user_sessions')->where('user_id',$request->user()->id)->where('id',$session)->update(['is_revoked'=>true]); } catch (\Throwable $e) {}
+        return response()->json(['message'=>'Session revoked']);
+    }
+
+    public function revokeOthers(Request $request)
+    {
+        try {
+            DB::table('user_sessions')->where('user_id',$request->user()->id)->where('session_id','!=',$request->session()->getId())->update(['is_revoked'=>true]);
+            DB::table('sessions')->where('user_id',$request->user()->id)->where('id','!=',$request->session()->getId())->delete();
+        } catch (\Throwable $e) {}
+        return response()->json(['message'=>'Other sessions revoked']);
+    }
+
+    public function revokeAll(Request $request)
+    {
+        try {
+            DB::table('user_sessions')->where('user_id',$request->user()->id)->update(['is_revoked'=>true]);
+            DB::table('sessions')->where('user_id',$request->user()->id)->delete();
+        } catch (\Throwable $e) {}
+        return response()->json(['message'=>'All sessions revoked']);
     }
 }

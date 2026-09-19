@@ -2,7 +2,7 @@
 """Apply Phase 13 audit hooks to existing controllers. Exact-match, fail-loud."""
 import sys
 
-BASE = "/home/user/ffarena-app"
+BASE = "/home/user/FF-"
 
 REPLACEMENTS = [
     # ============================= AdminController =============================

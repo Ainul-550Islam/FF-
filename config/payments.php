@@ -33,9 +33,6 @@ return [
             'username' => env('BKASH_USERNAME'),
             'password' => env('BKASH_PASSWORD'),
             'merchant_number' => env('BKASH_MERCHANT_NUMBER'),
-            // Access-token cache TTL (seconds). bKash id_tokens are valid for
-            // 3600s; we refresh with a safety margin.
-            'token_ttl_seconds' => (int) env('BKASH_TOKEN_TTL_SECONDS', 3300),
         ],
 
         'nagad' => [
@@ -87,3 +84,4 @@ return [
     ],
 
 ];
+

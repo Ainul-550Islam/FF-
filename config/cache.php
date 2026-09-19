@@ -1,36 +1,22 @@
 <?php
 
-use Illuminate\Support\Str;
-
 return [
 
     /*
     |--------------------------------------------------------------------------
-    | Default Cache Store
+    | Default Cache Store — G4 Redis Production
     |--------------------------------------------------------------------------
     |
-    | This option controls the default cache store that will be used by the
-    | framework. This connection is utilized if another isn't explicitly
-    | specified when running a cache operation inside the application.
+    | Local: database (or file) by default for zero-setup dev.
+    | Test: array (isolated, no Redis required unless integration tests).
+    | Staging/Production: redis (set CACHE_STORE=redis).
+    |
+    | G4 documents that production MUST use redis for distributed locks,
+    | rate limiting, and cache coherence across workers.
     |
     */
 
     'default' => env('CACHE_STORE', 'database'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cache Stores
-    |--------------------------------------------------------------------------
-    |
-    | Here you may define all of the cache "stores" for your application as
-    | well as their drivers. You may even define multiple stores for the
-    | same cache driver to group types of items stored in your caches.
-    |
-    | Supported drivers: "array", "database", "file", "memcached",
-    |                    "redis", "dynamodb", "octane",
-    |                    "failover", "null"
-    |
-    */
 
     'stores' => [
 
@@ -60,9 +46,7 @@ return [
                 env('MEMCACHED_USERNAME'),
                 env('MEMCACHED_PASSWORD'),
             ],
-            'options' => [
-                // Memcached::OPT_CONNECT_TIMEOUT => 2000,
-            ],
+            'options' => [],
             'servers' => [
                 [
                     'host' => env('MEMCACHED_HOST', '127.0.0.1'),
@@ -72,6 +56,7 @@ return [
             ],
         ],
 
+        // G4 — Redis cache store with isolated connection and lock connection.
         'redis' => [
             'driver' => 'redis',
             'connection' => env('REDIS_CACHE_CONNECTION', 'cache'),
@@ -91,11 +76,22 @@ return [
             'driver' => 'octane',
         ],
 
+        // Failover: try redis, then database, then array — safe degradation when Redis unavailable.
         'failover' => [
             'driver' => 'failover',
             'stores' => [
+                'redis',
                 'database',
                 'array',
+            ],
+        ],
+
+        // G4 — dedicated failover for non-critical caches that may fall back to DB.
+        'redis_failover' => [
+            'driver' => 'failover',
+            'stores' => [
+                'redis',
+                'database',
             ],
         ],
 
@@ -103,15 +99,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Cache Key Prefix
+    | Cache Key Prefix — G4 environment-aware
     |--------------------------------------------------------------------------
     |
-    | When utilizing the APC, database, memcached, Redis, and DynamoDB cache
-    | stores, there might be other applications using the same cache. For
-    | that reason, you may prefix every cache key to avoid collisions.
+    | Format: ffarena:{env}:cache- by default, e.g. ffarena:local:cache-
+    | This prefix is prepended to every key by Laravel's cache manager.
+    | Application-level keys (CacheKeys, RedisKeys) add their own namespace
+    | on top: ffarena:{env}:{domain}:{identifier}:{version}
     |
     */
 
-    'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
+    'prefix' => env('CACHE_PREFIX', 'ffarena-'.env('APP_ENV', 'local').'-cache-'),
 
 ];

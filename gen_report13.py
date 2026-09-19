@@ -1,8 +1,9 @@
+import os
 #!/usr/bin/env python3
 """Generate PHASE13_ADMIN_MODERATION_AUDIT_SUPPORT_ANALYTICS_REPORT.md."""
 import subprocess, os, datetime
 
-ROOT = "/home/user/ffarena-app"
+ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, "PHASE13_ADMIN_MODERATION_AUDIT_SUPPORT_ANALYTICS_REPORT.md")
 
 def read(p):

@@ -2,7 +2,7 @@
 """Generate PHASE16_PRODUCTION_HARDENING_OBSERVABILITY_REPORT.md"""
 import os
 
-ROOT = "/home/user/ffarena-app"
+ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, "PHASE16_PRODUCTION_HARDENING_OBSERVABILITY_REPORT.md")
 
 NEW_FILES = [

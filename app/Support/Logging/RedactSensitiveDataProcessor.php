@@ -1,102 +1,23 @@
 <?php
-
 namespace App\Support\Logging;
-
 use Monolog\LogRecord;
-use Monolog\Processor\ProcessorInterface;
-
-/**
- * Phase 16 — last-line defence against credential leakage in logs.
- *
- * Recursively scrubs records for well-known sensitive keys and value shapes
- * (bearer tokens, "password", "secret", OTP codes, authorization headers…)
- * and replaces them with "[REDACTED]". It runs on every structured channel so
- * a stray context array can never persist a secret.
- */
-class RedactSensitiveDataProcessor implements ProcessorInterface
+class RedactSensitiveDataProcessor
 {
-    /**
-     * Keys (or substrings) whose values are always scrubbed.
-     *
-     * @var array<int, string>
-     */
-    protected array $sensitiveKeys = [
-        'password',
-        'passwd',
-        'secret',
-        'token',
-        'api_key',
-        'apikey',
-        'api-key',
-        'authorization',
-        'bearer',
-        'otp',
-        'verification_code',
-        'access_token',
-        'refresh_token',
-        'client_secret',
-        'webhook_secret',
-        'private_key',
-        'app_key',
-        'session_id',
-        'credit_card',
-        'card_number',
-        'cvv',
-    ];
-
+    private const SENSITIVE_KEYS=['password','secret','token','jwt','api_key','private_key','DATABASE_URL','REDIS_URL','DB_PASSWORD','REDIS_PASSWORD','authorization','cookie','x-api-key'];
     public function __invoke(LogRecord $record): LogRecord
     {
-        return $record->with(
-            message: $this->redactString($record->message),
-            context: $this->redactValue($record->context),
-            extra: $this->redactValue($record->extra),
-        );
+        $message=$record->message; $context=$record->context;
+        foreach(self::SENSITIVE_KEYS as $key){$pattern='/'.preg_quote($key,'/').'["\']?\s*[:=]\s*["\']?[^"\'\s,}]+/i'; $message=preg_replace($pattern,$key.'=***REDACTED***',$message);}
+        $redactedContext=$this->redactArray($context);
+        return $record->with(message:$message,context:$redactedContext);
     }
-
-    protected function redactValue(mixed $value): mixed
+    private function redactArray(array $data): array
     {
-        if (is_array($value)) {
-            foreach ($value as $key => $item) {
-                if (is_string($key) && $this->isSensitiveKey($key)) {
-                    $value[$key] = '[REDACTED]';
-
-                    continue;
-                }
-
-                $value[$key] = $this->redactValue($item);
-            }
-
-            return $value;
+        foreach($data as $k=>$v){
+            $lower=strtolower((string)$k);
+            foreach(self::SENSITIVE_KEYS as $sensitive){if(str_contains($lower,strtolower($sensitive))){$data[$k]='***REDACTED***'; continue 2;}}
+            if(is_array($v))$data[$k]=$this->redactArray($v);
         }
-
-        if (is_string($value)) {
-            return $this->redactString($value);
-        }
-
-        return $value;
-    }
-
-    protected function isSensitiveKey(string $key): bool
-    {
-        $normalized = strtolower(str_replace(['-', ' ', '.'], '_', $key));
-
-        foreach ($this->sensitiveKeys as $needle) {
-            if (str_contains($normalized, $needle)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    protected function redactString(string $value): string
-    {
-        // "Bearer <token>" (HTTP Authorization header values).
-        $value = preg_replace('/\bbearer\s+[A-Za-z0-9\-._~+\/=]+/i', 'bearer [REDACTED]', $value);
-
-        // "password=<anything until whitespace/comma>".
-        $value = preg_replace('/\b(password|passwd|secret|api[_-]?key|token)\s*[=:]\s*[^\s,;]+/i', '$1=[REDACTED]', $value);
-
-        return (string) $value;
+        return $data;
     }
 }

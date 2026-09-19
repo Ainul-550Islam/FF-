@@ -43,9 +43,6 @@ return [
     'payments' => [
         // Secret used to sign/verify provider webhook callbacks (HMAC-SHA256).
         'webhook_secret' => env('PAYMENT_WEBHOOK_SECRET', 'ffarena-local-webhook-secret'),
-        // Secret used to sign the hosted-gateway redirect `state` token
-        // (HMAC-SHA256). Falls back to webhook_secret, then APP_KEY-derived.
-        'callback_secret' => env('PAYMENT_CALLBACK_SECRET'),
     ],
 
     /*
@@ -65,3 +62,4 @@ return [
     ],
 
 ];
+

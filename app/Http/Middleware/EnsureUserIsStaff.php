@@ -1,23 +1,23 @@
 <?php
-
 namespace App\Http\Middleware;
-
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Platform staff only (admin or moderator). Distinct from the `admin`
- * middleware: staff can work the moderation/support queues but never gain
- * financial or global-security administration powers.
- */
 class EnsureUserIsStaff
 {
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->user() || ! $request->user()->isStaff()) {
-            abort(403, 'Staff access only.');
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'unauthorized'], 401);
         }
-
+        if (method_exists($user, 'isStaff') && !$user->isStaff()) {
+            return response()->json(['error' => 'forbidden', 'message' => 'Staff required'], 403);
+        }
+        if (isset($user->is_staff) && !$user->is_staff) {
+            return response()->json(['error' => 'forbidden', 'message' => 'Staff required'], 403);
+        }
         return $next($request);
     }
 }

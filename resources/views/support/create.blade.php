@@ -1,43 +1,5 @@
 @extends('layouts.app')
-@section('title', 'New Support Ticket — FF Arena')
+@section('title','Create Support Ticket')
 @section('content')
-    <header class="page-head">
-        <h1 class="page-title">🎫 New Support Ticket</h1>
-    </header>
-
-    <div class="card" style="max-width: 640px">
-        <form method="POST" action="{{ route('support.store') }}" novalidate>
-            @csrf
-            <div class="field">
-                <label for="subject">Subject</label>
-                <input type="text" id="subject" name="subject" maxlength="255" required placeholder="Brief summary of your issue">
-            </div>
-
-            <div class="grid cols-2" style="grid-template-columns: 1fr 1fr; gap: 10px">
-                <div class="field">
-                    <label for="category">Category</label>
-                    <select id="category" name="category" required>
-                        @foreach ($categories as $category)
-                            <option value="{{ $category }}">{{ ucfirst($category) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="field">
-                    <label for="priority">Priority</label>
-                    <select id="priority" name="priority">
-                        @foreach ($priorities as $priority)
-                            <option value="{{ $priority }}" {{ $priority === 'normal' ? 'selected' : '' }}>{{ ucfirst($priority) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            <div class="field">
-                <label for="message">Message</label>
-                <textarea id="message" name="message" rows="6" required placeholder="Describe the issue in detail"></textarea>
-            </div>
-
-            <button type="submit" class="btn btn-primary mt-2">Submit ticket</button>
-        </form>
-    </div>
+<div style="max-width: 600px; margin: 0 auto;"><h1>Create Ticket</h1><div class="card" style="margin-top: 16px;"><form method="POST" action="{{ route('support.store') }}">@csrf<div class="form-group"><label class="form-label required">Subject</label><input type="text" name="subject" class="form-input" required></div><div class="form-group"><label class="form-label required">Body</label><textarea name="body" class="form-textarea" required></textarea></div><button type="submit" class="btn btn-primary" data-require-online>Submit</button><span data-internet-status class="internet-status online" style="margin-left: 12px;"></span></form></div></div>
 @endsection

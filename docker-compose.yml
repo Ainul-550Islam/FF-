@@ -1,0 +1,232 @@
+# FF Arena — R9 Real Production Stack
+# Local/staging verification with PostgreSQL 15 + Redis 7 + Go + Rust + Laravel
+# Usage: docker compose up -d --build
+# Health: curl http://localhost:8000/health, :8081/health, :8082/health
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ffarena-postgres-r9
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ffarena}
+      POSTGRES_USER: ${POSTGRES_USER:-ffarena}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ffarena}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ffarena} -d ${POSTGRES_DB:-ffarena}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ffarena_net
+    # Do NOT expose publicly - only internal network
+    # ports: intentionally not exposed for security
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  redis:
+    image: redis:7-alpine
+    container_name: ffarena-redis-r9
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-ffarena-redis-secret}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-ffarena-redis-secret}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - ffarena_net
+    # Do NOT expose publicly - only internal network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  app:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    container_name: ffarena-app-r9
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_KEY: ${APP_KEY}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-ffarena}
+      DB_USERNAME: ${POSTGRES_USER:-ffarena}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-ffarena}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-ffarena-redis-secret}
+      REDIS_PREFIX: ${REDIS_PREFIX:-ffarena-prod-}
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      JWT_SECRET: ${JWT_SECRET}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
+      GO_PAYMENT_URL: http://payment-gateway-go:8081
+      RUST_SECURITY_URL: http://security-rust:8082
+    ports:
+      - "${APP_PORT:-8000}:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - ffarena_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  payment-gateway-go:
+    build:
+      context: ./services/payment-gateway-go
+      dockerfile: Dockerfile
+    container_name: ffarena-payment-go-r9
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: 8081
+      APP_ENV: production
+      DB_DRIVER: postgres
+      DATABASE_URL: postgres://${POSTGRES_USER:-ffarena}:${POSTGRES_PASSWORD:-ffarena}@postgres:5432/${POSTGRES_DB:-ffarena}?sslmode=disable
+      REDIS_URL: redis://:${REDIS_PASSWORD:-ffarena-redis-secret}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      SERVICE_ID: payment-gateway-go
+      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
+      RATE_LIMIT_PER_MIN: 60
+      ENABLE_METRICS: true
+    ports:
+      - "${GO_PAYMENT_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ffarena_net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  security-rust:
+    build:
+      context: ./services/security-rust
+      dockerfile: Dockerfile
+    container_name: ffarena-security-rust-r9
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: 8082
+      APP_ENV: production
+      REDIS_URL: redis://:${REDIS_PASSWORD:-ffarena-redis-secret}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      SERVICE_ID: security-rust
+      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
+      RATE_LIMIT_PER_MIN: 60
+      ENABLE_METRICS: true
+    ports:
+      - "${RUST_SECURITY_PORT:-8082}:8082"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ffarena_net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    container_name: ffarena-worker-r9
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-ffarena}
+      DB_USERNAME: ${POSTGRES_USER:-ffarena}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-ffarena}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-ffarena-redis-secret}
+      QUEUE_CONNECTION: redis
+    command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=90"]
+    networks:
+      - ffarena_net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  ffarena_net:
+    driver: bridge
+    name: ffarena_net_r9
+
+volumes:
+  postgres-data:
+    driver: local
+    name: ffarena_postgres_data_r9
+  redis_data:
+    driver: local
+    name: ffarena_redis_data_r9

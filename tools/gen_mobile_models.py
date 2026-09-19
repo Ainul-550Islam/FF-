@@ -27,7 +27,7 @@ import shutil
 import subprocess
 import sys
 
-ROOT = "/home/user/ffarena-app"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC = os.path.join(ROOT, "storage", "api-docs", "openapi.json")
 OUT_MODELS = os.path.join(ROOT, "mobile", "lib", "core", "api", "generated", "openapi_models.dart")
 OUT_ENDPOINTS = os.path.join(ROOT, "mobile", "lib", "core", "api", "generated", "openapi_endpoints.dart")

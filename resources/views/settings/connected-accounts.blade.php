@@ -1,63 +1,98 @@
 @extends('layouts.app')
-@section('title', 'Connected Accounts — FF Arena')
+
+@section('title', 'Connected Accounts')
+
 @section('content')
-    <header class="page-head">
-        <h1 class="page-title">Connected Accounts</h1>
-    </header>
+<div class="settings-layout">
+    @include('settings._nav')
 
-    <section class="card" aria-labelledby="password-heading">
-        <h3 id="password-heading">Password</h3>
-        @if ($hasPassword)
-            <p class="muted">A password is set on this account. You can change it in
-                <a href="{{ route('settings.security') }}">security settings</a>.</p>
-        @else
-            <p class="muted">No password set. <a href="{{ route('settings.security') }}">Set one</a> so you can sign in
-                even if you unlink a provider.</p>
-        @endif
-    </section>
+    <div class="settings-content">
+        <div style="margin-bottom: 24px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+            <div>
+                <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 800;">Connected Accounts</h1>
+                <p class="text-muted">Link your Google account or phone for faster login and recovery. OAuth data is stored securely.</p>
+            </div>
+            <span data-internet-status class="internet-status online"></span>
+        </div>
 
-    <section class="card" aria-labelledby="google-heading">
-        <h3 id="google-heading">Google</h3>
-        @if ($identities->contains('provider', 'google'))
-            <p>✅ <x-status-pill status="confirmed" label="Connected" /></p>
-            <form method="POST" action="{{ route('settings.google.unlink') }}">
-                @csrf
-                <button type="submit" class="btn btn-sm btn-danger">Disconnect Google</button>
-            </form>
-        @else
-            @if ($googleConfigured)
-                <p class="muted">Connect Google to sign in with one click.</p>
-                <a href="{{ route('settings.google.link') }}" class="btn btn-primary btn-sm">Connect Google</a>
-            @else
-                <p class="muted">Google Sign-In is not configured.</p>
-            @endif
-        @endif
-    </section>
-
-    <section class="card" aria-labelledby="phone-heading">
-        <h3 id="phone-heading">Phone</h3>
-        @if ($identities->contains('provider', 'phone'))
-            @php($phoneIdentity = $identities->firstWhere('provider', 'phone'))
-            <p>✅ <x-status-pill status="verified" /> <span class="muted">{{ $phoneIdentity->provider_subject }}</span></p>
-            <form method="POST" action="{{ route('settings.phone.unlink') }}">
-                @csrf
-                <button type="submit" class="btn btn-sm btn-danger">Disconnect phone</button>
-            </form>
-        @else
-            @if ($phoneConfigured)
-                <p class="muted">Verify your phone number to enable phone sign-in.</p>
-                <form method="POST" action="{{ route('settings.phone.link') }}">
-                    @csrf
-                    <div class="field">
-                        <label for="phone">Mobile number</label>
-                        <input type="tel" id="phone" name="phone" value="{{ old('phone', $user->phone) }}"
-                               placeholder="01712345678" autocomplete="tel" inputmode="tel" required>
+        <div class="grid" style="gap: 16px;">
+            {{-- Google --}}
+            <div class="card" style="display: flex; gap: 16px; align-items: center;">
+                <div style="width: 48px; height: 48px; background: white; border-radius: 12px; display: grid; place-items: center; font-size: 24px;" aria-hidden="true">G</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 15px;">Google</div>
+                    <div class="text-muted" style="font-size: 13px;">
+                        @if($googleIdentity ?? false)
+                            Connected as {{ $googleIdentity->email ?? $googleIdentity->name }} • Last used {{ $googleIdentity->last_used_at ? \Carbon\Carbon::parse($googleIdentity->last_used_at)->diffForHumans() : 'recently' }}
+                        @else
+                            Not connected - Link Google for one-click login
+                        @endif
                     </div>
-                    <button type="submit" class="btn btn-primary btn-sm mt-2">Verify phone</button>
-                </form>
-            @else
-                <p class="muted">Phone verification is not configured.</p>
-            @endif
-        @endif
-    </section>
+                </div>
+                <div>
+                    @if($googleIdentity ?? false)
+                        <form method="POST" action="{{ route('settings.connected-accounts.disconnect', 'google') }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm" data-confirm="Disconnect Google account? You will need password to login." data-require-online>Disconnect</button>
+                        </form>
+                    @else
+                        <a href="{{ route('auth.google.redirect') }}" class="btn btn-secondary btn-sm" data-require-online>Connect Google</a>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Phone --}}
+            <div class="card" style="display: flex; gap: 16px; align-items: center;">
+                <div style="width: 48px; height: 48px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; display: grid; place-items: center; font-size: 20px;" aria-hidden="true">📱</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 15px;">Phone Number</div>
+                    <div class="text-muted" style="font-size: 13px;">
+                        @if($user->phone)
+                            {{ $user->phone }} @if($user->phone_verified_at) <x-status-pill status="success" label="Verified" /> @else <x-status-pill status="warning" label="Unverified" /> @endif
+                        @else
+                            No phone linked - Add phone for OTP login
+                        @endif
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    @if($user->phone && !$user->phone_verified_at)
+                        <form method="POST" action="{{ route('settings.phone.verify.request') }}">
+                            @csrf
+                            <button type="submit" class="btn btn-primary btn-sm" data-require-online>Verify</button>
+                        </form>
+                    @endif
+                    <a href="{{ route('profile.edit') }}" class="btn btn-secondary btn-sm">Manage</a>
+                </div>
+            </div>
+
+            {{-- Future providers placeholder --}}
+            <div class="card" style="display: flex; gap: 16px; align-items: center; opacity: 0.6;">
+                <div style="width: 48px; height: 48px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; display: grid; place-items: center; font-size: 20px;" aria-hidden="true">🎮</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 15px;">Discord (Coming Soon)</div>
+                    <div class="text-muted" style="font-size: 13px;">Link Discord for team coordination and tournament announcements</div>
+                </div>
+                <div>
+                    <button class="btn btn-ghost btn-sm" disabled>Soon</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 24px;">
+            <h3 style="margin: 0 0 12px; font-size: 14px; font-weight: 700;">Security & Privacy</h3>
+            <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-muted); display: grid; gap: 6px;">
+                <li>OAuth tokens are encrypted at rest and never logged</li>
+                <li>We only request <code>email</code> and <code>profile</code> scopes - no extra permissions</li>
+                <li>Disconnecting removes token immediately, audit logged</li>
+                <li>Phone numbers are hashed for rate limiting, OTP codes are hashed (bcrypt) and expire in 5 minutes</li>
+                <li>Internet required for OAuth flow - offline fallback to password/OTP</li>
+            </ul>
+            <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center;">
+                <span data-internet-status class="internet-status online"></span>
+                <span class="text-muted" style="font-size: 12px;">OAuth requires internet. If offline, use password login.</span>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection

@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    G1 — PostgreSQL test matrix (see .github/workflows/ci.yml).
-
+    G1 — PostgreSQL test matrix + R9 Real PostgreSQL Integration
     Identical to phpunit.xml except the database runs on PostgreSQL so the
-    full suite is exercised against the production driver. The default
-    phpunit.xml keeps SQLite :memory: for fast local runs.
+    full suite is exercised against the production driver.
 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
@@ -18,6 +16,12 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        <testsuite name="R9_PostgreSQL">
+            <directory>tests/Feature/R9</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
@@ -26,6 +30,7 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:bgN0yS08tC5r/rDRWdX8EeqxrkOIJezGxtmpEqXSGhI="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

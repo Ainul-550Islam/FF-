@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- G4 + R9 — Redis integration test suite — Real Redis Integration -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="G4">
+            <directory>tests/Feature/G4</directory>
+        </testsuite>
+        <testsuite name="R9_Redis">
+            <directory>tests/Feature/R9</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:bgN0yS08tC5r/rDRWdX8EeqxrkOIJezGxtmpEqXSGhI="/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="CACHE_STORE" value="redis"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="REDIS_HOST" value="127.0.0.1"/>
+        <env name="REDIS_PORT" value="6379"/>
+        <env name="REDIS_DB" value="15"/>
+        <env name="REDIS_CACHE_DB" value="14"/>
+        <env name="REDIS_QUEUE_DB" value="13"/>
+        <env name="REDIS_PREFIX" value="ffarena-testing-database-"/>
+        <env name="CACHE_PREFIX" value="ffarena-testing-cache-"/>
+        <env name="REDIS_CLIENT" value="phpredis"/>
+    </php>
+</phpunit>

@@ -1,61 +1,125 @@
 <?php
-
 namespace App\Http\Middleware;
 
-use App\Support\ApiResponse;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Phase 15 — post-authentication token sanity checks.
- *
- * After `auth:sanctum` has resolved the bearer token, reject the request
- * when:
- *   - the token has expired,
- *   - the owning API client has been revoked,
- *   - the account is deactivated or pending deletion.
- *
- * No internal detail (token id, expiry, client) is leaked — the response is
- * always a generic 401.
- */
 class EnsureTokenIsValid
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $user = $request->user();
+        $token = $request->bearerToken();
 
-        if ($user === null) {
-            return ApiResponse::error('unauthenticated', 'Authentication is required.', [], 401);
+        if (!$token) {
+            return response()->json([
+                'error' => 'token_required',
+                'message' => 'Bearer token required'
+            ], 401);
         }
 
-        // Deactivated / deleted accounts must not authenticate.
-        if (! $user->isActive()) {
-            return ApiResponse::error(
-                'account_inactive',
-                'This account is not active.',
-                [],
-                401
-            );
+        if (strlen($token) < 10) {
+            return response()->json([
+                'error' => 'token_invalid',
+                'message' => 'Token too short'
+            ], 401);
         }
 
-        $token = $request->user()->currentAccessToken();
+        if (strlen($token) > 500) {
+            return response()->json([
+                'error' => 'token_invalid',
+                'message' => 'Token too long'
+            ], 401);
+        }
 
-        if ($token instanceof PersonalAccessToken) {
-            // Expired tokens are rejected even if Sanctum has not pruned them.
-            if ($token->expires_at !== null && $token->expires_at->isPast()) {
-                $token->delete();
+        try {
+            $personalAccessToken = PersonalAccessToken::findToken($token);
 
-                return ApiResponse::error('token_expired', 'This token has expired.', [], 401);
+            if (!$personalAccessToken) {
+                Log::warning('Token not found', [
+                    'redacted_token' => $this->redactToken($token),
+                    'request_id' => $request->header('X-Request-ID', 'unknown'),
+                    'ip' => $request->ip(),
+                ]);
+
+                return response()->json([
+                    'error' => 'token_invalid',
+                    'message' => 'Token not found'
+                ], 401);
             }
 
-            // A token minted for a revoked application stops working.
-            if ($token->api_client_id !== null && $token->client !== null && ! $token->client->isActive()) {
-                return ApiResponse::error('token_revoked', 'This token belongs to a revoked application.', [], 401);
-            }
-        }
+            if ($personalAccessToken->expires_at && $personalAccessToken->expires_at->isPast()) {
+                Log::info('Token expired', [
+                    'token_id' => $personalAccessToken->id,
+                    'expires_at' => $personalAccessToken->expires_at,
+                    'request_id' => $request->header('X-Request-ID', 'unknown'),
+                ]);
 
-        return $next($request);
+                return response()->json([
+                    'error' => 'token_expired',
+                    'message' => 'Token expired'
+                ], 401);
+            }
+
+            $tokenable = $personalAccessToken->tokenable;
+
+            if (!$tokenable) {
+                return response()->json([
+                    'error' => 'token_invalid',
+                    'message' => 'Token owner not found'
+                ], 401);
+            }
+
+            if (method_exists($tokenable, 'isActive') && !$tokenable->isActive()) {
+                Log::warning('Inactive account attempt', [
+                    'user_id' => $tokenable->id ?? 'unknown',
+                    'request_id' => $request->header('X-Request-ID', 'unknown'),
+                ]);
+
+                return response()->json([
+                    'error' => 'account_inactive',
+                    'message' => 'Account is inactive'
+                ], 403);
+            }
+
+            if (isset($tokenable->is_active) && !$tokenable->is_active) {
+                return response()->json([
+                    'error' => 'account_inactive',
+                    'message' => 'Account is inactive'
+                ], 403);
+            }
+
+            // Check token abilities if needed
+            // Example: $personalAccessToken->can('payment:create')
+
+            Log::info('Token validation success', [
+                'user_id' => $tokenable->id ?? 'unknown',
+                'token_id' => $personalAccessToken->id,
+                'request_id' => $request->header('X-Request-ID', 'unknown'),
+            ]);
+
+            return $next($request);
+        } catch (\Exception $e) {
+            Log::error('Token validation error', [
+                'error' => $e->getMessage(),
+                'redacted_token' => $this->redactToken($token),
+                'request_id' => $request->header('X-Request-ID', 'unknown'),
+            ]);
+
+            return response()->json([
+                'error' => 'token_invalid',
+                'message' => 'Token validation failed'
+            ], 401);
+        }
+    }
+
+    protected function redactToken(string $token): string
+    {
+        if (strlen($token) <= 8) {
+            return "***REDACTED***";
+        }
+        return substr($token, 0, 4) . "***REDACTED***" . substr($token, -4);
     }
 }
