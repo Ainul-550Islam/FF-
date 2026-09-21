@@ -43,7 +43,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('prize_tiers', function (Blueprint $table) {
+        $guard = function (string $table, \Closure $create) {
+            if (!Schema::hasTable($table)) {
+                Schema::create($table, $create);
+            }
+        };
+        $guard('prize_tiers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tournament_id')->constrained()->cascadeOnDelete();
             $table->unsignedInteger('position'); // 1-based rank (1st, 2nd, …)
@@ -55,7 +60,7 @@ return new class extends Migration
             $table->unique(['tournament_id', 'position'], 'prize_tiers_tournament_position_unique');
         });
 
-        Schema::create('prize_distributions', function (Blueprint $table) {
+        $guard('prize_distributions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tournament_id')->constrained()->cascadeOnDelete();
             $table->string('status', 16)->default('draft'); // draft|calculated|approved|processing|completed|failed|cancelled
@@ -74,7 +79,7 @@ return new class extends Migration
             $table->index('status', 'prize_distributions_status_index');
         });
 
-        Schema::create('prize_snapshot_items', function (Blueprint $table) {
+        $guard('prize_snapshot_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('distribution_id')->constrained('prize_distributions')->cascadeOnDelete();
             $table->foreignId('tournament_id')->constrained()->cascadeOnDelete();
@@ -88,7 +93,7 @@ return new class extends Migration
             $table->index('tournament_id', 'prize_snapshot_tournament_index');
         });
 
-        Schema::create('payouts', function (Blueprint $table) {
+        $guard('payouts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('distribution_id')->constrained('prize_distributions')->cascadeOnDelete();
             $table->foreignId('tournament_id')->constrained()->cascadeOnDelete();
@@ -115,7 +120,7 @@ return new class extends Migration
             $table->index('status', 'payouts_status_index');
         });
 
-        Schema::create('payout_events', function (Blueprint $table) {
+        $guard('payout_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payout_id')->constrained('payouts')->cascadeOnDelete();
             $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
@@ -129,7 +134,7 @@ return new class extends Migration
             $table->index('event', 'payout_events_event_index');
         });
 
-        Schema::create('financial_settlements', function (Blueprint $table) {
+        $guard('financial_settlements', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tournament_id')->constrained()->cascadeOnDelete();
             $table->unsignedBigInteger('gross_collected_minor')->default(0);
@@ -148,7 +153,7 @@ return new class extends Migration
             $table->unique('tournament_id', 'financial_settlements_tournament_unique');
         });
 
-        Schema::create('settlement_adjustments', function (Blueprint $table) {
+        $guard('settlement_adjustments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tournament_id')->constrained()->cascadeOnDelete();
             $table->bigInteger('amount_minor'); // signed: credit positive, debit negative

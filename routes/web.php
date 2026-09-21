@@ -25,6 +25,19 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\PhoneAuthController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AccountLiveController;
+use App\Http\Controllers\LiveController;
+use App\Http\Controllers\ModerationController;
+use App\Http\Controllers\SecurityController;
+use App\Http\Controllers\ScoringRuleController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\AuditController;
+use App\Http\Controllers\PayoutController;
+use App\Http\Controllers\AdminSupportController;
+use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\Api\V1\SupportController as V1SupportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -211,6 +224,106 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
     Route::get('/audit', [AdminController::class, 'audit'])->name('audit');
     Route::get('/ops', [OpsController::class, 'dashboard'])->name('ops.dashboard');
     Route::get('/ops/failed-jobs', [OpsController::class, 'failedJobs'])->name('ops.failed-jobs');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Phase 13-16 Named Routes (registered against existing controller actions)
+|--------------------------------------------------------------------------
+| The tests and app code reference these named routes. Each one below is
+| wired to a controller method that already exists in this codebase; no new
+| business logic is introduced here — only the route registration.
+*/
+
+// --- Guest: OAuth (Google), phone-login OTP, and the signed verify link ---
+Route::middleware('guest')->group(function () {
+    Route::get('/oauth/google', [AuthController::class, 'redirectToGoogle'])->name('google.redirect');
+    Route::get('/oauth/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('google.callback');
+    Route::get('/phone/verify', [AuthController::class, 'showPhoneVerify'])->name('phone.verify');
+    Route::post('/phone/request', [AuthController::class, 'requestPhoneOtp'])->name('phone.request')->middleware('throttle:otp-request');
+    Route::post('/phone/verify', [AuthController::class, 'verifyPhoneLogin'])->name('phone.login.verify')->middleware('throttle:otp-verify');
+});
+
+// Signed email-verification link (works for guest and authenticated).
+Route::get('/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
+
+// Payment-provider webhooks (signature verified inside the handler).
+Route::post('/webhooks/payments/{provider}', [WebhookController::class, 'handle'])->name('webhooks.payments');
+Route::post('/payments/callback/{provider}', [WebhookController::class, 'handle'])->name('payments.callback');
+
+// --- Authenticated: account, security, moderation, live, tournament actions ---
+Route::middleware(['auth', 'active'])->group(function () {
+    // Email verification (notice + resend)
+    Route::get('/verify-email', [AuthController::class, 'showVerifyEmail'])->name('verification.notice');
+    Route::post('/verify-email/resend', [AuthController::class, 'resendVerification'])->name('verification.resend');
+
+    // Account live feed + notification badge
+    Route::get('/account/live', [AccountLiveController::class, 'index'])->name('account.live');
+    Route::get('/notifications/unread', [LiveController::class, 'unreadCount'])->name('notifications.unread');
+
+    // Moderation
+    Route::get('/moderation', [ModerationController::class, 'index'])->name('moderation.index');
+    Route::get('/moderation/security', [ModerationController::class, 'security'])->name('moderation.security');
+
+    // Security (anti-cheat incidents + identity verification)
+    Route::post('/security/identity', [SecurityController::class, 'requestVerification'])->name('security.identity.request');
+    Route::get('/security/incidents', [SecurityController::class, 'incidents'])->name('security.incidents.index');
+    Route::post('/security/incidents', [SecurityController::class, 'openIncident'])->name('security.incidents.open');
+    Route::post('/security/incidents/{incident}/resolve', [SecurityController::class, 'resolveIncident'])->name('security.incidents.resolve');
+    Route::post('/security/incidents/{incident}/review', [SecurityController::class, 'reviewIncident'])->name('security.incidents.review');
+
+    // Password change (settings.password)
+    Route::post('/settings/password', [AccountSecurityController::class, 'updatePassword'])->name('settings.password');
+
+    // Support tickets (messages JSON + show alias)
+    Route::get('/support/tickets/{ticket}', [SupportController::class, 'show'])->name('support.tickets.show');
+    Route::get('/support/tickets/{ticket}/messages', [V1SupportController::class, 'messages'])->name('support.tickets.messages');
+
+    // Tournament organizer actions + live/analytics/scoring
+    Route::post('/tournaments', [TournamentController::class, 'store'])->name('tournaments.store');
+    Route::put('/tournaments/{tournament}', [TournamentController::class, 'update'])->name('tournaments.update');
+    Route::get('/tournaments/{tournament}/analytics', [AnalyticsController::class, 'tournament'])->name('tournaments.analytics');
+    Route::get('/tournaments/{tournament}/live', [LiveController::class, 'tournamentLive'])->name('tournaments.live');
+    Route::get('/tournaments/{tournament}/stream', [LiveController::class, 'stream'])->name('tournaments.stream');
+    Route::get('/tournaments/{tournament}/scoring', [ScoringRuleController::class, 'show'])->name('tournaments.scoring.show');
+    Route::post('/tournaments/{tournament}/scoring', [ScoringRuleController::class, 'store'])->name('tournaments.scoring.store');
+
+    // Checkout / payment initiation
+    Route::post('/checkout/{tournament}/{team}', [CheckoutController::class, 'initiate'])->name('payment.initiate');
+});
+
+// --- Admin: named routes backed by existing admin controller methods ---
+Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Audit
+    Route::get('/audit-index', [AuditController::class, 'index'])->name('audit.index');
+    Route::get('/audit/export', [AuditController::class, 'export'])->name('audit.export');
+
+    // Ops (underscore alias for the failed-jobs route)
+    Route::get('/ops/failed-jobs', [OpsController::class, 'failedJobs'])->name('ops.failed_jobs');
+
+    // Analytics CSV export (admin-only)
+    Route::get('/analytics/export', [AnalyticsController::class, 'exportTournaments'])->name('analytics.export');
+
+    // Payments / payouts (index aliases + payout lifecycle actions)
+    Route::get('/payments', [AdminController::class, 'payments'])->name('payments.index');
+    Route::get('/payouts', [AdminController::class, 'payouts'])->name('payouts.index');
+    Route::post('/payouts/{payout}/approve', [PayoutController::class, 'approve'])->name('payouts.approve');
+    Route::post('/payouts/{payout}/process', [PayoutController::class, 'process'])->name('payouts.process');
+    Route::post('/payouts/{payout}/fail', [PayoutController::class, 'fail'])->name('payouts.fail');
+    Route::post('/payouts/{payout}/cancel', [PayoutController::class, 'cancel'])->name('payouts.cancel');
+
+    // Settlements index alias
+    Route::get('/settlements', [SettlementController::class, 'index'])->name('settlements.index');
+
+    // Support tickets (admin view)
+    Route::get('/support/tickets', [AdminSupportController::class, 'index'])->name('support.index');
+    Route::get('/support/tickets/export', [AdminSupportController::class, 'export'])->name('support.export');
+    Route::get('/support/tickets/{ticket}', [AdminSupportController::class, 'show'])->name('support.show');
+
+    // Security enforcement (restrict / lift / verify identity)
+    Route::post('/security/restrict/{user}', [SecurityController::class, 'restrict'])->name('security.restrict');
+    Route::post('/security/lift/{restriction}', [SecurityController::class, 'liftRestriction'])->name('security.lift');
+    Route::post('/security/verify/{user}', [SecurityController::class, 'verifyIdentity'])->name('security.verify');
 });
 
 // Fallback - 404

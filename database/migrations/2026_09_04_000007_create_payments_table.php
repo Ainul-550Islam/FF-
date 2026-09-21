@@ -8,7 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('payments', function (Blueprint $table) {
+        $guard = function (string $table, \Closure $create) {
+            if (!Schema::hasTable($table)) {
+                Schema::create($table, $create);
+            }
+        };
+        $guard('payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tournament_id')->constrained()->cascadeOnDelete();
             $table->foreignId('team_id')->constrained()->cascadeOnDelete();

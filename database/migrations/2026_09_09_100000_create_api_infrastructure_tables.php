@@ -11,6 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        $guard = function (string $table, \Closure $create) {
+            if (!Schema::hasTable($table)) {
+                Schema::create($table, $create);
+            }
+        };
         // ------------------------------------------------------------------
         // api_clients — a user-owned "API application". Personal access
         // tokens are issued against a client and linked via
@@ -18,7 +23,7 @@ return new class extends Migration
         // entire application at once. Plaintext secrets are never stored;
         // tokens are stored only as their SHA-256 hash (Sanctum).
         // ------------------------------------------------------------------
-        Schema::create('api_clients', function (Blueprint $table) {
+        $guard('api_clients', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('name', 80);
@@ -45,7 +50,7 @@ return new class extends Migration
         // endpoints. A repeated request within the TTL replays the stored
         // response instead of executing again.
         // ------------------------------------------------------------------
-        Schema::create('api_idempotency_keys', function (Blueprint $table) {
+        $guard('api_idempotency_keys', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('key', 128);                    // SHA-256 of the client key
@@ -66,7 +71,7 @@ return new class extends Migration
         // The signing secret is stored encrypted; it is never returned by
         // the API after creation.
         // ------------------------------------------------------------------
-        Schema::create('webhook_endpoints', function (Blueprint $table) {
+        $guard('webhook_endpoints', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('url', 500);
@@ -84,7 +89,7 @@ return new class extends Migration
         // ------------------------------------------------------------------
         // webhook_deliveries — per-event delivery attempts (outbound).
         // ------------------------------------------------------------------
-        Schema::create('webhook_deliveries', function (Blueprint $table) {
+        $guard('webhook_deliveries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('endpoint_id')->constrained('webhook_endpoints')->cascadeOnDelete();
             $table->string('event', 60);
@@ -108,7 +113,7 @@ return new class extends Migration
         // stored encrypted (never plaintext); safe metadata is stored
         // separately. Duplicate external event ids are idempotent.
         // ------------------------------------------------------------------
-        Schema::create('webhook_events', function (Blueprint $table) {
+        $guard('webhook_events', function (Blueprint $table) {
             $table->id();
             $table->string('provider', 30);
             $table->string('external_event_id', 128)->nullable();

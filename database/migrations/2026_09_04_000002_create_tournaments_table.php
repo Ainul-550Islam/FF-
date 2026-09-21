@@ -8,7 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('tournaments', function (Blueprint $table) {
+        $guard = function (string $table, \Closure $create) {
+            if (!Schema::hasTable($table)) {
+                Schema::create($table, $create);
+            }
+        };
+        $guard('tournaments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organizer_id')->constrained('users')->cascadeOnDelete();
             $table->string('name');

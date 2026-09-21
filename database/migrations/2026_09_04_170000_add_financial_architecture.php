@@ -30,22 +30,50 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            $table->bigInteger('amount_minor')->default(0)->after('amount');
-            $table->string('currency', 8)->default('BDT')->after('amount_minor');
-            $table->string('provider', 30)->nullable()->after('method');
-            $table->string('provider_reference', 80)->nullable()->after('provider');
-            $table->string('idempotency_key', 64)->nullable()->after('provider_reference');
-            $table->foreignId('payer_user_id')->nullable()->after('trx_id')->constrained('users')->nullOnDelete();
-            $table->timestamp('paid_at')->nullable()->after('status');
-            $table->timestamp('refunded_at')->nullable()->after('paid_at');
+        // Idempotent, per-statement tolerant: this migration may run on a
+        // schema where an earlier generation (create_all_tables / the legacy
+        // 000002-000007 set) already created some of these tables or columns.
+        // Each statement is applied only when its target is missing, so the
+        // result is the union of both generations and nothing is destructive.
+        $guardCreate = function (string $table, \Closure $def) {
+            if (!Schema::hasTable($table)) {
+                Schema::create($table, $def);
+            }
+        };
+        $guardColumn = function (string $table, string $col, \Closure $def) {
+            if (Schema::hasTable($table) && !Schema::hasColumn($table, $col)) {
+                Schema::table($table, $def);
+            }
+        };
+        $tolerant = function (\Closure $def) {
+            try {
+                $def();
+            } catch (\Throwable $e) {
+                $m = $e->getMessage();
+                if (str_contains($m, 'duplicate index') || str_contains($m, 'already exists') || str_contains($m, 'no such column')) {
+                    return; // index/unique already present, or base column added later
+                }
+                throw $e;
+            }
+        };
 
-            $table->unique('idempotency_key', 'payments_idempotency_key_unique');
-            $table->index('team_id', 'payments_team_index');
-            $table->index('status', 'payments_status_index');
-        });
+        // payments — Phase-08 minor-unit + provider state-machine columns
+        $guardColumn('payments', 'amount_minor', function (Blueprint $table) { $table->bigInteger('amount_minor')->default(0)->after('amount'); });
+        $guardColumn('payments', 'currency', function (Blueprint $table) { $table->string('currency', 8)->default('BDT')->after('amount_minor'); });
+        $guardColumn('payments', 'provider', function (Blueprint $table) { $table->string('provider', 30)->nullable()->after('method'); });
+        $guardColumn('payments', 'provider_reference', function (Blueprint $table) { $table->string('provider_reference', 80)->nullable()->after('provider'); });
+        $guardColumn('payments', 'idempotency_key', function (Blueprint $table) { $table->string('idempotency_key', 64)->nullable()->after('provider_reference'); });
+        $guardColumn('payments', 'payer_user_id', function (Blueprint $table) { $table->foreignId('payer_user_id')->nullable()->after('trx_id')->constrained('users')->nullOnDelete(); });
+        $guardColumn('payments', 'paid_at', function (Blueprint $table) { $table->timestamp('paid_at')->nullable()->after('status'); });
+        $guardColumn('payments', 'refunded_at', function (Blueprint $table) { $table->timestamp('refunded_at')->nullable()->after('paid_at'); });
 
-        Schema::create('wallets', function (Blueprint $table) {
+        $tolerant(function () { Schema::table('payments', function (Blueprint $table) { $table->unique('idempotency_key', 'payments_idempotency_key_unique'); }); });
+        if (Schema::hasColumn('payments', 'team_id')) {
+            $tolerant(function () { Schema::table('payments', function (Blueprint $table) { $table->index('team_id', 'payments_team_index'); }); });
+        }
+        $tolerant(function () { Schema::table('payments', function (Blueprint $table) { $table->index('status', 'payments_status_index'); }); });
+
+        $guardCreate('wallets', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('currency', 8)->default('BDT');
@@ -55,8 +83,9 @@ return new class extends Migration
 
             $table->unique('user_id', 'wallets_user_unique');
         });
+        $guardColumn('wallets', 'status', function (Blueprint $table) { $table->string('status')->default('active'); });
 
-        Schema::create('ledger_entries', function (Blueprint $table) {
+        $guardCreate('ledger_entries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('wallet_id')->constrained('wallets')->cascadeOnDelete();
             $table->string('direction', 8); // credit | debit
@@ -73,8 +102,14 @@ return new class extends Migration
             $table->index('wallet_id', 'ledger_wallet_index');
             $table->index(['reference_type', 'reference_id'], 'ledger_reference_index');
         });
+        // When the earlier generation created ledger_entries, pick up the
+        // Phase-08 columns it lacks (type/description are also guaranteed by
+        // the later union migration; actor_id belongs to this generation).
+        $guardColumn('ledger_entries', 'type', function (Blueprint $table) { $table->string('type', 30)->nullable(); });
+        $guardColumn('ledger_entries', 'description', function (Blueprint $table) { $table->string('description')->nullable(); });
+        $guardColumn('ledger_entries', 'actor_id', function (Blueprint $table) { $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete(); });
 
-        Schema::create('refunds', function (Blueprint $table) {
+        $guardCreate('refunds', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payment_id')->constrained('payments')->cascadeOnDelete();
             $table->unsignedBigInteger('amount_minor');
@@ -86,7 +121,7 @@ return new class extends Migration
             $table->unique('payment_id', 'refunds_payment_unique');
         });
 
-        Schema::create('payment_events', function (Blueprint $table) {
+        $guardCreate('payment_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payment_id')->constrained('payments')->cascadeOnDelete();
             $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
@@ -118,12 +153,24 @@ return new class extends Migration
      */
     protected function backfillExistingPayments(): void
     {
-        $captainByTeam = DB::table('teams')->pluck('captain_id', 'id')->all();
+        if (!Schema::hasTable('payments') || !Schema::hasColumn('payments', 'amount_minor')) {
+            return;
+        }
+
+        $captainByTeam = Schema::hasTable('teams')
+            ? DB::table('teams')->pluck('captain_id', 'id')->all()
+            : [];
 
         $payments = DB::table('payments')->orderBy('id')->get();
 
         foreach ($payments as $payment) {
-            $minor = (int) round((float) $payment->amount * 100);
+            // Legacy rows carry the decimal `amount`; newer rows already hold
+            // `amount_minor` (and no `amount`) — never clobber an existing
+            // minor-unit value.
+            $amountRaw = $payment->amount ?? null;
+            $minor = $amountRaw === null
+                ? (int) ($payment->amount_minor ?? 0)
+                : (int) round((float) $amountRaw * 100);
 
             $update = [
                 'amount_minor' => max(0, $minor),

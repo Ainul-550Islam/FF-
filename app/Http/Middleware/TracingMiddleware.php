@@ -9,7 +9,7 @@ class TracingMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $traceId = $request->header('X-Trace-ID') ?: $request->header('traceparent') ? $this->parseTraceParent($request->header('traceparent')) : (string) Str::uuid();
+        $traceId = $request->header('X-Trace-ID') ?: ($request->header('traceparent') ? $this->parseTraceParent($request->header('traceparent')) : (string) Str::uuid());
         $spanId = (string) Str::uuid();
         
         // W3C Trace Context

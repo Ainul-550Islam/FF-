@@ -37,6 +37,8 @@ class User extends Authenticatable
         'is_banned',
         'banned_at',
         'ban_reason',
+        'account_status',
+        'deactivated_at',
     ];
 
     protected $hidden = [
@@ -89,6 +91,46 @@ class User extends Authenticatable
         return $this->morphMany(\Laravel\Sanctum\PersonalAccessToken::class, 'tokenable');
     }
 
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function identities()
+    {
+        return $this->hasMany(UserIdentity::class);
+    }
+
+    public function paymentMethods()
+    {
+        return $this->hasMany(PaymentMethod::class);
+    }
+
+    public function deviceLinks()
+    {
+        return $this->hasMany(DeviceLink::class);
+    }
+
+    public function mobileDevices()
+    {
+        return $this->hasMany(MobileDevice::class);
+    }
+
+    public function riskProfile()
+    {
+        return $this->hasOne(RiskProfile::class);
+    }
+
+    public function identityVerification()
+    {
+        return $this->hasOne(IdentityVerification::class);
+    }
+
+    public function userIdentities()
+    {
+        return $this->hasMany(UserIdentity::class);
+    }
+
     // Profile / Avatar helpers
     public function getAvatarUrlAttribute(): string
     {
@@ -132,12 +174,28 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return (bool) $this->is_admin;
+        // Union of both generations: the Phase-04 is_admin flag and the
+        // Phase-14 role column ('admin').
+        return (bool) $this->is_admin || $this->role === 'admin';
     }
 
     public function isStaff(): bool
     {
-        return (bool) ($this->is_staff || $this->is_admin);
+        // Platform staff: admin/moderator flag or admin/moderator role.
+        return (bool) ($this->is_staff || $this->is_admin)
+            || in_array($this->role, ['admin', 'moderator'], true);
+    }
+
+    public function isModerator(): bool
+    {
+        // Platform staff are admins and users carrying the moderator role
+        // (see DisputeService staff query: role in [admin, moderator]).
+        return $this->is_admin || in_array($this->role, ['admin', 'moderator'], true);
+    }
+
+    public function isOrganizer(): bool
+    {
+        return $this->role === 'organizer';
     }
 
     public function isActive(): bool

@@ -12,7 +12,22 @@ use App\Policies\UserPolicy;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // Phase 14 — phone OTP provider. The log-based provider is the
+        // default (dev/test); the SMS gateway provider is selected via
+        // services.phone_otp.provider = 'sms'. Tests bind their own fake
+        // against the interface, which takes precedence over this binding.
+        $this->app->bind(\App\Contracts\PhoneOtpProviderInterface::class, function () {
+            return config('services.phone_otp.provider', 'log') === 'sms'
+                ? new \App\Gateways\SmsGatewayPhoneOtpProvider()
+                : new \App\Gateways\LogPhoneOtpProvider();
+        });
+
+        // Phase 14 — Google Sign-In provider (Socialite in production;
+        // tests bind a fake against the interface).
+        $this->app->bind(\App\Contracts\GoogleOAuthProviderInterface::class, \App\Gateways\SocialiteGoogleProvider::class);
+    }
 
     public function boot(): void
     {
