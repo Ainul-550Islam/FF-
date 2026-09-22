@@ -11,6 +11,11 @@ use App\Http\Controllers\Gameberry\SpinController;
 use App\Http\Controllers\Gameberry\MagicChestController;
 use App\Http\Controllers\Gameberry\WeeklyEventController;
 use App\Http\Controllers\Gameberry\ReferralController;
+use App\Http\Controllers\Gameberry\DashboardController;
+use App\Http\Controllers\Gameberry\LevelController;
+use App\Http\Controllers\Gameberry\GameModeController;
+use App\Http\Controllers\Gameberry\AutoModeController;
+use App\Http\Controllers\Gameberry\GoldWalletController;
 
 Route::middleware(['auth', 'verified'])->prefix('gameberry')->name('gameberry.')->group(function () {
     // Dice Collection - 250+ dice, 52 max, Facebook-only exchange, Lucky dice gem reward
@@ -118,6 +123,39 @@ Route::middleware(['auth', 'verified'])->prefix('gameberry')->name('gameberry.')
         Route::get('/scratch-cards', [ReferralController::class, 'scratchCards'])->name('scratch_cards');
         Route::post('/scratch-cards/{cardId}/scratch', [ReferralController::class, 'scratch'])->name('scratch');
     });
+
+    // Dashboard - LudoStar style overview: gold/gem wallets, dice, league, level, buddies, events, referral
+    // (resolves route('gameberry.dashboard.index') used by resources/views/gameberry/layout.blade.php)
+    Route::prefix('dashboard')->name('dashboard.')->group(function () {
+        Route::get('/', [DashboardController::class, 'index'])->name('index');
+    });
+
+    // Level system - Level 4 Bronze unlock, Level 12 Titan unlock
+    Route::prefix('level')->name('level.')->group(function () {
+        Route::get('/', [LevelController::class, 'index'])->name('index');
+        Route::get('/{userId}', [LevelController::class, 'show'])->whereNumber('userId')->name('show');
+    });
+
+    // Game modes - classic / master / quick / team_up
+    Route::prefix('game-modes')->name('game_modes.')->group(function () {
+        Route::get('/', [GameModeController::class, 'index'])->name('index');
+        Route::get('/{mode}', [GameModeController::class, 'show'])->name('show');
+    });
+
+    // Auto mode - auto-play on disconnect
+    // (resolves route('gameberry.auto_mode.enable') / route('gameberry.auto_mode.disable')
+    //  posted by resources/views/gameberry/auto_mode/index.blade.php)
+    Route::prefix('auto-mode')->name('auto_mode.')->group(function () {
+        Route::get('/', [AutoModeController::class, 'index'])->name('index');
+        Route::post('/enable', [AutoModeController::class, 'enable'])->name('enable');
+        Route::post('/disable', [AutoModeController::class, 'disable'])->name('disable');
+    });
+
+    // Gold wallet ledger + reconciliation (GoldWalletController; the economy group keeps its own names)
+    Route::prefix('gold-wallet')->name('gold_wallet.')->group(function () {
+        Route::get('/', [GoldWalletController::class, 'index'])->name('index');
+        Route::get('/stats', [GoldWalletController::class, 'stats'])->name('stats');
+    });
 });
 
 // Final7 — Feature 1001-1050 Production 1000+ Files — Full Code No Skip — 50 views + 15 controllers
@@ -156,6 +194,173 @@ Route::middleware(['auth', 'verified'])->prefix('gameberry/final8')->name('gameb
     }
     for ($i = 1171; $i <= 1185; $i++) {
         $controller = "App\\Http\\Controllers\\Gameberry\\Final8\\Final{$i}Controller";
+        Route::get("/controller-{$i}", [$controller, 'index'])->name("controller_{$i}");
+        Route::post("/controller-{$i}/play", [$controller, 'play'])->name("controller_{$i}.play");
+        Route::get("/controller-{$i}/stats", [$controller, 'stats'])->name("controller_{$i}.stats");
+    }
+});
+
+// ==== ADDED: Core parts 1-4 (files 121-400) - report-proven missing, one file per number ====
+Route::middleware(['auth', 'verified'])->prefix('gameberry/core')->name('gameberry.core.')->group(function () {
+    Route::get('/view/{feature}', [\App\Http\Controllers\Gameberry\Core\CoreFeatureViewController::class, 'show'])
+        ->whereNumber('feature')->name('view');
+    Route::get('/coverage', [\App\Http\Controllers\Gameberry\Core\CoreFeatureViewController::class, 'coverage'])->name('coverage');
+    for ($i = 121; $i <= 160; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Core\\Core" . (181 + ($i - 121) % 10) . "Controller";
+        Route::get("/feature-{$i}", [$controller, 'index'])->name("feature_{$i}");
+        Route::post("/feature-{$i}/play", [$controller, 'play'])->name("feature_{$i}.play");
+    }
+    for ($i = 181; $i <= 190; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Core\\Core{$i}Controller";
+        Route::get("/controller-{$i}", [$controller, 'index'])->name("controller_{$i}");
+        Route::post("/controller-{$i}/play", [$controller, 'play'])->name("controller_{$i}.play");
+        Route::get("/controller-{$i}/stats", [$controller, 'stats'])->name("controller_{$i}.stats");
+    }
+    for ($i = 201; $i <= 250; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Core\\Core" . (282 + ($i - 201) % 15) . "Controller";
+        Route::get("/feature-{$i}", [$controller, 'index'])->name("feature_{$i}");
+        Route::post("/feature-{$i}/play", [$controller, 'play'])->name("feature_{$i}.play");
+    }
+    for ($i = 282; $i <= 296; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Core\\Core{$i}Controller";
+        Route::get("/controller-{$i}", [$controller, 'index'])->name("controller_{$i}");
+        Route::post("/controller-{$i}/play", [$controller, 'play'])->name("controller_{$i}.play");
+        Route::get("/controller-{$i}/stats", [$controller, 'stats'])->name("controller_{$i}.stats");
+    }
+    for ($i = 312; $i <= 331; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Core\\Core" . (352 + ($i - 312) % 5) . "Controller";
+        Route::get("/feature-{$i}", [$controller, 'index'])->name("feature_{$i}");
+        Route::post("/feature-{$i}/play", [$controller, 'play'])->name("feature_{$i}.play");
+    }
+    for ($i = 352; $i <= 356; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Core\\Core{$i}Controller";
+        Route::get("/controller-{$i}", [$controller, 'index'])->name("controller_{$i}");
+        Route::post("/controller-{$i}/play", [$controller, 'play'])->name("controller_{$i}.play");
+        Route::get("/controller-{$i}/stats", [$controller, 'stats'])->name("controller_{$i}.stats");
+    }
+    for ($i = 362; $i <= 381; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Core\\Core" . (395 + ($i - 362) % 3) . "Controller";
+        Route::get("/feature-{$i}", [$controller, 'index'])->name("feature_{$i}");
+        Route::post("/feature-{$i}/play", [$controller, 'play'])->name("feature_{$i}.play");
+    }
+    for ($i = 395; $i <= 397; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Core\\Core{$i}Controller";
+        Route::get("/controller-{$i}", [$controller, 'index'])->name("controller_{$i}");
+        Route::post("/controller-{$i}/play", [$controller, 'play'])->name("controller_{$i}.play");
+        Route::get("/controller-{$i}/stats", [$controller, 'stats'])->name("controller_{$i}.stats");
+    }
+});
+
+// ==== ADDED: Final7 (1016-1050) + Final8 (1116-1150) feature views - every added view reachable ====
+Route::middleware(['auth', 'verified'])->prefix('gameberry/final7')->name('gameberry.final7.')->group(function () {
+    Route::get('/view/{feature}', [\App\Http\Controllers\Gameberry\Final7\Final7ViewController::class, 'show'])
+        ->whereNumber('feature')->name('view');
+});
+Route::middleware(['auth', 'verified'])->prefix('gameberry/final8')->name('gameberry.final8.')->group(function () {
+    Route::get('/view/{feature}', [\App\Http\Controllers\Gameberry\Final8\Final8ViewController::class, 'show'])
+        ->whereNumber('feature')->name('view');
+});
+
+// ==== ADDED: Stats controllers 21-30 (services + tests + dashboard views already existed) ====
+Route::middleware(['auth', 'verified'])->prefix('gameberry/stats')->name('gameberry.stats.')->group(function () {
+    for ($i = 21; $i <= 30; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Stats\\Stat{$i}Controller";
+        Route::get("/stat-{$i}", [$controller, 'index'])->name('stat_' . $i);
+        Route::get("/stat-{$i}/{userId}", [$controller, 'show'])->name('stat_' . $i . '.show');
+        Route::post("/stat-{$i}/calculate", [$controller, 'calculate'])->name('stat_' . $i . '.calculate');
+    }
+});
+
+// Part 18 File 1201-1300 - Final9 - 50 views + 15 controllers + 20 services + 15 api - Full Code No Skip - 115 files
+Route::middleware(['auth', 'verified'])->prefix('gameberry/final9')->name('gameberry.final9.')->group(function () {
+    Route::get('/view/{feature}', [\App\Http\Controllers\Gameberry\Final9\Final9ViewController::class, 'show'])
+        ->whereNumber('feature')->name('view');
+    Route::get('/coverage', [\App\Http\Controllers\Gameberry\Final9\Final9ViewController::class, 'coverage'])->name('coverage');
+    for ($i = 1201; $i <= 1250; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Final9\\Final9" . (1271 + ($i - 1201) % 15) . "Controller";
+        // Use first 15 controllers cycling for 50 views
+        if ($i <= 1215) {
+            $controller = "App\\Http\\Controllers\\Gameberry\\Final9\\Final9" . (1271 + $i - 1201) . "Controller";
+        } else {
+            $controller = "App\\Http\\Controllers\\Gameberry\\Final9\\Final91271Controller";
+        }
+        Route::get("/feature-{$i}", [$controller, 'index'])->name("feature_{$i}");
+        Route::post("/feature-{$i}/play", [$controller, 'play'])->name("feature_{$i}.play");
+    }
+    for ($i = 1271; $i <= 1285; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Final9\\Final9{$i}Controller";
+        Route::get("/controller-{$i}", [$controller, 'index'])->name("controller_{$i}");
+        Route::post("/controller-{$i}/play", [$controller, 'play'])->name("controller_{$i}.play");
+        Route::get("/controller-{$i}/stats", [$controller, 'stats'])->name("controller_{$i}.stats");
+    }
+});
+
+// Part 19 File 1301-1400 - Final10 - 50 views + 15 controllers + 20 services + 15 api - Full Code No Skip - 115 files
+Route::middleware(['auth', 'verified'])->prefix('gameberry/final10')->name('gameberry.final10.')->group(function () {
+    Route::get('/view/{feature}', [\App\Http\Controllers\Gameberry\Final10\Final10ViewController::class, 'show'])
+        ->whereNumber('feature')->name('view');
+    Route::get('/coverage', [\App\Http\Controllers\Gameberry\Final10\Final10ViewController::class, 'coverage'])->name('coverage');
+    for ($i = 1301; $i <= 1350; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Final10\\Final10" . (1371 + ($i - 1301) % 15) . "Controller";
+        // Use first 15 controllers cycling for 50 views
+        if ($i <= 1315) {
+            $controller = "App\\Http\\Controllers\\Gameberry\\Final10\\Final10" . (1371 + $i - 1301) . "Controller";
+        } else {
+            $controller = "App\\Http\\Controllers\\Gameberry\\Final10\\Final101371Controller";
+        }
+        Route::get("/feature-{$i}", [$controller, 'index'])->name("feature_{$i}");
+        Route::post("/feature-{$i}/play", [$controller, 'play'])->name("feature_{$i}.play");
+    }
+    for ($i = 1371; $i <= 1385; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Final10\\Final10{$i}Controller";
+        Route::get("/controller-{$i}", [$controller, 'index'])->name("controller_{$i}");
+        Route::post("/controller-{$i}/play", [$controller, 'play'])->name("controller_{$i}.play");
+        Route::get("/controller-{$i}/stats", [$controller, 'stats'])->name("controller_{$i}.stats");
+    }
+});
+
+// Part 20 File 1401-1500 - Final11 - 50 views + 15 controllers + 20 services + 15 api - Full Code No Skip - 115 files
+Route::middleware(['auth', 'verified'])->prefix('gameberry/final11')->name('gameberry.final11.')->group(function () {
+    Route::get('/view/{feature}', [\App\Http\Controllers\Gameberry\Final11\Final11ViewController::class, 'show'])
+        ->whereNumber('feature')->name('view');
+    Route::get('/coverage', [\App\Http\Controllers\Gameberry\Final11\Final11ViewController::class, 'coverage'])->name('coverage');
+    for ($i = 1401; $i <= 1450; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Final11\\Final11" . (1471 + ($i - 1401) % 15) . "Controller";
+        // Use first 15 controllers cycling for 50 views
+        if ($i <= 1415) {
+            $controller = "App\\Http\\Controllers\\Gameberry\\Final11\\Final11" . (1471 + $i - 1401) . "Controller";
+        } else {
+            $controller = "App\\Http\\Controllers\\Gameberry\\Final11\\Final111471Controller";
+        }
+        Route::get("/feature-{$i}", [$controller, 'index'])->name("feature_{$i}");
+        Route::post("/feature-{$i}/play", [$controller, 'play'])->name("feature_{$i}.play");
+    }
+    for ($i = 1471; $i <= 1485; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Final11\\Final11{$i}Controller";
+        Route::get("/controller-{$i}", [$controller, 'index'])->name("controller_{$i}");
+        Route::post("/controller-{$i}/play", [$controller, 'play'])->name("controller_{$i}.play");
+        Route::get("/controller-{$i}/stats", [$controller, 'stats'])->name("controller_{$i}.stats");
+    }
+});
+
+// Part 21 File 1501-1600 - Final12 - 50 views + 15 controllers + 20 services + 15 api - Full Code No Skip - 115 files
+Route::middleware(['auth', 'verified'])->prefix('gameberry/final12')->name('gameberry.final12.')->group(function () {
+    Route::get('/view/{feature}', [\App\Http\Controllers\Gameberry\Final12\Final12ViewController::class, 'show'])
+        ->whereNumber('feature')->name('view');
+    Route::get('/coverage', [\App\Http\Controllers\Gameberry\Final12\Final12ViewController::class, 'coverage'])->name('coverage');
+    for ($i = 1501; $i <= 1550; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Final12\\Final12" . (1571 + ($i - 1501) % 15) . "Controller";
+        // Use first 15 controllers cycling for 50 views
+        if ($i <= 1515) {
+            $controller = "App\\Http\\Controllers\\Gameberry\\Final12\\Final12" . (1571 + $i - 1501) . "Controller";
+        } else {
+            $controller = "App\\Http\\Controllers\\Gameberry\\Final12\\Final121571Controller";
+        }
+        Route::get("/feature-{$i}", [$controller, 'index'])->name("feature_{$i}");
+        Route::post("/feature-{$i}/play", [$controller, 'play'])->name("feature_{$i}.play");
+    }
+    for ($i = 1571; $i <= 1585; $i++) {
+        $controller = "App\\Http\\Controllers\\Gameberry\\Final12\\Final12{$i}Controller";
         Route::get("/controller-{$i}", [$controller, 'index'])->name("controller_{$i}");
         Route::post("/controller-{$i}/play", [$controller, 'play'])->name("controller_{$i}.play");
         Route::get("/controller-{$i}/stats", [$controller, 'stats'])->name("controller_{$i}.stats");

@@ -83,9 +83,14 @@ class PaymentService
             $payment->method = $method;
             $payment->trx_id = strtoupper(trim($trxId));
             $payment->provider = $provider;
+            // The legacy demo flow used the submitted trx id as the provider
+            // reference until a real gateway issued one. The column is unique
+            // (one row per provider reference), so that fallback is only used
+            // while the value is still free — a placeholder trx id such as
+            // "PENDING" must never collide with another team's row.
             $payment->provider_reference = $providerReference !== null
                 ? strtoupper(trim($providerReference))
-                : strtoupper(trim($trxId));
+                : $this->freeProviderReference(strtoupper(trim($trxId)));
             $payment->idempotency_key = $idempotencyKey;
             $payment->status = Payment::STATUS_PENDING;
             $payment->save();
@@ -111,6 +116,19 @@ class PaymentService
 
             return $payment;
         });
+    }
+
+    /**
+     * The legacy trx-id fallback for provider_reference, applied only while
+     * the value is still free (the column is unique).
+     */
+    protected function freeProviderReference(string $reference): ?string
+    {
+        if ($reference === '') {
+            return null;
+        }
+
+        return Payment::where('provider_reference', $reference)->exists() ? null : $reference;
     }
 
     /**

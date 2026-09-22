@@ -2,6 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\AccountLink;
+use App\Models\AntiCheatIncident;
+use App\Models\IpLink;
+use App\Models\OtpChallenge;
+use App\Models\PaymentMethod;
+use App\Models\RiskEvent;
+use App\Models\Tournament;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -81,9 +88,36 @@ class User extends Authenticatable
         return $this->hasMany(Payment::class);
     }
 
+    /**
+     * Payouts where this user is the recipient.
+     *
+     * The Phase 09 schema keys recipients by `recipient_user_id`; the legacy
+     * financial-architecture column is `user_id`, so recipients are matched
+     * through both.
+     */
     public function payouts()
     {
-        return $this->hasMany(Payout::class);
+        return $this->hasMany(Payout::class, 'recipient_user_id');
+    }
+
+    /**
+     * Payouts addressed to the legacy `user_id` column.
+     */
+    public function payoutsAsUser()
+    {
+        return $this->hasMany(Payout::class, 'user_id');
+    }
+
+    /**
+     * Every payout this user receives, across both column generations.
+     */
+    public function allPayouts()
+    {
+        return Payout::query()
+            ->where(function ($query) {
+                $query->where('recipient_user_id', $this->id)
+                    ->orWhere('user_id', $this->id);
+            });
     }
 
     public function personalAccessTokens()
@@ -114,6 +148,96 @@ class User extends Authenticatable
     public function mobileDevices()
     {
         return $this->hasMany(MobileDevice::class);
+    }
+
+    /**
+     * Teams this user captains (teams are keyed to their captain).
+     */
+    public function teams()
+    {
+        return $this->hasMany(Team::class, 'captain_id');
+    }
+
+    /**
+     * Authentication history for this account (login/logout/link events).
+     */
+    public function loginEvents()
+    {
+        return $this->hasMany(LoginEvent::class)->orderByDesc('created_at');
+    }
+
+    /**
+     * Fraud/anti-cheat restrictions placed on this account (Phase 10).
+     */
+    public function restrictions()
+    {
+        return $this->hasMany(Restriction::class);
+    }
+
+    /**
+     * Explicit restrictions by their Phase 10 status column.
+     */
+    public function activeRestrictions()
+    {
+        return $this->restrictions()->where('status', 'active');
+    }
+
+    /**
+     * Tournaments this user organizes.
+     */
+    public function tournaments()
+    {
+        return $this->hasMany(Tournament::class, 'organizer_id');
+    }
+
+    /**
+     * Risk events attributable to this account (append-only).
+     */
+    public function riskEvents()
+    {
+        return $this->hasMany(RiskEvent::class);
+    }
+
+    /**
+     * Hashed IP observations for this account (anti-fraud, never raw IPs).
+     */
+    public function ipLinks()
+    {
+        return $this->hasMany(IpLink::class);
+    }
+
+    /**
+     * Anti-cheat incidents where this user is the accused or reporter.
+     */
+    public function antiCheatIncidents()
+    {
+        return $this->hasMany(AntiCheatIncident::class, 'accused_user_id');
+    }
+
+    /**
+     * Account-similarity links involving this user (either direction),
+     * eagerly loading both sides.
+     */
+    public function linkedAccounts()
+    {
+        return AccountLink::query()
+            ->with(['user', 'linkedUser'])
+            ->where(function ($q) {
+                $q->where('user_id', $this->id)->orWhere('linked_user_id', $this->id);
+            });
+    }
+
+    /**
+     * Phone OTP challenges issued for this account.
+     */
+    public function otpChallenges()
+    {
+        return $this->hasMany(OtpChallenge::class);
+    }
+
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email_verified_at !== null;
     }
 
     public function riskProfile()
@@ -198,14 +322,64 @@ class User extends Authenticatable
         return $this->role === 'organizer';
     }
 
+    /**
+     * Union of both account generations: the legacy `is_active` / `is_banned`
+     * flags and the Phase 14 `account_status` lifecycle column. A `null`
+     * status means "never set" and is treated as active.
+     */
     public function isActive(): bool
     {
-        return (bool) ($this->is_active ?? true) && !$this->is_banned;
+        return (bool) ($this->is_active ?? true)
+            && ! $this->is_banned
+            && ! $this->isDeactivated()
+            && ! $this->isDeleted();
     }
 
     public function isBanned(): bool
     {
         return (bool) $this->is_banned;
+    }
+
+    /**
+     * Deactivated (self-service or admin) or awaiting deletion.
+     */
+    public function isDeactivated(): bool
+    {
+        return in_array($this->account_status, ['deactivated', 'deletion_pending', 'suspended'], true);
+    }
+
+    /**
+     * A deleted account is an anonymizing tombstone: authentication, listing
+     * and every mutation are refused.
+     */
+    public function isDeleted(): bool
+    {
+        return $this->account_status === 'deleted';
+    }
+
+    /**
+     * Human-readable reason an account cannot authenticate, or null when it
+     * can. Used by the API middleware/controllers for an honest error code.
+     */
+    public function inactiveReason(): ?string
+    {
+        if ($this->isBanned()) {
+            return 'banned';
+        }
+
+        if ($this->isDeactivated()) {
+            return 'deactivated';
+        }
+
+        if ($this->isDeleted()) {
+            return 'deleted';
+        }
+
+        if (! (bool) ($this->is_active ?? true)) {
+            return 'inactive';
+        }
+
+        return null;
     }
 
     public function canChangeUsername(): bool

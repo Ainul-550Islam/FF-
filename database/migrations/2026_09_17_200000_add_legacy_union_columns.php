@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -80,6 +81,10 @@ return new class extends Migration
                 'approved_by' => 'foreignIdNullableUsers',
                 'processed_by' => 'foreignIdNullableUsers',
                 'processed_at' => 'timestampNullable',
+                // The settlement flow records the external/manual reference on
+                // completion and the reason on failure.
+                'provider_reference' => 'string60Nullable',
+                'failure_reason' => 'string255Nullable',
             ];
             foreach (array_keys($payoutCols) as $col) {
                 if (Schema::hasColumn('payouts', $col)) {
@@ -102,6 +107,12 @@ return new class extends Migration
                         case 'string30Nullable':
                             $table->string($col, 30)->nullable();
                             break;
+                        case 'string60Nullable':
+                            $table->string($col, 60)->nullable();
+                            break;
+                        case 'string255Nullable':
+                            $table->string($col, 255)->nullable();
+                            break;
                         case 'timestampNullable':
                             $table->timestamp($col)->nullable();
                             break;
@@ -116,6 +127,53 @@ return new class extends Migration
                 if (!str_contains($e->getMessage(), 'duplicate') && !str_contains($e->getMessage(), 'already exists')) {
                     throw $e;
                 }
+            }
+        }
+
+        // financial_settlements: the pre-Phase09 migration creates the table
+        // with the legacy totals only, so the prize-distribution generation's
+        // reconciliation snapshot columns must be guaranteed here.
+        if (Schema::hasTable('financial_settlements')) {
+            // The legacy generation declares total_amount_minor NOT NULL; the
+            // settlement snapshot inserts its own columns instead.
+            $this->nullableUnionColumns('financial_settlements');
+
+            $settlementCols = [
+                'gross_collected_minor' => 'unsignedBigIntegerDefault',
+                'refunded_minor' => 'unsignedBigIntegerDefault',
+                'net_collected_minor' => 'unsignedBigIntegerDefault',
+                'prize_pool_minor' => 'unsignedBigIntegerDefault',
+                'allocated_prizes_minor' => 'unsignedBigIntegerDefault',
+                'completed_payouts_minor' => 'unsignedBigIntegerDefault',
+                'platform_revenue_minor' => 'unsignedBigIntegerDefault',
+                'adjustments_minor' => 'bigIntegerDefault',
+                'reconciliation_status' => 'string20Nullable',
+                'finalized_by' => 'foreignIdNullableUsers',
+                'finalized_at' => 'timestampNullable',
+            ];
+            foreach ($settlementCols as $col => $kind) {
+                if (Schema::hasColumn('financial_settlements', $col)) {
+                    continue;
+                }
+                Schema::table('financial_settlements', function (Blueprint $table) use ($col, $kind) {
+                    switch ($kind) {
+                        case 'unsignedBigIntegerDefault':
+                            $table->unsignedBigInteger($col)->default(0);
+                            break;
+                        case 'bigIntegerDefault':
+                            $table->bigInteger($col)->default(0);
+                            break;
+                        case 'string20Nullable':
+                            $table->string($col, 20)->nullable();
+                            break;
+                        case 'foreignIdNullableUsers':
+                            $table->foreignId($col)->nullable()->constrained('users')->nullOnDelete();
+                            break;
+                        case 'timestampNullable':
+                            $table->timestamp($col)->nullable();
+                            break;
+                    }
+                });
             }
         }
 
@@ -160,7 +218,9 @@ return new class extends Migration
 
         // ledger_entries: the financial-architecture generation documents
         // type (deposit|refund|adjustment|reversal|...) and description on
-        // the ledger; guarantee the columns exist on the union schema.
+        // the ledger, plus the running-balance snapshot (balance_after) and
+        // the movement currency; guarantee the columns exist on the union
+        // schema so both generations read/write the same rows.
         if (Schema::hasTable('ledger_entries')) {
             if (!Schema::hasColumn('ledger_entries', 'type')) {
                 Schema::table('ledger_entries', function (Blueprint $table) {
@@ -170,6 +230,192 @@ return new class extends Migration
             if (!Schema::hasColumn('ledger_entries', 'description')) {
                 Schema::table('ledger_entries', function (Blueprint $table) {
                     $table->string('description', 255)->nullable();
+                });
+            }
+            if (!Schema::hasColumn('ledger_entries', 'balance_after')) {
+                Schema::table('ledger_entries', function (Blueprint $table) {
+                    $table->bigInteger('balance_after')->nullable();
+                });
+            }
+            if (!Schema::hasColumn('ledger_entries', 'currency')) {
+                Schema::table('ledger_entries', function (Blueprint $table) {
+                    $table->string('currency', 8)->default('BDT');
+                });
+            }
+
+            // Backfill: the legacy rows carry the running balance in
+            // balance_after_minor; mirror it into balance_after so either
+            // column reads the same value.
+            DB::table('ledger_entries')
+                ->whereNull('balance_after')
+                ->whereNotNull('balance_after_minor')
+                ->update(['balance_after' => DB::raw('balance_after_minor')]);
+        }
+
+        // users: the Phase 14 account-security generation records two-factor
+        // state on the user row.
+        if (Schema::hasTable('users') && !Schema::hasColumn('users', 'two_factor_enabled')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->boolean('two_factor_enabled')->default(false);
+            });
+        }
+
+        // login_events: the Phase 14 generation records the auth status, the
+        // resolved location and the raw request metadata for the user-facing
+        // login history.
+        if (Schema::hasTable('login_events')) {
+            $loginColumns = [
+                'ip_address' => fn (Blueprint $table) => $table->string('ip_address', 45)->nullable(),
+                'user_agent' => fn (Blueprint $table) => $table->string('user_agent', 512)->nullable(),
+                'location' => fn (Blueprint $table) => $table->string('location', 120)->nullable(),
+                'status' => fn (Blueprint $table) => $table->string('status', 20)->nullable(),
+                'successful' => fn (Blueprint $table) => $table->boolean('successful')->default(true),
+            ];
+
+            foreach ($loginColumns as $col => $def) {
+                if (Schema::hasColumn('login_events', $col)) {
+                    continue;
+                }
+
+                Schema::table('login_events', function (Blueprint $table) use ($def) {
+                    $def($table);
+                });
+            }
+        }
+
+        // webhook_events: the Phase 15 ingress generation tracks the provider
+        // event id, the signature verdict, the processing status/state and the
+        // encrypted payload + receipt timestamp.
+        if (Schema::hasTable('webhook_events')) {
+            $webhookColumns = [
+                'external_event_id' => fn (Blueprint $table) => $table->string('external_event_id', 191)->nullable(),
+                'signature_status' => fn (Blueprint $table) => $table->string('signature_status', 20)->nullable(),
+                'status' => fn (Blueprint $table) => $table->string('status', 30)->nullable(),
+                'payload_encrypted' => fn (Blueprint $table) => $table->text('payload_encrypted')->nullable(),
+                'metadata' => fn (Blueprint $table) => $table->json('metadata')->nullable(),
+                'received_at' => fn (Blueprint $table) => $table->timestamp('received_at')->nullable(),
+            ];
+
+            foreach ($webhookColumns as $col => $def) {
+                if (Schema::hasColumn('webhook_events', $col)) {
+                    continue;
+                }
+
+                Schema::table('webhook_events', function (Blueprint $table) use ($def) {
+                    $def($table);
+                });
+            }
+
+            // Idempotency for (provider, external_event_id): the ingress never
+            // processes the same provider event twice.
+            $indexName = 'webhook_events_provider_external_event_unique';
+
+            if (! Schema::hasIndex('webhook_events', $indexName)) {
+                Schema::table('webhook_events', function (Blueprint $table) use ($indexName) {
+                    $table->unique(['provider', 'external_event_id'], $indexName);
+                });
+            }
+
+            if (! Schema::hasIndex('webhook_events', 'webhook_events_status_index')) {
+                Schema::table('webhook_events', function (Blueprint $table) {
+                    $table->index('status');
+                });
+            }
+
+            // Union: the ingress generation keys rows by external_event_id and
+            // never sets the legacy event_id, so that column must be nullable
+            // (the unique indexes still guarantee one row per event).
+            if (Schema::hasColumn('webhook_events', 'event_id')) {
+                Schema::table('webhook_events', function (Blueprint $table) {
+                    $table->string('event_id', 191)->nullable()->change();
+                });
+            }
+
+            // Backfill both generations' identifiers/state onto one another.
+            DB::table('webhook_events')
+                ->whereNull('external_event_id')
+                ->whereNotNull('event_id')
+                ->update(['external_event_id' => DB::raw('event_id')]);
+
+            DB::table('webhook_events')
+                ->whereNull('status')
+                ->whereNotNull('state')
+                ->update(['status' => DB::raw('state')]);
+
+            DB::table('webhook_events')
+                ->whereNull('event_id')
+                ->whereNotNull('external_event_id')
+                ->update(['event_id' => DB::raw('external_event_id')]);
+        }
+
+        // payment_methods: the Phase 14 generation verifies a saved method and
+        // tracks its masked identifier hash + last use.
+        if (Schema::hasTable('payment_methods')) {
+            $methodColumns = [
+                'identifier_hash' => fn (Blueprint $table) => $table->string('identifier_hash', 64)->nullable(),
+                'is_verified' => fn (Blueprint $table) => $table->boolean('is_verified')->default(false),
+                'last_used_at' => fn (Blueprint $table) => $table->timestamp('last_used_at')->nullable(),
+            ];
+
+            foreach ($methodColumns as $col => $def) {
+                if (Schema::hasColumn('payment_methods', $col)) {
+                    continue;
+                }
+
+                Schema::table('payment_methods', function (Blueprint $table) use ($def) {
+                    $def($table);
+                });
+            }
+        }
+
+        // user_identities: the Phase 14 linked-provider generation stores the
+        // provider subject, the profile snapshot and the raw payload.
+        if (Schema::hasTable('user_identities')) {
+            $identityColumns = [
+                'provider_user_id' => fn (Blueprint $table) => $table->string('provider_user_id', 191)->nullable(),
+                'email' => fn (Blueprint $table) => $table->string('email', 191)->nullable(),
+                'name' => fn (Blueprint $table) => $table->string('name', 191)->nullable(),
+                'avatar' => fn (Blueprint $table) => $table->string('avatar', 512)->nullable(),
+                'payload' => fn (Blueprint $table) => $table->json('payload')->nullable(),
+            ];
+
+            foreach ($identityColumns as $col => $def) {
+                if (Schema::hasColumn('user_identities', $col)) {
+                    continue;
+                }
+
+                Schema::table('user_identities', function (Blueprint $table) use ($def) {
+                    $def($table);
+                });
+            }
+
+            // Backfill the provider subject from the legacy identifier column
+            // (both hold the same provider-side id).
+            if (Schema::hasColumn('user_identities', 'provider_id')) {
+                DB::table('user_identities')
+                    ->whereNull('provider_user_id')
+                    ->whereNotNull('provider_id')
+                    ->update(['provider_user_id' => DB::raw('provider_id')]);
+            }
+        }
+
+        // otp_challenges: the Phase 14 generation keys a challenge by the
+        // delivery channel/reference and enforces an attempt ceiling.
+        if (Schema::hasTable('otp_challenges')) {
+            $otpColumns = [
+                'reference' => fn (Blueprint $table) => $table->string('reference', 191)->nullable(),
+                'provider' => fn (Blueprint $table) => $table->string('provider', 40)->nullable(),
+                'max_attempts' => fn (Blueprint $table) => $table->unsignedSmallInteger('max_attempts')->default(5),
+                'consumed_at' => fn (Blueprint $table) => $table->timestamp('consumed_at')->nullable(),
+            ];
+
+            foreach ($otpColumns as $col => $def) {
+                if (Schema::hasColumn('otp_challenges', $col)) {
+                    continue;
+                }
+
+                Schema::table('otp_challenges', function (Blueprint $table) use ($def) {
+                    $def($table);
                 });
             }
         }

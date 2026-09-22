@@ -72,23 +72,21 @@ class EnsureTokenIsValid
                 ], 401);
             }
 
-            if (method_exists($tokenable, 'isActive') && !$tokenable->isActive()) {
-                Log::warning('Inactive account attempt', [
+            // A deactivated, suspended, banned or deleted account cannot use a
+            // bearer token: the credential is refused with the API's standard
+            // error envelope (401 + error.code = account_inactive).
+            if (method_exists($tokenable, 'inactiveReason') && ($reason = $tokenable->inactiveReason()) !== null) {
+                Log::warning('Inactive account bearer attempt', [
                     'user_id' => $tokenable->id ?? 'unknown',
+                    'reason' => $reason,
                     'request_id' => $request->header('X-Request-ID', 'unknown'),
                 ]);
 
-                return response()->json([
-                    'error' => 'account_inactive',
-                    'message' => 'Account is inactive'
-                ], 403);
+                return \App\Support\ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
             }
 
-            if (isset($tokenable->is_active) && !$tokenable->is_active) {
-                return response()->json([
-                    'error' => 'account_inactive',
-                    'message' => 'Account is inactive'
-                ], 403);
+            if (isset($tokenable->is_active) && !$tokenable->is_active && !method_exists($tokenable, 'inactiveReason')) {
+                return \App\Support\ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
             }
 
             // Check token abilities if needed

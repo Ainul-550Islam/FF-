@@ -12,10 +12,10 @@ class EnsureUserIsStaff
         if (!$user) {
             return response()->json(['error' => 'unauthorized'], 401);
         }
-        if (method_exists($user, 'isStaff') && !$user->isStaff()) {
-            return response()->json(['error' => 'forbidden', 'message' => 'Staff required'], 403);
-        }
-        if (isset($user->is_staff) && !$user->is_staff) {
+        // User::isStaff() already unions both generations (the is_staff /
+        // is_admin flags and the admin / moderator roles), so the legacy
+        // flag-only check would wrongly reject role-based moderators.
+        if (! $user->isStaff()) {
             return response()->json(['error' => 'forbidden', 'message' => 'Staff required'], 403);
         }
         return $next($request);

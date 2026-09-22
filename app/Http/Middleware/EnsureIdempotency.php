@@ -1,25 +1,61 @@
 <?php
+
 namespace App\Http\Middleware;
+
+use App\Services\IdempotencyService;
 use Closure;
+use DomainException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Phase 15 — Idempotency-Key enforcement for critical mutation endpoints.
+ *
+ * When an `Idempotency-Key` header is present the request is resolved
+ * against the idempotency store: a replay within the TTL returns the stored
+ * response, a reuse with a different body is a 409, and a fresh key's
+ * successful (2xx) response is stored for future replays. Requests without
+ * the header pass straight through.
+ */
 class EnsureIdempotency
 {
+    public function __construct(protected IdempotencyService $idempotency)
+    {
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->isMethod('POST') && $request->is('api/*')) {
-            $key = $request->header('Idempotency-Key') ?: $request->header('X-Idempotency-Key');
-            if (!$key) {
-                return response()->json([
-                    'error' => 'idempotency_key_required',
-                    'message' => 'Idempotency-Key header required for POST api/*'
-                ], 400);
-            }
-            if (strlen($key) < 8 || strlen($key) > 100) {
-                return response()->json(['error' => 'invalid_idempotency_key', 'message' => 'Idempotency key must be 8-100 chars'], 400);
-            }
+        $key = $this->idempotency->keyFrom($request);
+
+        if ($key === null) {
+            return $next($request);
         }
-        return $next($request);
+
+        $stored = $this->idempotency->resolve($request->user(), $key, $request);
+
+        if ($stored !== null) {
+            $response = $stored;
+
+            // Surface replays with the standard header.
+            $response->headers->set('Idempotency-Replayed', 'true');
+
+            return $response;
+        }
+
+        try {
+            $response = $next($request);
+        } catch (DomainException $e) {
+            // The service layer has already rejected a conflicting reuse.
+            throw $e;
+        }
+
+        // Only successful mutations are recorded; a failed request can be
+        // safely retried with the same key.
+        if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
+            $this->idempotency->store($request->user(), $key, $request, $response);
+            $response->headers->set('Idempotency-Key-Processed', 'true');
+        }
+
+        return $response;
     }
 }

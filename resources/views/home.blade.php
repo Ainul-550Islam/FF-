@@ -1,83 +1,63 @@
 @extends('layouts.app')
 
-@section('title', 'FF Arena - Home')
-@section('description', 'FF Arena competitive gaming tournaments - Join, compete, win')
-
 @section('content')
-<div style="text-align: center; padding: 40px 0 32px;">
-    <h1 style="font-size: 48px; font-weight: 900; margin: 0 0 16px; line-height: 1.1;">Compete. Win. <span style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Dominate.</span></h1>
-    <p class="text-muted" style="font-size: 18px; max-width: 600px; margin: 0 auto 24px;">Join the ultimate Free Fire tournament platform. Secure wallet, anti-cheat, real payouts via bKash, Nagad, Rocket.</p>
-    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; align-items: center;">
-        <a href="{{ route('tournaments.index') }}" class="btn btn-primary btn-lg">Browse Tournaments</a>
-        <a href="{{ route('register') }}" class="btn btn-secondary btn-lg">Create Account</a>
-        <span data-internet-status class="internet-status online"></span>
-    </div>
-    <div style="margin-top: 16px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; font-size: 13px; color: var(--text-muted);">
-        <span>✓ Offline-aware</span>
-        <span>✓ Avatar profiles</span>
-        <span>✓ Internet check</span>
-        <span>✓ Secure wallet</span>
-    </div>
-</div>
-
-<div class="grid grid-3" style="margin-top: 32px;">
-    <div class="card">
-        <div style="font-size: 32px; margin-bottom: 12px;" aria-hidden="true">🏆</div>
-        <h3 style="margin: 0 0 8px; font-size: 18px; font-weight: 700;">Tournaments</h3>
-        <p class="text-muted" style="font-size: 14px; margin: 0 0 16px;">Daily scrims, weekly championships, monthly majors. Entry via wallet, prize auto-distributed.</p>
-        <a href="{{ route('tournaments.index') }}" class="btn btn-ghost btn-sm">Explore →</a>
-    </div>
-    <div class="card">
-        <div style="font-size: 32px; margin-bottom: 12px;" aria-hidden="true">👤</div>
-        <h3 style="margin: 0 0 8px; font-size: 18px; font-weight: 700;">Profile & Avatar</h3>
-        <p class="text-muted" style="font-size: 14px; margin: 0 0 16px;">Custom avatar, bio, stats, login history, connected accounts. Private storage, authenticated serving.</p>
-        <a href="{{ route('profile.show') }}" class="btn btn-ghost btn-sm">View Profile →</a>
-    </div>
-    <div class="card">
-        <div style="font-size: 32px; margin-bottom: 12px;" aria-hidden="true">🔒</div>
-        <h3 style="margin: 0 0 8px; font-size: 18px; font-weight: 700;">Security & Settings</h3>
-        <p class="text-muted" style="font-size: 14px; margin: 0 0 16px;">2FA, sessions, login history, payment methods, internet status monitoring, offline safety.</p>
-        <a href="{{ route('settings.security') }}" class="btn btn-ghost btn-sm">Security →</a>
-    </div>
-</div>
-
-<div class="card" style="margin-top: 24px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-    <div style="flex: 1;">
-        <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: 700;">Internet Connection Monitor</h3>
-        <p class="text-muted" style="font-size: 13px; margin: 0;">We continuously check your connection. If offline, financial actions are blocked to prevent duplicate charges. Idempotency ensures safety when you reconnect.</p>
-    </div>
-    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <span data-internet-status class="internet-status online"></span>
-        <button onclick="window.FFArena?.checkInternet()" class="btn btn-secondary btn-sm" data-require-online>Test Connection</button>
-    </div>
-</div>
-
-@if(($tournaments ?? collect())->count() > 0)
-    <div style="margin-top: 32px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 style="margin: 0; font-size: 22px; font-weight: 800;">Featured Tournaments</h2>
-            <a href="{{ route('tournaments.index') }}" class="btn btn-ghost btn-sm">View All</a>
+    <section class="hero" aria-labelledby="hero-title">
+        <h1 id="hero-title">Bangladesh's <span class="tag">Free Fire</span> Tournament Platform</h1>
+        <p class="page-subtitle">
+            Organizers run fair tournaments. Players pay entry with bKash, get auto brackets,
+            submit scores with proof — and winners get paid. No chaos, no cheating.
+        </p>
+        <div class="row mt-4">
+            <a href="{{ route('tournaments.index') }}" class="btn btn-primary btn-lg">Browse Tournaments</a>
+            @guest
+                <a href="{{ route('register') }}" class="btn btn-cyan">Join as Player</a>
+                <a href="{{ route('register') }}" class="btn">Become an Organizer</a>
+            @endguest
         </div>
-        <div class="grid grid-3">
-            @foreach($tournaments as $tournament)
-                <div class="card card-hover">
-                    <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
-                        <h3 style="margin: 0; font-size: 16px; font-weight: 700;">{{ $tournament->name }}</h3>
-                        <x-status-pill :status="$tournament->status" />
+    </section>
+
+    <section aria-labelledby="featured-heading">
+        <h2 id="featured-heading">🔥 Live &amp; Upcoming Tournaments</h2>
+
+        <div class="grid cols-3">
+            @forelse ($tournaments as $t)
+                <article class="card">
+                    <div class="row-between">
+                        <x-status-pill :status="$t->status" />
+                        <span class="muted">{{ strtoupper($t->game_mode) }} · {{ $t->map }}</span>
                     </div>
-                    <div class="text-muted" style="font-size: 13px;">Prize: {{ number_format($tournament->prize_pool_minor / 100, 2) }} BDT • {{ $tournament->max_teams }} teams</div>
-                    <div style="margin-top: 12px;">
-                        <a href="{{ route('tournaments.show', $tournament) }}" class="btn btn-secondary btn-sm" style="width: 100%;">View Details</a>
+                    <h3 class="mt-3">
+                        <a href="{{ route('tournaments.show', $t) }}">{{ $t->name }}</a>
+                    </h3>
+                    <p class="muted mb-3" style="font-size: .85rem">
+                        by {{ $t->organizer->name ?? 'Organizer' }}
+                    </p>
+                    <dl class="row">
+                        <div class="stat">
+                            <dt class="label">Entry</dt>
+                            <dd class="num">৳{{ number_format($t->entry_fee) }}</dd>
+                        </div>
+                        <div class="stat">
+                            <dt class="label">Prize</dt>
+                            <dd class="num">৳{{ number_format($t->prize_pool) }}</dd>
+                        </div>
+                        <div class="stat">
+                            <dt class="label">Teams</dt>
+                            <dd class="num">{{ $t->confirmed_teams_count }}/{{ $t->team_slots }}</dd>
+                        </div>
+                    </dl>
+                    <div class="mt-3">
+                        <a href="{{ route('tournaments.show', $t) }}"
+                           class="btn btn-sm {{ $t->status === 'open' ? 'btn-green' : '' }}">
+                            {{ $t->status === 'open' ? 'Register →' : 'View Details' }}
+                        </a>
                     </div>
-                </div>
-            @endforeach
+                </article>
+            @empty
+                <x-empty-state title="No tournaments yet" icon="🏆">
+                    Be the first organizer to publish a tournament on FF Arena.
+                </x-empty-state>
+            @endforelse
         </div>
-    </div>
-@else
-    <div class="card" style="margin-top: 32px; text-align: center; padding: 32px;">
-        <div style="font-size: 48px; margin-bottom: 16px;" aria-hidden="true">🎮</div>
-        <h3 style="margin: 0 0 8px;">No tournaments yet</h3>
-        <p class="text-muted" style="font-size: 14px;">Tournaments will appear here once created by admins. Check back soon!</p>
-    </div>
-@endif
+    </section>
 @endsection

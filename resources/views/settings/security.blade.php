@@ -1,117 +1,147 @@
 @extends('layouts.app')
-
-@section('title', 'Security Settings')
-
+@section('title', 'Security Settings — FF Arena')
 @section('content')
-<div class="settings-layout">
-    @include('settings._nav')
+    <header class="page-head">
+        <h1 class="page-title">Security Settings</h1>
+    </header>
 
-    <div class="settings-content">
-        <div style="margin-bottom: 24px;">
-            <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 800;">Security Settings</h1>
-            <p class="text-muted">Manage your password, two-factor authentication, and security preferences.</p>
-            <div style="margin-top: 12px;">
-                <span data-internet-status class="internet-status online"></span>
+    <div class="grid cols-2">
+        <section class="card" aria-labelledby="account-status">
+            <h3 id="account-status">Account status</h3>
+            <div class="table-wrap">
+                <table>
+                    <caption class="sr-only">Account verification and state</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Check</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Email verification</td>
+                            <td>
+                                @if ($user->hasVerifiedEmail())
+                                    <x-status-pill status="verified" />
+                                @else
+                                    <x-status-pill status="pending" label="Not verified" />
+                                    <a href="{{ route('verification.notice') }}" class="btn btn-sm mt-1">Verify</a>
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Phone verification</td>
+                            <td>
+                                @if ($identities->contains('provider', 'phone'))
+                                    <x-status-pill status="verified" />
+                                @else
+                                    <x-status-pill status="pending" label="Not verified" />
+                                    <a href="{{ route('settings.connected-accounts') }}" class="btn btn-sm mt-1">Verify</a>
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Google account</td>
+                            <td>
+                                @if ($identities->contains('provider', 'google'))
+                                    <x-status-pill status="confirmed" label="Linked" />
+                                @else
+                                    <x-status-pill status="draft" label="Not linked" />
+                                    <a href="{{ route('settings.connected-accounts') }}" class="btn btn-sm mt-1">Link</a>
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Password</td>
+                            <td>
+                                @if ($hasPassword)
+                                    <x-status-pill status="confirmed" label="Set" />
+                                @else
+                                    <x-status-pill status="pending" label="Not set" />
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Account state</td>
+                            <td><x-status-pill :status="$user->isActive() ? 'active' : 'failed'" :label="$user->account_status" /></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-        </div>
+        </section>
 
-        <div class="card" style="margin-bottom: 24px;">
-            <div class="card-header">
-                <h2 class="card-title">Change Password</h2>
-            </div>
-            <form method="POST" action="{{ route('settings.security.password') }}">
+        <section class="card" aria-labelledby="change-password">
+            <h3 id="change-password">Change password</h3>
+            <form method="POST" action="{{ route('settings.password') }}" novalidate>
                 @csrf
-                @method('PUT')
-                <div class="form-group">
-                    <label for="current_password" class="form-label required">Current Password</label>
-                    <input type="password" id="current_password" name="current_password" class="form-input @error('current_password') is-invalid @enderror" required autocomplete="current-password">
-                    @error('current_password') <div class="form-error">{{ $message }}</div> @enderror
-                </div>
-                <div class="grid grid-2">
-                    <div class="form-group">
-                        <label for="password" class="form-label required">New Password</label>
-                        <input type="password" id="password" name="password" class="form-input @error('password') is-invalid @enderror" required autocomplete="new-password" minlength="8">
-                        <div class="form-hint">Min 8 chars, mix of letters, numbers, symbols</div>
-                        @error('password') <div class="form-error">{{ $message }}</div> @enderror
+                @if ($hasPassword)
+                    <div class="field">
+                        <label for="current_password">Current password</label>
+                        <input type="password" id="current_password" name="current_password"
+                               autocomplete="current-password" required
+                               @if ($errors->has('current_password')) aria-invalid="true" aria-describedby="current_password-error" @endif>
+                        @error('current_password')
+                            <span class="form-error" id="current_password-error">{{ $message }}</span>
+                        @enderror
                     </div>
-                    <div class="form-group">
-                        <label for="password_confirmation" class="form-label required">Confirm New Password</label>
-                        <input type="password" id="password_confirmation" name="password_confirmation" class="form-input" required autocomplete="new-password">
-                    </div>
+                @endif
+                <div class="field">
+                    <label for="password">New password (min 8 characters)</label>
+                    <input type="password" id="password" name="password"
+                           autocomplete="new-password" required
+                           @if ($errors->has('password')) aria-invalid="true" aria-describedby="password-error" @endif>
+                    @error('password')
+                        <span class="form-error" id="password-error">{{ $message }}</span>
+                    @enderror
                 </div>
-                <button type="submit" class="btn btn-primary" data-require-online>Update Password</button>
+                <div class="field">
+                    <label for="password_confirmation">Confirm new password</label>
+                    <input type="password" id="password_confirmation" name="password_confirmation"
+                           autocomplete="new-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary mt-2">{{ $hasPassword ? 'Change password' : 'Set password' }}</button>
+            </form>
+        </section>
+    </div>
+
+    <section class="card" aria-labelledby="active-sessions">
+        <h3 id="active-sessions">Active sessions</h3>
+        <p class="muted">Review and revoke your active sessions, or sign out everywhere.</p>
+        <div class="row mt-2">
+            <a href="{{ route('settings.sessions') }}" class="btn btn-sm">View sessions</a>
+            <form method="POST" action="{{ route('settings.sessions.revokeAll') }}">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-danger">Sign out everywhere</button>
             </form>
         </div>
+    </section>
 
-        <div class="card" style="margin-bottom: 24px;">
-            <div class="card-header">
-                <h2 class="card-title">Two-Factor Authentication</h2>
-                <x-status-pill status="{{ $user->two_factor_enabled ?? false ? 'success' : 'warning' }}" :label="($user->two_factor_enabled ?? false) ? 'Enabled' : 'Disabled'" />
+    <section class="card" aria-labelledby="danger-zone" style="border-color: var(--red)">
+        <h3 id="danger-zone" class="text-danger">Danger zone</h3>
+        @if ($user->isActive())
+            <div class="row">
+                <form method="POST" action="{{ route('settings.deactivate') }}"
+                      onsubmit="return confirm('Deactivate your account? You can reactivate it later.')">
+                    @csrf
+                    <button type="submit" class="btn btn-sm" style="border-color: var(--amber); color: var(--amber)">Deactivate account</button>
+                </form>
+                <form method="POST" action="{{ route('settings.deletion.request') }}"
+                      onsubmit="return confirm('Request account deletion? This cannot be undone.')">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-danger">Request deletion</button>
+                </form>
             </div>
-            <div style="display: grid; gap: 16px;">
-                <p class="text-muted" style="font-size: 14px; margin: 0;">Add an extra layer of security to your account. When enabled, you'll need to enter a code from your authenticator app during login.</p>
-                
-                @if($user->two_factor_enabled ?? false)
-                    <div class="alert alert-success">
-                        <span>✓</span>
-                        <span>2FA is enabled. Your account is protected with time-based one-time passwords.</span>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-secondary btn-sm">View Recovery Codes</button>
-                        <form method="POST" action="{{ route('settings.security.2fa.disable') }}" style="display: inline;">
-                            @csrf
-                            <button type="submit" class="btn btn-danger btn-sm" data-confirm="Disable 2FA? This reduces account security.">Disable 2FA</button>
-                        </form>
-                    </div>
-                @else
-                    <div class="alert alert-warning">
-                        <span>⚠</span>
-                        <span>2FA is not enabled. We strongly recommend enabling it to protect your wallet and tournament entries.</span>
-                    </div>
-                    <a href="{{ route('settings.security.2fa.setup') }}" class="btn btn-primary btn-sm" style="align-self: flex-start;">Enable 2FA</a>
-                @endif
-            </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 24px;">
-            <div class="card-header">
-                <h2 class="card-title">Login Notifications</h2>
-            </div>
-            <div style="display: grid; gap: 12px;">
-                <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-                    <input type="checkbox" name="notify_new_device" value="1" {{ old('notify_new_device', $user->notify_new_device ?? true) ? 'checked' : '' }} style="width: 18px; height: 18px;">
-                    <span>
-                        <strong>New device login</strong>
-                        <span class="text-muted" style="display: block; font-size: 13px;">Email notification when login from new device</span>
-                    </span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-                    <input type="checkbox" name="notify_failed_login" value="1" {{ old('notify_failed_login', $user->notify_failed_login ?? true) ? 'checked' : '' }} style="width: 18px; height: 18px;">
-                    <span>
-                        <strong>Failed login attempts</strong>
-                        <span class="text-muted" style="display: block; font-size: 13px;">Notify after 3 failed attempts</span>
-                    </span>
-                </label>
-            </div>
-        </div>
-
-        <div class="card" style="border-color: rgba(214,48,49,0.3);">
-            <div class="card-header">
-                <h2 class="card-title" style="color: var(--danger);">Active Sessions</h2>
-                <a href="{{ route('settings.sessions') }}" class="btn btn-ghost btn-sm">Manage All</a>
-            </div>
-            <p class="text-muted" style="font-size: 14px;">If you see an unfamiliar device, revoke its session immediately and change your password.</p>
-            <div style="margin-top: 12px;">
-                <div style="display: flex; gap: 12px; align-items: center; padding: 12px; background: var(--bg-elevated); border-radius: 8px; border: 1px solid var(--border);">
-                    <span style="width: 10px; height: 10px; background: var(--success); border-radius: 50%; display: inline-block;"></span>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; font-size: 14px;">Current Session • {{ request()->ip() }}</div>
-                        <div class="text-muted" style="font-size: 12px;">{{ Str::limit(request()->userAgent(), 80) }} • Active now</div>
-                    </div>
-                    <x-status-pill status="success" label="Current" />
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+        @elseif ($user->account_status === 'deactivated')
+            <form method="POST" action="{{ route('settings.reactivate') }}">
+                @csrf
+                <button type="submit" class="btn btn-green btn-sm">Reactivate account</button>
+            </form>
+        @elseif ($user->account_status === 'deletion_pending')
+            <p class="muted">Deletion requested — it will be processed shortly.</p>
+            <form method="POST" action="{{ route('settings.deletion.cancel') }}">
+                @csrf
+                <button type="submit" class="btn btn-sm">Cancel deletion request</button>
+            </form>
+        @endif
+    </section>
 @endsection

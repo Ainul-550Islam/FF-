@@ -75,24 +75,30 @@ class EnsureBearerToken
                 ], 401);
             }
 
-            // Check if tokenable (user) is active
-            if (method_exists($tokenable, 'isActive') && !$tokenable->isActive()) {
-                return response()->json([
-                    'error' => 'account_inactive',
-                    'message' => 'Account is inactive'
-                ], 403);
+            // A deactivated, suspended, banned or deleted account cannot use a
+            // bearer token: the credential is refused with the API's standard
+            // error envelope (401 + error.code = account_inactive).
+            if (method_exists($tokenable, 'inactiveReason') && ($reason = $tokenable->inactiveReason()) !== null) {
+                Log::warning('Inactive account bearer attempt', [
+                    'user_id' => $tokenable->id ?? 'unknown',
+                    'reason' => $reason,
+                    'request_id' => $request->header('X-Request-ID', 'unknown'),
+                ]);
+
+                return \App\Support\ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
             }
 
-            if (isset($tokenable->is_active) && !$tokenable->is_active) {
-                return response()->json([
-                    'error' => 'account_inactive',
-                    'message' => 'Account is inactive'
-                ], 403);
+            if (isset($tokenable->is_active) && !$tokenable->is_active && !method_exists($tokenable, 'inactiveReason')) {
+                return \App\Support\ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
             }
 
-            // Set user resolver
-            $request->setUserResolver(function() use ($tokenable) {
-                return $tokenable;
+            // Resolve the user through Sanctum's guard so the authenticated
+            // instance carries its access token (ability checks such as
+            // `abilities:*` and token metadata rely on currentAccessToken()).
+            // The validated tokenable remains the fallback for callers that
+            // run outside the guard.
+            $request->setUserResolver(function () use ($tokenable) {
+                return auth('sanctum')->user() ?? $tokenable;
             });
 
             // Update last used at

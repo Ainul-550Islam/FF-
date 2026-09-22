@@ -17,17 +17,51 @@ class LedgerEntry extends Model
     public const DIRECTION_CREDIT = 'credit';
     public const DIRECTION_DEBIT = 'debit';
 
-    protected $fillable = ['wallet_id','user_id','direction','amount_minor','balance_after_minor','type','description','reference_type','reference_id','idempotency_key','metadata'];
-    protected $casts = ['amount_minor'=>'integer','balance_after_minor'=>'integer','metadata'=>'array'];
+    /**
+     * Ledger rows are the immutable financial source of truth and are written
+     * exclusively by WalletService — nothing is mass-assignable.
+     */
+    protected $fillable = [];
+    protected $casts = ['amount_minor'=>'integer','balance_after_minor'=>'integer','balance_after'=>'integer','metadata'=>'array'];
     public function wallet(){return $this->belongsTo(Wallet::class);}
     public function user(){return $this->belongsTo(User::class);}
 
     /**
-     * Alias used across services/tests for the post-movement balance.
+     * The actor who caused the movement (admin credit/debit, refund processor,
+     * payout processor). Null for system-generated movements.
      */
-    public function getBalanceAfterAttribute()
+    public function actor(){return $this->belongsTo(User::class, 'actor_id');}
+
+    public function isCredit(): bool
     {
-        return $this->balance_after_minor;
+        return $this->direction === self::DIRECTION_CREDIT;
+    }
+
+    public function isDebit(): bool
+    {
+        return $this->direction === self::DIRECTION_DEBIT;
+    }
+
+    /**
+     * The post-movement running balance. Both generations of the schema are
+     * supported: `balance_after` (financial architecture) and
+     * `balance_after_minor` (legacy) — whichever column carries the value.
+     */
+    public function getBalanceAfterAttribute(): ?int
+    {
+        $value = $this->attributes['balance_after'] ?? $this->attributes['balance_after_minor'] ?? null;
+
+        return $value === null ? null : (int) $value;
+    }
+
+    /**
+     * Keep the two running-balance columns in lockstep on write so a ledger
+     * row is always readable through either name.
+     */
+    public function setBalanceAfterAttribute(?int $value): void
+    {
+        $this->attributes['balance_after'] = $value;
+        $this->attributes['balance_after_minor'] = $value;
     }
 
     // ledger_entries table is source of truth for financial integrity

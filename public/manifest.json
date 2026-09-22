@@ -1,0 +1,57 @@
+{
+    "name": "FF Arena - Free Fire Tournament Platform",
+    "short_name": "FF Arena",
+    "description": "Bangladesh's Free Fire tournament platform. Register teams, play brackets, submit scores, track the leaderboard and withdraw prizes.",
+    "id": "/",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "display_override": ["standalone", "minimal-ui", "browser"],
+    "orientation": "portrait-primary",
+    "background_color": "#0a0a0f",
+    "theme_color": "#0a0a0f",
+    "lang": "bn-BD",
+    "dir": "ltr",
+    "categories": ["games", "sports", "entertainment"],
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "/favicon.svg",
+            "type": "image/svg+xml",
+            "sizes": "any",
+            "purpose": "any"
+        },
+        {
+            "src": "/apple-touch-icon.png",
+            "type": "image/png",
+            "sizes": "180x180",
+            "purpose": "any"
+        },
+        {
+            "src": "/favicon.ico",
+            "type": "image/x-icon",
+            "sizes": "any",
+            "purpose": "any"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Tournaments",
+            "short_name": "Tournaments",
+            "url": "/tournaments",
+            "description": "Browse open and upcoming Free Fire tournaments"
+        },
+        {
+            "name": "Wallet",
+            "short_name": "Wallet",
+            "url": "/wallet",
+            "description": "Balance, entry fees and prize payouts"
+        },
+        {
+            "name": "Notifications",
+            "short_name": "Alerts",
+            "url": "/notifications",
+            "description": "Match, payment and dispute notifications"
+        }
+    ]
+}

@@ -1,165 +1,199 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="color-scheme" content="dark light">
-    <meta name="theme-color" content="#0a0a0f">
-    <meta name="description" content="@yield('description', 'FF Arena - Competitive gaming tournaments platform')">
-    
-    <title>@yield('title', config('app.name', 'FF Arena'))</title>
-    
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
-    <link rel="manifest" href="{{ asset('manifest.json') }}">
-    
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @stack('styles')
-    
-    <style>
-        /* Critical CSS for FOUC prevention */
-        .skip-link { position: absolute; top: -100%; left: 16px; z-index: 9999; padding: 12px 20px; background: #6c5ce7; color: white; border-radius: 8px; font-weight: 600; text-decoration: none; }
-        .skip-link:focus { top: 16px; }
-    </style>
-</head>
-<body>
-    {{-- Skip Link for Accessibility --}}
-    <a href="#main" class="skip-link">{{ __('ui.skip_to_content', [], 'Skip to main content') }}</a>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b0e1a">
 
-    {{-- Offline Banner - Internet Check --}}
+    {{-- SEO (Phase 17) — title honours per-page @section('title') for the
+         long-tail pages, falling back to the SEO manager's computed title. --}}
+    <title>@yield('title', $seo['title'])</title>
+    <meta name="description" content="{{ $seo['description'] }}">
+
+    @if ($seo['indexable'])
+        <link rel="canonical" href="{{ $seo['canonical'] }}">
+    @else
+        <meta name="robots" content="noindex, nofollow">
+    @endif
+
+    {{-- Open Graph / social previews (only publicly accessible data) --}}
+    <meta property="og:site_name" content="{{ config('app.name', 'FF Arena') }}">
+    <meta property="og:title" content="@yield('title', $seo['title'])">
+    <meta property="og:description" content="{{ $seo['description'] }}">
+    <meta property="og:type" content="{{ $seo['og_type'] }}">
+    <meta property="og:url" content="{{ $seo['canonical'] }}">
+    @if ($seo['og_image'])
+        <meta property="og:image" content="{{ $seo['og_image'] }}">
+        @if ($seo['og_image_alt'])<meta property="og:image:alt" content="{{ $seo['og_image_alt'] }}">@endif
+    @endif
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="@yield('title', $seo['title'])">
+    <meta name="twitter:description" content="{{ $seo['description'] }}">
+
+    {{-- Site identity --}}
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+
+    {{-- JSON-LD structured data (server-encoded, HTML-safe) --}}
+    @if ($seo['jsonld'])
+        <script type="application/ld+json">{!! $seo['jsonld'] !!}</script>
+    @endif
+
+    {{-- Page-specific head additions --}}
+    @stack('head')
+
+    {{-- Stylesheet: prefer the Vite build when present, else the served copy
+         (identical content; see public/css/app.css + resources/css/app.css). --}}
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @else
+        <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    @endif
+
+    {{-- Shared behaviours, deferred so they never block first paint --}}
+    <script src="{{ asset('js/app.js') }}" defer></script>
+</head>
+<body id="top">
+    <a class="skip-link" href="#main">{{ __('ui.skip_to_content') }}</a>
+
+    {{-- Offline banner + internet status (progressive enhancement; the inline
+         script below keeps it correct before public/js/app.js loads). --}}
     <div id="offline-banner" class="offline-banner" role="alert" aria-live="assertive" aria-hidden="true">
         <span class="dot" aria-hidden="true"></span>
         <span>You are offline - check your internet connection</span>
-        <button onclick="window.FFArena?.checkInternet()" class="btn btn-sm btn-secondary" style="margin-left: 12px; background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: white;">Retry</button>
+        <button onclick="window.FFArena?.checkInternet()" class="btn btn-sm btn-secondary"
+                style="margin-left: 12px; background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: white;">Retry</button>
     </div>
 
-    <div class="app-shell">
-        {{-- Header --}}
-        <header class="app-header" role="banner">
-            <div class="header-inner">
-                <a href="{{ route('home') }}" class="brand" aria-label="FF Arena Home">
-                    <span class="brand-icon" aria-hidden="true">FF</span>
-                    <span>FF Arena</span>
-                </a>
+    <header class="site-header">
+        <div class="container nav-bar">
+            <a href="{{ route('home') }}" class="brand" aria-label="{{ config('app.name', 'FF Arena') }} — home">
+                <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+                    <defs>
+                        <linearGradient id="brandFg" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#a855f7"/>
+                        </linearGradient>
+                    </defs>
+                    <rect x="2" y="2" width="60" height="60" rx="14" fill="#141a2e" stroke="#28335a" stroke-width="2"/>
+                    <path d="M22 14h22l-5 14h-8l-2 8h8l-5 14H20l5-14h8l2-8h-8z" fill="url(#brandFg)"/>
+                </svg>
+                FF<span>ARENA</span>
+            </a>
 
-                <nav class="nav-links" data-mobile-nav role="navigation" aria-label="Main navigation">
-                    <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}">Home</a>
-                    <a href="{{ route('tournaments.index') }}" class="nav-link {{ request()->routeIs('tournaments.*') ? 'active' : '' }}">Tournaments</a>
-                    <a href="{{ route('leaderboard.show', ['tournament' => 'latest']) }}" class="nav-link {{ request()->routeIs('leaderboard.*') ? 'active' : '' }}">Leaderboard</a>
-                    @auth
-                        <a href="{{ route('wallet.index') }}" class="nav-link {{ request()->routeIs('wallet.*') ? 'active' : '' }}">Wallet</a>
-                        <a href="{{ route('notifications.index') }}" class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
-                            Notifications
-                            @if(auth()->user()->unreadNotifications ?? false)
-                                <span class="unread-badge" aria-label="Unread notifications" style="margin-left: 6px; background: #d63031; color: white; font-size: 10px; padding: 2px 6px; border-radius: 999px;">•</span>
-                            @endif
-                        </a>
-                        @if(auth()->user()->isAdmin())
-                            <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.*') ? 'active' : '' }}">Admin</a>
-                        @endif
-                    @endauth
-                </nav>
+            <span data-internet-status class="internet-status online" aria-live="polite" title="Internet connection status">
+                <span class="dot" style="background: var(--success)" aria-hidden="true"></span> Online
+            </span>
 
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    {{-- Internet Status Indicator --}}
-                    <span data-internet-status class="internet-status online" aria-live="polite" title="Internet connection status">
-                        <span class="dot" style="background: var(--success)" aria-hidden="true"></span> Online
-                    </span>
+            <button class="nav-toggle" type="button" data-nav-toggle
+                    aria-expanded="false" aria-controls="site-nav">
+                <span class="nav-toggle-icon" aria-hidden="true"></span>
+                <span class="sr-only">{{ __('ui.menu') }}</span>
+            </button>
 
-                    @auth
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <a href="{{ route('profile.show') }}" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit;" aria-label="Profile - {{ auth()->user()->display_name_or_name }}">
-                                <span class="avatar avatar-sm" data-initials="{{ auth()->user()->initials }}">
-                                    @if(auth()->user()->hasAvatar())
-                                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->display_name_or_name }} avatar" width="32" height="32" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                                    @else
-                                        <span class="avatar-fallback">{{ auth()->user()->initials }}</span>
-                                    @endif
-                                </span>
-                                <span style="font-weight: 600; font-size: 14px;" class="hide-mobile">{{ auth()->user()->display_name_or_name }}</span>
-                            </a>
-                            <form method="POST" action="{{ route('logout') }}" style="display: inline;">
-                                @csrf
-                                <button type="submit" class="btn btn-ghost btn-sm" aria-label="Logout">Logout</button>
-                            </form>
-                        </div>
-                    @else
-                        <a href="{{ route('login') }}" class="btn btn-ghost btn-sm">Login</a>
-                        <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Register</a>
-                    @endauth
+            <nav id="site-nav" class="nav-links" aria-label="{{ __('ui.primary_navigation') }}"
+                 @auth data-unread-url="{{ route('notifications.unread') }}" @endauth>
+                <a class="nav-link" href="{{ route('tournaments.index') }}">{{ __('ui.tournaments') }}</a>
 
-                    <button class="mobile-nav-toggle" data-mobile-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Toggle navigation">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M3 12h18M3 6h18M3 18h18"/>
+                @auth
+                    @if (auth()->user()->isOrganizer() || auth()->user()->isAdmin())
+                        <a class="nav-link" href="{{ route('tournaments.create') }}">+ Create Tournament</a>
+                    @endif
+                    <a class="nav-link" href="{{ route('wallet.index') }}">Wallet</a>
+                    <a class="nav-link" href="{{ route('support.index') }}">Support</a>
+                    <a class="nav-link" href="{{ route('notifications.index') }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                            <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                    </button>
-                </div>
+                        {{ __('ui.notifications') }}
+                        <span class="nav-badge" id="unread-badge" aria-live="polite"
+                              @if (($unreadNotifications ?? 0) === 0) hidden @endif>
+                            {{ ($unreadNotifications ?? 0) > 99 ? '99+' : ($unreadNotifications ?? 0) }}
+                        </span>
+                    </a>
+                    @if (auth()->user()->isAdmin() || auth()->user()->isModerator() || auth()->user()->isOrganizer())
+                        <a class="nav-link" href="{{ route('moderation.index') }}">Moderation</a>
+                    @endif
+                    @if (auth()->user()->isAdmin() || auth()->user()->isModerator())
+                        <a class="nav-link" href="{{ route('moderation.security') }}">Security</a>
+                    @endif
+                    @if (auth()->user()->isAdmin() || auth()->user()->isModerator())
+                        <a class="nav-link" href="{{ route('admin.support.index') }}">Support Queue</a>
+                    @endif
+                    @if (auth()->user()->isAdmin())
+                        <a class="nav-link" href="{{ route('admin.accounts.index') }}">Accounts</a>
+                        <a class="nav-link" href="{{ route('admin.analytics.index') }}">Analytics</a>
+                        <a class="nav-link" href="{{ route('admin.audit.index') }}">Audit</a>
+                        <a class="nav-link" href="{{ route('admin.dashboard') }}">Admin</a>
+                    @endif
+                    <a class="nav-link" href="{{ route('profile.show', auth()->user()) }}">Profile</a>
+                    <a class="nav-link" href="{{ route('profile.edit') }}">Settings</a>
+
+                    <span class="nav-link muted" aria-hidden="true">{{ auth()->user()->name }}</span>
+
+                    <form method="POST" action="{{ route('logout') }}" class="nav-form">
+                        @csrf
+                        <button type="submit" class="btn btn-ghost btn-sm">{{ __('ui.logout') }}</button>
+                    </form>
+                @else
+                    <a class="nav-link" href="{{ route('login') }}">{{ __('ui.login') }}</a>
+                    <a class="btn btn-primary btn-sm" href="{{ route('register') }}">{{ __('ui.register') }}</a>
+                @endauth
+            </nav>
+        </div>
+    </header>
+
+    <main id="main" class="site-main container">
+        @if (session('success'))
+            <div class="alert alert-success" role="status">
+                <span aria-hidden="true">✓</span>
+                <span>{{ session('success') }}</span>
             </div>
-        </header>
+        @endif
 
-        {{-- Main --}}
-        <main id="main" class="main-content" role="main" tabindex="-1">
-            {{-- Flash Messages --}}
-            @if(session('success'))
-                <div class="alert alert-success" role="status" aria-live="polite">
-                    <span aria-hidden="true">✓</span>
-                    <span>{{ session('success') }}</span>
-                </div>
-            @endif
-            @if(session('error'))
-                <div class="alert alert-danger" role="alert" aria-live="assertive">
-                    <span aria-hidden="true">✕</span>
-                    <span>{{ session('error') }}</span>
-                </div>
-            @endif
-            @if(session('warning'))
-                <div class="alert alert-warning" role="status" aria-live="polite">
-                    <span aria-hidden="true">⚠</span>
-                    <span>{{ session('warning') }}</span>
-                </div>
-            @endif
-            @if($errors->any())
-                <div class="alert alert-danger" role="alert" aria-live="assertive">
-                    <span aria-hidden="true">✕</span>
-                    <div>
-                        <strong>Please fix the following:</strong>
-                        <ul style="margin: 8px 0 0; padding-left: 20px;">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                </div>
-            @endif
+        @if (session('error'))
+            <div class="alert alert-error" role="alert">
+                <span aria-hidden="true">✕</span>
+                <span>{{ session('error') }}</span>
+            </div>
+        @endif
 
-            @yield('content')
-        </main>
-
-        {{-- Footer --}}
-        <footer class="app-footer" role="contentinfo">
-            <div style="max-width: 1280px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center;">
+        @if ($errors->any())
+            <div class="alert alert-error" role="alert">
+                <span aria-hidden="true">✕</span>
                 <div>
-                    <strong>FF Arena</strong> © {{ date('Y') }} - Competitive Gaming Platform
-                    <span style="margin-left: 12px;" data-internet-status class="internet-status online" aria-live="polite"></span>
+                    <strong>{{ __('ui.form_errors') }}</strong>
+                    <ul>
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
                 </div>
-                <nav aria-label="Footer navigation" style="display: flex; gap: 16px;">
-                    <a href="{{ route('sitemap') }}" style="color: var(--text-muted); text-decoration: none;">Sitemap</a>
-                    <a href="{{ route('health.index') }}" style="color: var(--text-muted); text-decoration: none;">Status</a>
-                    <a href="#" onclick="window.FFArena?.checkInternet(); return false;" style="color: var(--text-muted); text-decoration: none;">Check Connection</a>
-                </nav>
             </div>
-        </footer>
-    </div>
+        @endif
 
-    {{-- Toast Container --}}
-    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+        @yield('content')
+    </main>
 
-    @stack('scripts')
-    
+    <footer class="site-footer">
+        <div class="container">
+            <div>
+                <strong class="tag">{{ config('app.name', 'FF Arena') }}</strong>
+                — Bangladesh's Free Fire tournament platform.
+                Legit. Smart. Profitable. No hacks, ever.
+            </div>
+            <nav aria-label="{{ __('ui.footer_navigation') }}">
+                <a href="{{ route('tournaments.index') }}">{{ __('ui.tournaments') }}</a>
+                &middot;
+                <a href="{{ route('sitemap') }}">Sitemap</a>
+                &middot;
+                <a href="{{ route('robots') }}">robots.txt</a>
+            </nav>
+        </div>
+    </footer>
     <script>
-        // Critical inline for offline detection before main JS loads
-        (function() {
+        // Critical inline for offline detection before public/js/app.js loads.
+        (function () {
             const banner = document.getElementById('offline-banner');
             function updateBanner() {
                 if (!banner) return;

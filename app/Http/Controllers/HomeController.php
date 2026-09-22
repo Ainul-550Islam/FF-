@@ -3,36 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tournament;
-use Illuminate\Http\Request;
+use App\Support\Seo;
 
 class HomeController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $tournaments = Tournament::where('status', '!=', 'draft')
-            ->orderBy('starts_at', 'desc')
-            ->limit(6)
+        $tournaments = Tournament::with('organizer')
+            ->withCount('confirmedTeams')
+            ->whereIn('status', ['open', 'live', 'finished', 'closed'])
+            ->orderByRaw("CASE status WHEN 'live' THEN 0 WHEN 'open' THEN 1 ELSE 2 END")
+            ->orderByDesc('created_at')
+            ->limit(12)
             ->get();
 
+        $siteName = (string) config('app.name', 'FF Arena');
+
+        app(Seo::class)
+            ->title($siteName.' — Free Fire Tournaments in Bangladesh')
+            ->description('Browse live and upcoming Free Fire tournaments in Bangladesh. Register your squad, compete and get paid — the country\'s trusted tournament platform.')
+            ->canonical(route('home'))
+            ->indexable()
+            ->jsonLd([
+                '@context' => 'https://schema.org',
+                '@type' => 'WebSite',
+                'name' => $siteName,
+                'url' => route('home'),
+                'description' => 'Bangladesh\'s Free Fire tournament platform.',
+            ]);
+
         return view('home', compact('tournaments'));
-    }
-
-    public function livePoll(Request $request)
-    {
-        $cursor = $request->input('cursor', 0);
-        $events = [];
-
-        if ($request->user()) {
-            // Simulate live events - in production would query live_events table
-            $events = [
-                ['id' => 1, 'type' => 'tournament.update', 'message' => 'Tournament starting soon', 'cursor' => $cursor + 1],
-            ];
-        }
-
-        return view('live.poll', [
-            'events' => $events,
-            'cursor' => $cursor + 1,
-            'online' => true,
-        ]);
     }
 }

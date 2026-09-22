@@ -1,43 +1,80 @@
 <?php
+
 namespace App\Http\Controllers\Api\V1;
+
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\V1\NotificationResource;
+use App\Models\Notification;
+use App\Services\NotificationService;
+use App\Support\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * Phase 15 — the caller's own notifications (ownership enforced by querying
+ * through the user relationship).
+ */
 class NotificationController extends Controller
 {
-    public function index(Request $request)
+    public function __construct(
+        protected NotificationService $notifications,
+    ) {
+    }
+
+    /**
+     * GET /api/v1/me/notifications
+     */
+    public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-        try {
-            $notifications = $user->notifications()->orderBy('created_at','desc')->paginate(20);
-            return response()->json(['data'=>$notifications->items(),'meta'=>['total'=>$notifications->total(),'unread'=>$user->unreadNotifications()->count()]]);
-        } catch (\Throwable $e) {
-            return response()->json(['data'=>[],'meta'=>['total'=>0,'unread'=>0]]);
+        $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
+
+        $notifications = $this->notifications->forUser($request->user(), $perPage);
+
+        return ApiResponse::data(
+            NotificationResource::collection($notifications),
+            [
+                'unread_count' => $this->notifications->unreadCount($request->user()),
+                'pagination' => [
+                    'current_page' => $notifications->currentPage(),
+                    'last_page' => $notifications->lastPage(),
+                    'per_page' => $notifications->perPage(),
+                    'total' => $notifications->total(),
+                ],
+            ]
+        );
+    }
+
+    /**
+     * GET /api/v1/me/notifications/unread-count
+     */
+    public function unreadCount(Request $request): JsonResponse
+    {
+        return ApiResponse::data([
+            'unread_count' => $this->notifications->unreadCount($request->user()),
+        ]);
+    }
+
+    /**
+     * POST /api/v1/me/notifications/{notification}/read
+     */
+    public function markRead(Request $request, Notification $notification): JsonResponse
+    {
+        if ($notification->user_id !== $request->user()->id) {
+            return ApiResponse::error('not_found', 'Notification not found.', [], 404);
         }
+
+        $this->notifications->markRead($notification, $request->user());
+
+        return ApiResponse::data(new NotificationResource($notification->fresh()));
     }
 
-    public function unreadCount(Request $request)
+    /**
+     * POST /api/v1/me/notifications/read-all
+     */
+    public function markAllRead(Request $request): JsonResponse
     {
-        try {
-            $count = $request->user()->unreadNotifications()->count();
-        } catch (\Throwable $e) {
-            $count = 0;
-        }
-        return response()->json(['unread_count'=>$count]);
-    }
+        $count = $this->notifications->markAllRead($request->user());
 
-    public function markRead(Request $request, $notification)
-    {
-        try {
-            $n = $request->user()->notifications()->where('id',$notification)->first();
-            if ($n) $n->markAsRead();
-        } catch (\Throwable $e) {}
-        return response()->json(['message'=>'Marked as read']);
-    }
-
-    public function markAllRead(Request $request)
-    {
-        try { $request->user()->unreadNotifications->markAsRead(); } catch (\Throwable $e) {}
-        return response()->json(['message'=>'All marked as read']);
+        return ApiResponse::data(['marked_read' => $count]);
     }
 }

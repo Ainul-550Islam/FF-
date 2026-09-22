@@ -1,21 +1,51 @@
 @if ($paginator->hasPages())
-<nav role="navigation" aria-label="Pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; flex-wrap: wrap; gap: 12px;">
-<div class="text-muted" style="font-size: 13px;">Showing {{ $paginator->firstItem() }} to {{ $paginator->lastItem() }} of {{ $paginator->total() }}</div>
-<div style="display: flex; gap: 4px;">
-@foreach ($elements as $element)
-@if (is_string($element))
-<span class="btn btn-ghost btn-sm" disabled>{{ $element }}</span>
-@endif
-@if (is_array($element))
-@foreach ($element as $page => $url)
-@if ($page == $paginator->currentPage())
-<span class="btn btn-primary btn-sm" aria-current="page">{{ $page }}</span>
-@else
-<a href="{{ $url }}" class="btn btn-secondary btn-sm">{{ $page }}</a>
-@endif
-@endforeach
-@endif
-@endforeach
-</div>
-</nav>
+    <nav role="navigation" aria-label="Pagination">
+        <ul class="pagination">
+            {{-- Previous page link --}}
+            @if ($paginator->onFirstPage())
+                <li>
+                    <span class="disabled" aria-disabled="true">&laquo; Previous</span>
+                </li>
+            @else
+                <li>
+                    <a href="{{ $paginator->previousPageUrl() }}" rel="prev">&laquo; Previous</a>
+                </li>
+            @endif
+
+            {{-- Pagination elements --}}
+            @foreach ($elements as $element)
+                {{-- "Three Dots" separator --}}
+                @if (is_string($element))
+                    <li><span class="disabled" aria-hidden="true">{{ $element }}</span></li>
+                @endif
+
+                {{-- Array of links --}}
+                @if (is_array($element))
+                    @foreach ($element as $page => $url)
+                        @if ($page == $paginator->currentPage())
+                            <li><span aria-current="page" class="current">{{ $page }}</span></li>
+                        @else
+                            <li><a href="{{ $url }}" aria-label="Page {{ $page }}">{{ $page }}</a></li>
+                        @endif
+                    @endforeach
+                @endif
+            @endforeach
+
+            {{-- Next page link --}}
+            @if ($paginator->hasMorePages())
+                <li>
+                    <a href="{{ $paginator->nextPageUrl() }}" rel="next">Next &raquo;</a>
+                </li>
+            @else
+                <li>
+                    <span class="disabled" aria-disabled="true">Next &raquo;</span>
+                </li>
+            @endif
+        </ul>
+    </nav>
+
+    <p class="pagination-meta">
+        Showing {{ $paginator->firstItem() ?? 0 }}&ndash;{{ $paginator->lastItem() ?? 0 }}
+        of {{ $paginator->total() }} result{{ $paginator->total() === 1 ? '' : 's' }}
+    </p>
 @endif

@@ -1,32 +1,83 @@
 <?php
+
 namespace App\Http\Controllers\Api\V1;
+
 use App\Http\Controllers\Controller;
-use App\Models\Wallet;
-use App\Models\LedgerEntry;
-use App\Models\Payout;
+use App\Http\Resources\Api\V1\LedgerEntryResource;
+use App\Http\Resources\Api\V1\PayoutResource;
+use App\Http\Resources\Api\V1\WalletResource;
+use App\Services\WalletService;
+use App\Support\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * Phase 15 — wallet & payouts (read-only for ordinary users).
+ *
+ * There are deliberately NO credit/debit endpoints: balances and the ledger
+ * change only through the Phase 08/09 services.
+ */
 class WalletController extends Controller
 {
-    public function show(Request $request)
-    {
-        $user = $request->user();
-        $wallets = Wallet::where('user_id',$user->id)->get();
-        $primary = $wallets->firstWhere('currency','BDT') ?? $wallets->first();
-        return response()->json(['data'=>['wallets'=>$wallets,'primary'=>$primary,'total_minor'=>$wallets->sum('balance_minor')]]);
+    public function __construct(
+        protected WalletService $wallets,
+    ) {
     }
 
-    public function ledger(Request $request)
+    /**
+     * GET /api/v1/me/wallet
+     */
+    public function show(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $entries = LedgerEntry::where('user_id',$user->id)->orderBy('created_at','desc')->paginate(20);
-        return response()->json(['data'=>$entries->items(),'meta'=>['total'=>$entries->total()]]);
+        return ApiResponse::data(new WalletResource($this->wallets->walletFor($request->user())));
     }
 
-    public function payouts(Request $request)
+    /**
+     * GET /api/v1/me/wallet/ledger
+     */
+    public function ledger(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $payouts = Payout::where('user_id',$user->id)->orderBy('created_at','desc')->paginate(20);
-        return response()->json(['data'=>$payouts->items(),'meta'=>['total'=>$payouts->total()]]);
+        $wallet = $this->wallets->walletFor($request->user());
+
+        $perPage = min(100, max(1, (int) $request->query('per_page', 30)));
+
+        $entries = $wallet->ledgerEntries()->orderByDesc('id')->paginate($perPage);
+
+        return ApiResponse::data(
+            LedgerEntryResource::collection($entries),
+            [
+                'pagination' => [
+                    'current_page' => $entries->currentPage(),
+                    'last_page' => $entries->lastPage(),
+                    'per_page' => $entries->perPage(),
+                    'total' => $entries->total(),
+                ],
+            ]
+        );
+    }
+
+    /**
+     * GET /api/v1/me/payouts — own payouts only.
+     */
+    public function payouts(Request $request): JsonResponse
+    {
+        $perPage = min(100, max(1, (int) $request->query('per_page', 30)));
+
+        $payouts = $request->user()->payouts()
+            ->with('tournament')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+
+        return ApiResponse::data(
+            PayoutResource::collection($payouts),
+            [
+                'pagination' => [
+                    'current_page' => $payouts->currentPage(),
+                    'last_page' => $payouts->lastPage(),
+                    'per_page' => $payouts->perPage(),
+                    'total' => $payouts->total(),
+                ],
+            ]
+        );
     }
 }

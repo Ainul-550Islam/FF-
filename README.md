@@ -67,16 +67,44 @@ routes/web.php        সব রাউট
 
 ---
 
-## ▶️ লোকালি চালাতে
+## ▶️ লোকালি চালাতে (VS Code)
 
 ```bash
-cd ffarena-app
+# 1. unzip / clone করা ফোল্ডারে ঢুকুন
+cd FF-Arena-FINAL-SOURCE
+
+# 2. PHP + JS dependency
 composer install
-cp .env.example .env      # তারপর ডাটাবেজ সেটআপ
-php artisan key:generate
+npm install            # (ঐচ্ছিক — CSS/JS আগেই public/css, public/js তে বিল্ট করা আছে)
+
+# 3. Environment — .env ফাইল ZIP-এর ভেতরেই আছে (APP_KEY সহ)
+#    না থাকলে: cp .env.example .env && php artisan key:generate
+
+# 4. Database (SQLite — কোনো সার্ভার লাগে না)
+touch database/database.sqlite
 php artisan migrate --seed
-php artisan serve
+
+# 5. চালু করুন
+php artisan serve          # http://127.0.0.1:8000
 ```
+
+### ✅ যাচাই (verification)
+
+```bash
+php artisan route:list | wc -l     # 2147 লাইন (web + api + gameberry + health)
+php artisan test                   # 1170 passed, 40 skipped, 0 failed (4133 assertions)
+```
+
+### 🧹 ZIP-এ কী আছে / কী নেই
+
+| আছে | নেই (ইচ্ছাকৃত) |
+|---|---|
+| `app/`, `routes/`, `config/`, `database/`, `resources/`, `tests/`, `public/` | `vendor/` (`composer install` চালালেই আসবে) |
+| `composer.json` + `composer.lock`, `package.json` + `package-lock.json` | `node_modules/`, `public/build` |
+| `.env` (রেডি) + `.env.example` | `.git/`, ক্যাশ, লগ, `storage/framework/*` কম্পাইলড ভিউ |
+| `README.md`, `VSCODE_SETUP.md`, `docs/`, `deploy/` | `bin/k6` (65MB প্রি-বিল্ট লোড-টেস্ট বাইনারি — দরকার হলে রি-ডাউনলোড) |
+
+> GitHub-এ পুশ করলে `.gitignore` নিজেই `vendor/`, `node_modules/`, `.env`, ক্যাশ বাদ দিবে।
 
 ---
 

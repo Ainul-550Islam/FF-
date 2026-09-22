@@ -1,21 +1,10 @@
-@props(['type' => 'info', 'dismissible' => false, 'persistent' => false])
+@props(['type' => 'info'])
 
 @php
-$types = [
-    'success' => 'alert-success',
-    'error' => 'alert-danger',
-    'danger' => 'alert-danger',
-    'warning' => 'alert-warning',
-    'info' => 'alert-info',
-];
-$class = $types[$type] ?? $types['info'];
+    // Errors and warnings are announced assertively; success/info politely.
+    $role = in_array($type, ['error', 'warning'], true) ? 'alert' : 'status';
 @endphp
 
-<div {{ $attributes->merge(['class' => "alert $class"]) }} role="{{ $type === 'error' || $type === 'danger' ? 'alert' : 'status' }}" @if($persistent) data-persistent="true" @endif aria-live="{{ $type === 'error' || $type === 'danger' ? 'assertive' : 'polite' }}">
-    <div style="flex: 1;">
-        {{ $slot }}
-    </div>
-    @if($dismissible)
-        <button type="button" onclick="this.closest('.alert').remove()" aria-label="Dismiss alert" class="btn btn-ghost btn-sm" style="margin-left: auto;">×</button>
-    @endif
+<div role="{{ $role }}" {{ $attributes->merge(['class' => 'alert alert-'.$type]) }}>
+    {{ $slot }}
 </div>

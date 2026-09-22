@@ -42,13 +42,6 @@ class HealthCheckCommand extends Command
         }
 
         $this->newLine();
-        $db = $health->databaseStats();
-        $this->line('Database: '.$db['driver'].($db['reachable'] ? ' (reachable)' : ' (UNREACHABLE)'));
-        $this->line('  version: '.($db['version'] ?? 'n/a'));
-        $this->line('  migrations: '.($db['migrations'] ?? 'unknown'));
-        $this->line('  latency: '.($db['latency_ms'] === null ? 'n/a' : $db['latency_ms'].'ms'));
-
-        $this->newLine();
         $queue = $diagnostics['queue'];
 
         $this->line('Queue: '.($queue['reachable'] ? 'reachable' : 'UNREACHABLE'));

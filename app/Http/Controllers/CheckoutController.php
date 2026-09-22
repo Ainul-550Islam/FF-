@@ -134,9 +134,10 @@ class CheckoutController extends Controller
                 ->with('success', 'Registration confirmed! Your team is in.');
         }
 
-        // Hosted/redirect providers — when genuinely configured the adapter
-        // returns a provider redirect URL; otherwise every adapter falls back
-        // to the manual pending screen (never a fabricated success).
+        // Hosted/redirect providers: ask the gateway for a checkout session.
+        // A gateway that is not configured (or has no hosted checkout) throws
+        // a DomainException — the payer then continues on the manual pending
+        // screen instead of being sent to a dead provider page.
         try {
             $result = $gateway->createExternalPayment($payment);
 

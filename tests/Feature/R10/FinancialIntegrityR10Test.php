@@ -16,7 +16,7 @@ class FinancialIntegrityR10Test extends TestCase
         $user = \App\Models\User::factory()->create();
         $wallet = Wallet::create(['user_id' => $user->id, 'currency' => 'BDT', 'balance_minor' => 0]);
         
-        $credit = LedgerEntry::create([
+        $credit = $this->createRow(LedgerEntry::class, [
             'wallet_id' => $wallet->id,
             'user_id' => $user->id,
             'direction' => 'credit',

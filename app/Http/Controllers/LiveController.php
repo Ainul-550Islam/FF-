@@ -48,6 +48,21 @@ class LiveController extends Controller
     }
 
     /**
+     * Legacy `/live/poll` entry point. The canonical polling transport is
+     * `tournaments.live`; the old URL keeps working by resolving the
+     * tournament from the query string and delegating to the same handler.
+     */
+    public function poll(Request $request)
+    {
+        $tournament = Tournament::query()
+            ->where('slug', (string) $request->query('tournament'))
+            ->orWhere('id', (int) $request->query('tournament'))
+            ->firstOrFail();
+
+        return $this->tournamentLive($tournament, $request);
+    }
+
+    /**
      * Server-Sent Events stream for a tournament. Bounded lifetime with
      * comment heartbeats; ends cleanly so clients reconnect.
      */
