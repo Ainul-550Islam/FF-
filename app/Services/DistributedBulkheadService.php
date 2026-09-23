@@ -1,13 +1,17 @@
 <?php
+
 namespace App\Services;
+
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 
 class DistributedBulkheadService
 {
     protected int $maxConcurrent = 10;
+
     protected int $maxQueue = 100;
+
     protected bool $useRedis = false;
 
     public function __construct()
@@ -19,7 +23,7 @@ class DistributedBulkheadService
     {
         $activeKey = "bulkhead:{$provider}:active";
         $queueKey = "bulkhead:{$provider}:queue";
-        
+
         // Try distributed via Redis if available
         if ($this->useRedis) {
             try {
@@ -28,7 +32,7 @@ class DistributedBulkheadService
                 Log::warning('Redis bulkhead failed, falling back to Cache', ['error' => $e->getMessage()]);
             }
         }
-        
+
         // Fallback to Cache (file/database)
         return $this->executeWithCache($provider, $callback, $timeoutMs);
     }
@@ -36,15 +40,15 @@ class DistributedBulkheadService
     protected function executeWithRedis(string $provider, callable $callback, int $timeoutMs)
     {
         $activeKey = "bulkhead:{$provider}:active";
-        
+
         $count = Redis::incr($activeKey);
         Redis::expire($activeKey, 60); // Auto-cleanup
-        
+
         if ($count > $this->maxConcurrent) {
             Redis::decr($activeKey);
             throw new \RuntimeException("Bulkhead $provider at capacity (distributed): $count/{$this->maxConcurrent}");
         }
-        
+
         try {
             return $callback();
         } finally {
@@ -56,19 +60,19 @@ class DistributedBulkheadService
     {
         $activeKey = "bulkhead_{$provider}_active";
         $queueKey = "bulkhead_{$provider}_queue";
-        
+
         $active = (int) Cache::get($activeKey, 0);
-        
+
         if ($active >= $this->maxConcurrent) {
             $queued = (int) Cache::get($queueKey, 0);
             if ($queued >= $this->maxQueue) {
                 throw new \RuntimeException("Bulkhead $provider at capacity: too many requests");
             }
-            
+
             Cache::increment($queueKey);
             try {
                 $start = microtime(true);
-                while ((int)Cache::get($activeKey, 0) >= $this->maxConcurrent) {
+                while ((int) Cache::get($activeKey, 0) >= $this->maxConcurrent) {
                     if ((microtime(true) - $start) * 1000 > $timeoutMs) {
                         Cache::decrement($queueKey);
                         throw new \RuntimeException("Bulkhead $provider timeout");
@@ -79,7 +83,7 @@ class DistributedBulkheadService
                 Cache::decrement($queueKey);
             }
         }
-        
+
         Cache::increment($activeKey);
         try {
             return $callback();
@@ -93,6 +97,7 @@ class DistributedBulkheadService
         if ($this->useRedis) {
             try {
                 $active = (int) Redis::get("bulkhead:{$provider}:active") ?: 0;
+
                 return [
                     'provider' => $provider,
                     'active' => $active,
@@ -105,7 +110,7 @@ class DistributedBulkheadService
                 // Fallback
             }
         }
-        
+
         return [
             'provider' => $provider,
             'active' => (int) Cache::get("bulkhead_{$provider}_active", 0),

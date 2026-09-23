@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  * staff-only event types are filtered by LiveEventService, never by trusting
  * the client. No Phase 01–11 table is touched.
  */
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {

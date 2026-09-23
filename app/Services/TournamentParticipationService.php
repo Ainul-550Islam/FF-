@@ -27,8 +27,7 @@ class TournamentParticipationService
 {
     public function __construct(
         protected LiveEventService $live,
-    ) {
-    }
+    ) {}
 
     /**
      * Check a team in. Idempotent — checking in twice returns 'already' and

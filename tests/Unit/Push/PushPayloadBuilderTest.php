@@ -19,7 +19,7 @@ class PushPayloadBuilderTest extends TestCase
 
     private function notification(string $type, string $body = 'Full body', array $data = []): Notification
     {
-        $n = new Notification;
+        $n = new Notification();
         $n->id = 42;
         $n->type = $type;
         $n->title = 'Title';

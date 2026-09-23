@@ -22,8 +22,11 @@ use DomainException;
 class AccountLifecycleService
 {
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_DEACTIVATED = 'deactivated';
+
     public const STATUS_DELETION_PENDING = 'deletion_pending';
+
     public const STATUS_DELETED = 'deleted';
 
     public function __construct(
@@ -31,8 +34,7 @@ class AccountLifecycleService
         protected LoginEventService $loginEvents,
         protected NotificationService $notifications,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * Deactivate an account (self-service or admin). All sessions are
@@ -159,7 +161,7 @@ class AccountLifecycleService
         $user->deactivated_at = now();
         $user->name = 'Deleted User';
         $user->username = null;
-        $user->email = 'deleted-' . $user->id . '@ffarena.invalid';
+        $user->email = 'deleted-'.$user->id.'@ffarena.invalid';
         $user->phone = null;
         $user->game_uid = null;
         $user->bio = null;

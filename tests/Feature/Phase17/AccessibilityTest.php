@@ -100,7 +100,7 @@ class AccessibilityTest extends Phase17TestCase
         $tournament = $this->makeTournament($organizer, 'open');
 
         $captain = $this->makeUser('player');
-        $team = new Team;
+        $team = new Team();
         $team->tournament_id = $tournament->id;
         $team->captain_id = $captain->id;
         $team->name = 'Table Squad';

@@ -64,6 +64,7 @@ class GameBuddy extends Model
     public static function canAddMore(int $userId): bool
     {
         $count = self::where('user_id', $userId)->where('status', '!=', 'removed')->count();
+
         return $count < 25; // Gameberry max 25
     }
 

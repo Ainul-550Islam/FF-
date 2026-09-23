@@ -131,7 +131,7 @@ pub fn with_optional_auth(jwt_secret: String) -> impl Filter<Extract = (Option<A
                         if token.len() >= 10 {
                             if let Ok(claims) = crate::security::jwt::verify_jwt(token, &secret) {
                                 if claims.user_id > 0 {
-                                    return Ok(Some(AuthenticatedUser {
+                                    return Ok::<Option<AuthenticatedUser>, Rejection>(Some(AuthenticatedUser {
                                         user_id: claims.user_id,
                                         service_id: claims.service_id,
                                         is_admin: false,
@@ -143,7 +143,7 @@ pub fn with_optional_auth(jwt_secret: String) -> impl Filter<Extract = (Option<A
                         }
                     }
                 }
-                Ok(None)
+                Ok::<Option<AuthenticatedUser>, Rejection>(None)
             }
         })
 }
@@ -216,11 +216,12 @@ pub fn with_service_auth(hmac_secret: String) -> impl Filter<Extract = (), Error
 
                 // Validate signature - HMAC SHA256 of service_id + timestamp + nonce
                 let message = format!("{}{}{}", service_id, timestamp, nonce);
-                match crate::security::hmac::verify_hmac(message.as_bytes(), &signature, &secret) {
-                    Ok(_) => Ok(()),
-                    Err(_) => Err(warp::reject::custom(Unauthorized {
+                if crate::security::hmac::verify_hmac(&secret, &message, &signature) {
+                    Ok(())
+                } else {
+                    Err(warp::reject::custom(Unauthorized {
                         reason: "Invalid service signature".to_string(),
-                    })),
+                    }))
                 }
             }
         })

@@ -4,11 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('game_buddies')) {
+        if (! Schema::hasTable('game_buddies')) {
             Schema::create('game_buddies', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -25,7 +25,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('user_online_statuses')) {
+        if (! Schema::hasTable('user_online_statuses')) {
             Schema::create('user_online_statuses', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
@@ -43,7 +43,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('friend_notifications')) {
+        if (! Schema::hasTable('friend_notifications')) {
             Schema::create('friend_notifications', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete(); // who gets notified
@@ -56,7 +56,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('user_levels')) {
+        if (! Schema::hasTable('user_levels')) {
             Schema::create('user_levels', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
@@ -72,7 +72,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('referrals')) {
+        if (! Schema::hasTable('referrals')) {
             Schema::create('referrals', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('referrer_id')->constrained('users')->cascadeOnDelete();
@@ -89,7 +89,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('scratch_cards')) {
+        if (! Schema::hasTable('scratch_cards')) {
             Schema::create('scratch_cards', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();

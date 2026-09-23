@@ -60,8 +60,11 @@ class UserLeague extends Model
     public function isInTopPercent(): bool
     {
         $rank = $this->rank ?? $this->rank_in_league;
-        if (!$rank) return false;
+        if (! $rank) {
+            return false;
+        }
         $topCount = $this->league->promotion_top_count ?? 40;
+
         return $rank <= $topCount;
     }
 
@@ -73,7 +76,10 @@ class UserLeague extends Model
     public function winRate(): float
     {
         $total = $this->wins + $this->losses;
-        if ($total === 0) return 0;
+        if ($total === 0) {
+            return 0;
+        }
+
         return round(($this->wins / $total) * 100, 2);
     }
 
@@ -85,17 +91,23 @@ class UserLeague extends Model
     // Accessor for games_played compatibility - if not set, compute from wins+losses
     public function getGamesPlayedAttribute($value)
     {
-        if ($value !== null) return $value;
+        if ($value !== null) {
+            return $value;
+        }
         // Fallback to wins+losses if games_played not set
         $wins = $this->attributes['wins'] ?? 0;
         $losses = $this->attributes['losses'] ?? 0;
+
         return $wins + $losses;
     }
 
     // Accessor for rank compatibility
     public function getRankAttribute($value)
     {
-        if ($value !== null) return $value;
+        if ($value !== null) {
+            return $value;
+        }
+
         return $this->attributes['rank_in_league'] ?? null;
     }
 }

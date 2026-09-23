@@ -6,6 +6,7 @@ use App\Models\Dispute;
 use App\Models\DisputeEvidence;
 use App\Models\GameMatch;
 use App\Models\RiskEvent;
+use App\Models\ScoringRule;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
@@ -22,8 +23,7 @@ class DisputeController extends Controller
         protected DisputeService $service,
         protected FraudRiskService $risk,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * Show the "open a dispute" form.
@@ -53,13 +53,13 @@ class DisputeController extends Controller
         $this->authorize('openDispute', $match);
 
         $data = $request->validate([
-            'category' => 'required|in:' . implode(',', Dispute::CATEGORIES),
+            'category' => 'required|in:'.implode(',', Dispute::CATEGORIES),
             'description' => 'required|string|max:5000',
             'team_id' => 'nullable|integer|exists:teams,id',
-            'evidence_type' => 'nullable|in:' . implode(',', DisputeEvidence::TYPES),
+            'evidence_type' => 'nullable|in:'.implode(',', DisputeEvidence::TYPES),
             'evidence_description' => 'nullable|string|max:2000',
-            'evidence_file' => 'nullable|file|max:' . DisputeEvidence::MAX_KB
-                . '|mimetypes:' . $this->allowedMimeTypes(),
+            'evidence_file' => 'nullable|file|max:'.DisputeEvidence::MAX_KB
+                .'|mimetypes:'.$this->allowedMimeTypes(),
         ]);
 
         $user = $request->user();
@@ -83,7 +83,7 @@ class DisputeController extends Controller
             } catch (DomainException $e) {
                 return redirect()
                     ->route('matches.disputes.show', [$tournament, $match, $dispute])
-                    ->with('error', 'Dispute opened, but the evidence was not attached: ' . $e->getMessage());
+                    ->with('error', 'Dispute opened, but the evidence was not attached: '.$e->getMessage());
             }
         }
 
@@ -137,10 +137,10 @@ class DisputeController extends Controller
         $this->authorize('addEvidence', $dispute);
 
         $data = $request->validate([
-            'type' => 'required|in:' . implode(',', DisputeEvidence::TYPES),
+            'type' => 'required|in:'.implode(',', DisputeEvidence::TYPES),
             'description' => 'nullable|string|max:2000',
-            'evidence_file' => 'nullable|file|max:' . DisputeEvidence::MAX_KB
-                . '|mimetypes:' . $this->allowedMimeTypes(),
+            'evidence_file' => 'nullable|file|max:'.DisputeEvidence::MAX_KB
+                .'|mimetypes:'.$this->allowedMimeTypes(),
         ]);
 
         try {
@@ -245,7 +245,7 @@ class DisputeController extends Controller
             'metadata' => ['reviewer_id' => $reviewer->id],
         ]);
 
-        return back()->with('success', 'Dispute assigned to ' . $reviewer->name . '.');
+        return back()->with('success', 'Dispute assigned to '.$reviewer->name.'.');
     }
 
     /**
@@ -264,7 +264,7 @@ class DisputeController extends Controller
             'corrections' => 'nullable|array',
             'corrections.*.team_id' => 'required_with:corrections|integer|exists:teams,id',
             'corrections.*.kills' => 'nullable|integer|min:0',
-            'corrections.*.placement' => 'nullable|integer|min:1|max:' . \App\Models\ScoringRule::MAX_PLACEMENT,
+            'corrections.*.placement' => 'nullable|integer|min:1|max:'.ScoringRule::MAX_PLACEMENT,
         ]);
 
         $winner = Team::findOrFail($data['winner_team_id']);

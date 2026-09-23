@@ -3,13 +3,17 @@
 namespace App\Services\Gameberry;
 
 use App\Models\VideoAdReward;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class VideoAdService
 {
     const DAILY_LIMIT = 5;
+
     const GOLD_REWARD = 100;
+
     const GEM_REWARD = 1;
+
     const COOLDOWN_MINUTES = 30;
 
     public function canWatch(int $userId): bool
@@ -30,14 +34,17 @@ class VideoAdService
     public function getCooldownRemaining(int $userId): int
     {
         $lastAd = VideoAdReward::where('user_id', $userId)->orderByDesc('created_at')->first();
-        if (!$lastAd) return 0;
+        if (! $lastAd) {
+            return 0;
+        }
         $elapsed = $lastAd->created_at->diffInMinutes(now());
+
         return max(0, self::COOLDOWN_MINUTES - $elapsed);
     }
 
     public function watchAd(int $userId, string $provider = 'admob'): VideoAdReward
     {
-        if (!$this->canWatch($userId)) {
+        if (! $this->canWatch($userId)) {
             $todayCount = VideoAdReward::todayCount($userId);
             if ($todayCount >= self::DAILY_LIMIT) {
                 throw new \Exception('Daily video ad limit reached ('.self::DAILY_LIMIT.')');
@@ -58,8 +65,8 @@ class VideoAdService
             ]);
 
             // Give rewards
-            app(GoldEconomyService::class)->getOrCreateWallet($userId)->addGold(self::GOLD_REWARD, 'video_ad', 'video_ad_reward', (string)$reward->id, 'Free gold from video ad');
-            app(GemEconomyService::class)->getOrCreateWallet($userId)->addGems(self::GEM_REWARD, 'video_ad', 'video_ad_reward', (string)$reward->id, 'Free gem from video ad');
+            app(GoldEconomyService::class)->getOrCreateWallet($userId)->addGold(self::GOLD_REWARD, 'video_ad', 'video_ad_reward', (string) $reward->id, 'Free gold from video ad');
+            app(GemEconomyService::class)->getOrCreateWallet($userId)->addGems(self::GEM_REWARD, 'video_ad', 'video_ad_reward', (string) $reward->id, 'Free gem from video ad');
 
             $reward->status = 'rewarded';
             $reward->rewarded_at = now();
@@ -95,7 +102,7 @@ class VideoAdService
         ];
     }
 
-    public function getHistory(int $userId, int $limit = 20): \Illuminate\Database\Eloquent\Collection
+    public function getHistory(int $userId, int $limit = 20): Collection
     {
         return VideoAdReward::where('user_id', $userId)->orderByDesc('created_at')->limit($limit)->get();
     }

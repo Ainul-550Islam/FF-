@@ -25,8 +25,7 @@ class ApiTokenService
         protected LoginEventService $loginEvents,
         protected AuditLogService $audit,
         protected NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     /**
      * Issue a personal access token for a user.
@@ -78,7 +77,7 @@ class ApiTokenService
             $user,
             Notification::TYPE_SYSTEM,
             'API token created',
-            'A new API token "' . $this->cap($name, 60) . '" was created for your account.',
+            'A new API token "'.$this->cap($name, 60).'" was created for your account.',
             NotificationService::link('settings.security'),
             ['token_name' => $this->cap($name, 80)],
         );

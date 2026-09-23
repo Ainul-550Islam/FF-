@@ -1,7 +1,10 @@
 <?php
+
 namespace Database\Seeders;
-use Illuminate\Database\Seeder;
+
 use App\Models\SpinWheel;
+use Illuminate\Database\Seeder;
+
 class GameberrySpinSeeder extends Seeder
 {
     public function run(): void

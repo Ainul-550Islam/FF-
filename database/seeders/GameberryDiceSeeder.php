@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Dice;
+use Illuminate\Database\Seeder;
 
 class GameberryDiceSeeder extends Seeder
 {
@@ -16,7 +16,7 @@ class GameberryDiceSeeder extends Seeder
             'Ludo King', 'Parchisi Master', 'Lucky Seven', 'Mystic Eye', 'Dragon Scale',
             'Phoenix Feather', 'Unicorn Horn', 'Mermaid Tear', 'Wizard Staff', 'Knight Shield',
             'Fire Dice', 'Ice Dice', 'Thunder Dice', 'Earth Dice', 'Wind Dice',
-            'Sun Dice', 'Moon Dice', 'Star Dice', 'Galaxy Dice', 'Cosmic Dice'
+            'Sun Dice', 'Moon Dice', 'Star Dice', 'Galaxy Dice', 'Cosmic Dice',
         ];
 
         $count = 0;
@@ -24,9 +24,9 @@ class GameberryDiceSeeder extends Seeder
             $num = (int) (250 * $percent / 100);
             for ($i = 0; $i < $num; $i++) {
                 $count++;
-                $name = $diceNames[array_rand($diceNames)] . " #{$count}";
+                $name = $diceNames[array_rand($diceNames)]." #{$count}";
                 Dice::firstOrCreate(
-                    ['slug' => 'dice-' . $count],
+                    ['slug' => 'dice-'.$count],
                     [
                         'name' => $name,
                         'description' => "Collectible {$rarity} dice {$count} - LudoStar 250+ collection, max 52 per type, Facebook exchange",
@@ -44,10 +44,10 @@ class GameberryDiceSeeder extends Seeder
         // Ensure 250
         for ($i = $count + 1; $i <= 250; $i++) {
             Dice::firstOrCreate(
-                ['slug' => 'dice-' . $i],
+                ['slug' => 'dice-'.$i],
                 [
                     'name' => "Special Dice #{$i}",
-                    'description' => "Special collectible dice",
+                    'description' => 'Special collectible dice',
                     'rarity' => 'common',
                     'is_lucky' => false,
                     'is_collectible' => true,

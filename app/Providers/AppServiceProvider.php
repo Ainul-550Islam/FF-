@@ -11,12 +11,18 @@ use App\Gateways\GoogleTokenInfoIdVerifier;
 use App\Gateways\LogPhoneOtpProvider;
 use App\Gateways\SmsGatewayPhoneOtpProvider;
 use App\Gateways\SocialiteGoogleProvider;
+use App\Models\MarketingAutomation;
 use App\Models\PersonalAccessToken;
+use App\Services\MarketingAffiliateService;
+use App\Services\MarketingAutomationService;
+use App\Services\MarketingTrackingService;
 use App\Services\NotificationService;
 use App\Support\ErrorReporting\ErrorReporterManager;
 use App\Support\Metrics;
 use App\Support\Metrics\MetricsManager;
 use App\Support\Seo;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Events\JobFailed;
@@ -39,24 +45,24 @@ class AppServiceProvider extends ServiceProvider
         // configured; otherwise the dev/test log provider delivers codes.
         $this->app->singleton(PhoneOtpProviderInterface::class, function ($app) {
             if (! empty(env('SMS_GATEWAY_ENDPOINT')) && ! empty(env('SMS_GATEWAY_API_KEY'))) {
-                return new SmsGatewayPhoneOtpProvider;
+                return new SmsGatewayPhoneOtpProvider();
             }
 
-            return new LogPhoneOtpProvider;
+            return new LogPhoneOtpProvider();
         });
 
-        $this->app->singleton(GoogleOAuthProviderInterface::class, fn ($app) => new SocialiteGoogleProvider);
+        $this->app->singleton(GoogleOAuthProviderInterface::class, fn ($app) => new SocialiteGoogleProvider());
 
         // Phase 15 — Google id_token verification for the mobile/API login.
         // Tests bind a deterministic fake; production verifies server-side
         // against Google.
-        $this->app->singleton(GoogleIdTokenVerifierInterface::class, fn ($app) => new GoogleTokenInfoIdVerifier);
+        $this->app->singleton(GoogleIdTokenVerifierInterface::class, fn ($app) => new GoogleTokenInfoIdVerifier());
 
         // Phase 16 — observability seams. The manager classes resolve the
         // configured backend lazily so a broken metrics/error config can
         // never prevent the application from booting.
-        $this->app->singleton(MetricsInterface::class, fn ($app) => (new MetricsManager)->driver());
-        $this->app->singleton(ErrorReporterInterface::class, fn ($app) => (new ErrorReporterManager)->driver());
+        $this->app->singleton(MetricsInterface::class, fn ($app) => (new MetricsManager())->driver());
+        $this->app->singleton(ErrorReporterInterface::class, fn ($app) => (new ErrorReporterManager())->driver());
 
         // Phase 17 — request-scoped SEO metadata manager. Public pages opt in
         // to indexing; everything else stays noindex by default.
@@ -193,6 +199,61 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->registerApiRateLimiters();
+
+        $this->registerMarketingConversionListeners();
+    }
+
+    /**
+     * Phase 20 — marketing attribution & conversion wiring.
+     *
+     * The attribution middleware (CaptureMarketingAttribution) captures
+     * anonymous first/last-touch context on every request; the listeners
+     * below convert those touchpoints into user-linked conversions without
+     * touching the auth or payment flows themselves. Everything is quiet:
+     * attribution failures must never break registration, login or payment.
+     */
+    protected function registerMarketingConversionListeners(): void
+    {
+        $this->app['events']->listen(Registered::class, function (Registered $event): void {
+            // Fires wherever the framework emits Registered (none of the
+            // current registration controllers do — they auto-login, so the
+            // Login listener below is the primary in-repo path). Kept wired so
+            // the attribution attach also covers any future
+            // event(new Registered(...)) call site.
+            rescue(fn () => $this->app->make(MarketingTrackingService::class)->attachVisitor($event->user), report: false);
+        });
+
+        $this->app['events']->listen(Login::class, function (Login $event): void {
+            // Auth::login() inside both registration controllers (AuthController@register
+            // and RegisterController) fires Login too, so the fresh-account
+            // heuristic decides which funnel moment this is: an account created
+            // within the last 5 minutes is a registration — otherwise a login.
+            rescue(function () use ($event): void {
+                $user = $event->user;
+                $tracking = $this->app->make(MarketingTrackingService::class);
+                $tracking->attachVisitor($user);
+
+                $isRegistration = $user->created_at !== null
+                    && $user->created_at->greaterThan(now()->subMinutes(5));
+
+                $tracking->recordConversion(
+                    $isRegistration ? 'register_complete' : 'login_complete',
+                    $user
+                );
+
+                // Phase 21 — credit the affiliate whose referral link the
+                // visitor clicked (server-side, once per user, never for
+                // self-referrals). Quiet: cannot break auth.
+                if ($isRegistration) {
+                    rescue(fn () => $this->app->make(MarketingAffiliateService::class)->attachReferralToUser($user), report: false);
+
+                    // Phase 21 — lifecycle automation: the welcome drip and
+                    // any other user.registered automation fire through the
+                    // automation engine (cooldown-ledgered, quiet-fail).
+                    rescue(fn () => $this->app->make(MarketingAutomationService::class)->evaluate(MarketingAutomation::TRIGGER_USER_REGISTERED, $user), report: false);
+                }
+            }, report: false);
+        });
     }
 
     /**

@@ -31,14 +31,14 @@ class ApiReadSurfacesTest extends ApiTestCase
         $this->authForget();
 
         $surfaces = [
-            ['GET', '/api/v1/tournaments/' . $tournament->slug . '/live', 'with token'],
+            ['GET', '/api/v1/tournaments/'.$tournament->slug.'/live', 'with token'],
             ['GET', '/api/v1/me/live', 'with token'],
             ['GET', '/api/v1/leaderboards', 'guest'],
-            ['GET', '/api/v1/leaderboards/' . $tournament->slug, 'guest'],
-            ['GET', '/api/v1/players/' . $player->id . '/ranking', 'guest'],
-            ['GET', '/api/v1/tournaments/' . $tournament->slug . '/leaderboard', 'guest'],
-            ['GET', '/api/v1/tournaments/' . $tournament->slug . '/bracket', 'guest'],
-            ['GET', '/api/v1/tournaments/' . $tournament->slug . '/matches', 'guest'],
+            ['GET', '/api/v1/leaderboards/'.$tournament->slug, 'guest'],
+            ['GET', '/api/v1/players/'.$player->id.'/ranking', 'guest'],
+            ['GET', '/api/v1/tournaments/'.$tournament->slug.'/leaderboard', 'guest'],
+            ['GET', '/api/v1/tournaments/'.$tournament->slug.'/bracket', 'guest'],
+            ['GET', '/api/v1/tournaments/'.$tournament->slug.'/matches', 'guest'],
         ];
 
         foreach ($surfaces as [$method, $uri, $auth]) {

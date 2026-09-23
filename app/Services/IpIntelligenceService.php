@@ -21,8 +21,7 @@ class IpIntelligenceService
 {
     public function __construct(
         protected FraudRiskService $risk,
-    ) {
-    }
+    ) {}
 
     /**
      * Pseudonymous hash of an IP address.

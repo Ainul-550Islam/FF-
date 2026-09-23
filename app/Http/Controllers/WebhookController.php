@@ -21,8 +21,7 @@ class WebhookController extends Controller
 {
     public function __construct(
         protected PaymentService $payments,
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request, string $provider)
     {

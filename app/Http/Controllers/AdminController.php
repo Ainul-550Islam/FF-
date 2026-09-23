@@ -12,9 +12,9 @@ use App\Services\AuditLogService;
 use App\Services\FraudRiskService;
 use App\Services\PaymentService;
 use App\Services\WalletService;
+use App\Support\Money;
 use DomainException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
@@ -23,8 +23,7 @@ class AdminController extends Controller
         protected WalletService $wallets,
         protected FraudRiskService $risk,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     public function dashboard()
     {
@@ -145,7 +144,7 @@ class AdminController extends Controller
             'metadata' => ['amount_minor' => $refund->amount_minor],
         ]);
 
-        return back()->with('success', 'Payment refunded (৳' . \App\Support\Money::toDecimal($refund->amount_minor) . ' credited to the payer).');
+        return back()->with('success', 'Payment refunded (৳'.Money::toDecimal($refund->amount_minor).' credited to the payer).');
     }
 
     // ------------------------------------------------------------------
@@ -174,7 +173,7 @@ class AdminController extends Controller
             'description' => 'required|string|max:255',
         ]);
 
-        $minor = \App\Support\Money::toMinor($data['amount']);
+        $minor = Money::toMinor($data['amount']);
 
         try {
             $wallet = $this->wallets->walletFor($user);
@@ -201,7 +200,7 @@ class AdminController extends Controller
             'description' => 'required|string|max:255',
         ]);
 
-        $minor = \App\Support\Money::toMinor($data['amount']);
+        $minor = Money::toMinor($data['amount']);
 
         try {
             $wallet = $this->wallets->walletFor($user);
@@ -239,7 +238,7 @@ class AdminController extends Controller
         }
 
         if ($user->isModerator()) {
-            return back()->with('error', $user->name . ' is already a moderator.');
+            return back()->with('error', $user->name.' is already a moderator.');
         }
 
         $previousRole = $user->role;
@@ -253,7 +252,7 @@ class AdminController extends Controller
             'after' => ['role' => 'moderator'],
         ]);
 
-        return back()->with('success', $user->name . ' is now a moderator.');
+        return back()->with('success', $user->name.' is now a moderator.');
     }
 
     /**
@@ -280,6 +279,6 @@ class AdminController extends Controller
             'after' => ['role' => 'player'],
         ]);
 
-        return back()->with('success', $user->name . ' is no longer a moderator.');
+        return back()->with('success', $user->name.' is no longer a moderator.');
     }
 }

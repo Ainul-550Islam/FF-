@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Models\UserIdentity;
 
 /**
  * Phase 15 — API authentication: register, login, Google, OTP, token
@@ -121,7 +122,7 @@ class ApiAuthTest extends ApiTestCase
 
         // Link a phone to a user up front (verified identity).
         $user = $this->user(['phone' => '+8801712345678']);
-        $identity = new \App\Models\UserIdentity();
+        $identity = new UserIdentity();
         $identity->user_id = $user->id;
         $identity->provider = 'phone';
         $identity->provider_subject = '+8801712345678';
@@ -153,7 +154,7 @@ class ApiAuthTest extends ApiTestCase
         $tokenId = $user->tokens()->first()->id;
 
         $this->authForget();
-        $this->withToken($token)->deleteJson('/api/v1/me/tokens/' . $tokenId)->assertStatus(204);
+        $this->withToken($token)->deleteJson('/api/v1/me/tokens/'.$tokenId)->assertStatus(204);
 
         $this->authForget();
         $this->withToken($token)->getJson('/api/v1/me')->assertStatus(401);

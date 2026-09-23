@@ -4,11 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('private_tables')) {
+        if (! Schema::hasTable('private_tables')) {
             Schema::create('private_tables', function (Blueprint $table) {
                 $table->id();
                 $table->string('code')->unique()->index(); // table code for sharing
@@ -33,7 +33,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('private_table_participants')) {
+        if (! Schema::hasTable('private_table_participants')) {
             Schema::create('private_table_participants', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('private_table_id')->constrained('private_tables')->cascadeOnDelete();
@@ -54,7 +54,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('chat_messages')) {
+        if (! Schema::hasTable('chat_messages')) {
             Schema::create('chat_messages', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('private_table_id')->nullable()->constrained('private_tables')->cascadeOnDelete();
@@ -72,7 +72,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('challenges')) {
+        if (! Schema::hasTable('challenges')) {
             Schema::create('challenges', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('challenger_id')->constrained('users')->cascadeOnDelete();
@@ -90,7 +90,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('weekly_events')) {
+        if (! Schema::hasTable('weekly_events')) {
             Schema::create('weekly_events', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
@@ -108,7 +108,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('weekly_event_participants')) {
+        if (! Schema::hasTable('weekly_event_participants')) {
             Schema::create('weekly_event_participants', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('weekly_event_id')->constrained('weekly_events')->cascadeOnDelete();

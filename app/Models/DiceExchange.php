@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class DiceExchange extends Model
 {
@@ -28,7 +29,7 @@ class DiceExchange extends Model
     protected static function booted()
     {
         static::creating(function ($exchange) {
-            if (!isset($exchange->is_facebook_only)) {
+            if (! isset($exchange->is_facebook_only)) {
                 $exchange->is_facebook_only = true; // Gameberry FAQ: Facebook only
             }
             if (empty($exchange->expires_at)) {
@@ -54,35 +55,39 @@ class DiceExchange extends Model
 
     public function isPending(): bool
     {
-        return $this->status === 'pending' && (!$this->expires_at || $this->expires_at->isFuture());
+        return $this->status === 'pending' && (! $this->expires_at || $this->expires_at->isFuture());
     }
 
     public function canBeExchanged(): bool
     {
-        if (!$this->isPending()) return false;
+        if (! $this->isPending()) {
+            return false;
+        }
         // Facebook-only validation - must be Facebook friends
         if ($this->is_facebook_only) {
             // Check if users are Facebook connected - check game_buddies with facebook source or user facebook_id
             $sender = $this->sender;
             $receiver = $this->receiver;
+
             // Allow if both have facebook_id or are buddies - simplified for now, but enforce flag
             return true; // Facebook check would be here with actual Facebook Graph API
         }
+
         return true;
     }
 
     public function accept(): void
     {
-        if (!$this->isPending()) {
+        if (! $this->isPending()) {
             throw new \Exception('Exchange not pending');
         }
-        if (!$this->canBeExchanged()) {
+        if (! $this->canBeExchanged()) {
             throw new \Exception('Facebook only exchange - must be Facebook friends');
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () {
+        DB::transaction(function () {
             $senderDice = UserDice::where('user_id', $this->sender_id)->where('dice_id', $this->dice_id)->first();
-            if (!$senderDice || $senderDice->quantity < 2) {
+            if (! $senderDice || $senderDice->quantity < 2) {
                 throw new \Exception('Sender must have at least 2 of this dice to exchange');
             }
 

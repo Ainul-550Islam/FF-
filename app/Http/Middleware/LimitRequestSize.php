@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Http\Middleware;
+
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -11,7 +13,7 @@ class LimitRequestSize
     public function handle(Request $request, Closure $next): Response
     {
         $contentLength = $request->header('Content-Length');
-        if ($contentLength && (int)$contentLength > $this->maxSize) {
+        if ($contentLength && (int) $contentLength > $this->maxSize) {
             return response()->json(['error' => 'payload_too_large', 'message' => 'Request body too large, max 2MB'], 413);
         }
 

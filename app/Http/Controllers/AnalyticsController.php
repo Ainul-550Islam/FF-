@@ -21,8 +21,7 @@ class AnalyticsController extends Controller
 {
     public function __construct(
         protected AnalyticsService $analytics,
-    ) {
-    }
+    ) {}
 
     /**
      * Admin analytics overview.

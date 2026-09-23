@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Gameberry;
 
-use Tests\TestCase;
-use App\Models\User;
+use App\Models\AutoModeLog;
+use App\Models\FriendNotification;
 use App\Models\GameBuddy;
+use App\Models\User;
 use App\Models\UserOnlineStatus;
 use App\Services\Gameberry\SocialService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class SocialTest extends TestCase
 {
@@ -63,7 +65,7 @@ class SocialTest extends TestCase
         $this->service->setNotifyFriendsOnline($friend->id, true);
 
         // Friend should get notification when user comes online
-        $notifications = \App\Models\FriendNotification::where('user_id', $friend->id)->where('friend_id', $user->id)->get();
+        $notifications = FriendNotification::where('user_id', $friend->id)->where('friend_id', $user->id)->get();
         // At least one notification from online status
         $this->assertGreaterThanOrEqual(0, $notifications->count());
     }
@@ -75,7 +77,7 @@ class SocialTest extends TestCase
 
         $this->assertTrue($status->is_in_auto_mode);
 
-        $log = \App\Models\AutoModeLog::where('user_id', $user->id)->first();
+        $log = AutoModeLog::where('user_id', $user->id)->first();
         $this->assertNotNull($log);
         $this->assertEquals('disconnect', $log->reason);
         $this->assertTrue($log->is_auto_on);

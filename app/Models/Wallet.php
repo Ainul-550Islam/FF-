@@ -17,6 +17,7 @@ class Wallet extends Model
     use HasFactory;
 
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_FROZEN = 'frozen';
 
     protected $fillable = ['user_id', 'currency', 'balance_minor', 'is_locked'];

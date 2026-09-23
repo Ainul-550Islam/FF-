@@ -34,8 +34,7 @@ class CheckoutController extends Controller
         protected NotificationService $notifications,
         protected LiveEventService $live,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * Choose a payment method for a team's entry fee.
@@ -70,7 +69,7 @@ class CheckoutController extends Controller
         $this->authorize('pay', $team);
 
         $data = $request->validate([
-            'provider' => 'required|in:' . implode(',', $this->gateways->providers()),
+            'provider' => 'required|in:'.implode(',', $this->gateways->providers()),
             'trx_id' => 'nullable|string|max:40',
         ]);
 
@@ -117,7 +116,7 @@ class CheckoutController extends Controller
             $request->user(),
             Notification::TYPE_PAYMENT_INITIATED,
             'Payment started',
-            'Your entry fee payment for ' . $tournament->name . ' has been started (' . $gateway->label() . ').',
+            'Your entry fee payment for '.$tournament->name.' has been started ('.$gateway->label().').',
             NotificationService::link('payment.pending', [$tournament, $team, $payment]),
             ['payment_id' => $payment->id, 'provider' => $provider],
         );

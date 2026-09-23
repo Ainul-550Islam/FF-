@@ -20,8 +20,7 @@ class LeaderboardController extends Controller
 {
     public function __construct(
         protected ScoringService $scoring,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/leaderboards — tournaments that have standings.

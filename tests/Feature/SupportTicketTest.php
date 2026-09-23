@@ -6,7 +6,6 @@ use App\Models\LiveEvent;
 use App\Models\Notification;
 use App\Models\SupportInternalNote;
 use App\Models\SupportTicket;
-use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Services\LiveEventService;
@@ -37,7 +36,7 @@ class SupportTicketTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'Support Tournament';
-        $t->slug = 'support-' . Str::random(8);
+        $t->slug = 'support-'.Str::random(8);
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = 0;

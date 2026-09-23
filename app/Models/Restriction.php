@@ -18,11 +18,17 @@ class Restriction extends Model
     use HasFactory;
 
     public const TYPE_REGISTRATION_BLOCKED = 'registration_blocked';
+
     public const TYPE_CHECKIN_BLOCKED = 'checkin_blocked';
+
     public const TYPE_SCORE_SUBMISSION_BLOCKED = 'score_submission_blocked';
+
     public const TYPE_DISPUTE_BLOCKED = 'dispute_blocked';
+
     public const TYPE_PAYOUT_REVIEW = 'payout_review';
+
     public const TYPE_TOURNAMENT_PARTICIPATION_BLOCKED = 'tournament_participation_blocked';
+
     public const TYPE_ACCOUNT_SUSPENDED = 'account_suspended';
 
     public const TYPES = [
@@ -36,6 +42,7 @@ class Restriction extends Model
     ];
 
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_LIFTED = 'lifted';
 
     protected $fillable = [];

@@ -113,7 +113,7 @@ class PaymentCardGatewayTest extends TestCase
 
     protected function makeTournament(User $organizer): Tournament
     {
-        $t = new Tournament;
+        $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'Card Tournament';
         $t->slug = 'card-'.Str::random(8);
@@ -133,7 +133,7 @@ class PaymentCardGatewayTest extends TestCase
 
     protected function makeTeam(Tournament $tournament, User $captain): Team
     {
-        $team = new Team;
+        $team = new Team();
         $team->tournament_id = $tournament->id;
         $team->captain_id = $captain->id;
         $team->name = 'Team '.Str::random(6);

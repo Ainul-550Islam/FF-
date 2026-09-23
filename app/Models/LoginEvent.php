@@ -18,20 +18,35 @@ class LoginEvent extends Model
     use HasFactory;
 
     public const EVENT_LOGIN_PASSWORD = 'login.password';
+
     public const EVENT_LOGIN_GOOGLE = 'login.google';
+
     public const EVENT_LOGIN_PHONE = 'login.phone';
+
     public const EVENT_LOGIN_FAILED = 'login.failed';
+
     public const EVENT_LOGOUT = 'logout';
+
     public const EVENT_PASSWORD_RESET = 'password.reset';
+
     public const EVENT_PASSWORD_CHANGED = 'password.changed';
+
     public const EVENT_EMAIL_VERIFIED = 'email.verified';
+
     public const EVENT_PHONE_VERIFIED = 'phone.verified';
+
     public const EVENT_ACCOUNT_LINKED = 'account.linked';
+
     public const EVENT_ACCOUNT_UNLINKED = 'account.unlinked';
+
     public const EVENT_SESSION_REVOKED = 'session.revoked';
+
     public const EVENT_SESSIONS_REVOKED = 'sessions.revoked';
+
     public const EVENT_ACCOUNT_DEACTIVATED = 'account.deactivated';
+
     public const EVENT_ACCOUNT_REACTIVATED = 'account.reactivated';
+
     public const EVENT_DELETION_REQUESTED = 'account.deletion_requested';
 
     public const EVENTS = [
@@ -54,6 +69,7 @@ class LoginEvent extends Model
     ];
 
     public const STATUS_SUCCESS = 'success';
+
     public const STATUS_FAILURE = 'failure';
 
     public const UPDATED_AT = null;

@@ -24,8 +24,7 @@ class TokenController extends Controller
     public function __construct(
         protected ApiTokenService $tokens,
         protected ApiClientService $clients,
-    ) {
-    }
+    ) {}
 
     /**
      * POST /api/v1/me/tokens

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class GoldWallet extends Model
 {
@@ -42,7 +43,7 @@ class GoldWallet extends Model
             throw new \InvalidArgumentException('Amount must be positive for add');
         }
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
+        return DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
             $this->lockForUpdate();
             $this->refresh();
 
@@ -72,7 +73,7 @@ class GoldWallet extends Model
             throw new \InvalidArgumentException('Amount must be positive for spend');
         }
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
+        return DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
             $this->lockForUpdate();
             $this->refresh();
 

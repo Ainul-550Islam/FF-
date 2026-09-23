@@ -1,44 +1,56 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\PaymentMethodsController;
-use App\Http\Controllers\AvatarController;
-use App\Http\Controllers\TournamentController;
-use App\Http\Controllers\TeamController;
-use App\Http\Controllers\WalletController;
-use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\LeaderboardController;
-use App\Http\Controllers\MatchController;
-use App\Http\Controllers\SupportController;
-use App\Http\Controllers\DisputeController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AdminAccountController;
-use App\Http\Controllers\AdminSecurityController;
-use App\Http\Controllers\SettlementController;
-use App\Http\Controllers\OpsController;
-use App\Http\Controllers\AccountSecurityController;
-use App\Http\Controllers\SitemapController;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\Auth\GoogleAuthController;
-use App\Http\Controllers\Auth\PhoneAuthController;
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AccountLiveController;
-use App\Http\Controllers\LiveController;
-use App\Http\Controllers\ModerationController;
-use App\Http\Controllers\SecurityController;
-use App\Http\Controllers\ScoringRuleController;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\PaymentGatewayCallbackController;
+use App\Http\Controllers\AccountSecurityController;
+use App\Http\Controllers\AdminAccountController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminSupportController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PhoneAuthController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AvatarController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\DisputeController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\LiveController;
+use App\Http\Controllers\MarketingAffiliateController;
+use App\Http\Controllers\MarketingArticleController;
+use App\Http\Controllers\MarketingAutomationController;
+use App\Http\Controllers\MarketingCampaignController;
+use App\Http\Controllers\MarketingExperimentController;
+use App\Http\Controllers\MarketingLeadController;
+use App\Http\Controllers\MarketingPageController;
+use App\Http\Controllers\MarketingPromoCodeController;
+use App\Http\Controllers\MarketingPushController;
+use App\Http\Controllers\MarketingTrackingController;
+use App\Http\Controllers\MatchController;
+use App\Http\Controllers\ModerationController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OpsController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PaymentGatewayCallbackController;
+use App\Http\Controllers\PaymentMethodsController;
 use App\Http\Controllers\PayoutController;
-use App\Http\Controllers\AdminSupportController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ScoringRuleController;
+use App\Http\Controllers\SecurityController;
+use App\Http\Controllers\SettlementController;
+use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\SupportController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TournamentController;
+use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WebhookController;
-use App\Http\Controllers\Api\V1\SupportController as V1SupportController;
+use App\Models\Dispute;
+use App\Models\GameMatch;
+use App\Models\Payment;
+use App\Models\Team;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,12 +76,13 @@ Route::get('/health/live', function () {
 
 Route::get('/health/ready', function () {
     try {
-        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        DB::connection()->getPdo();
         $db = true;
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         $db = false;
     }
     $status = $db ? 200 : 503;
+
     return response()->json(['status' => $db ? 'ok' : 'degraded', 'checks' => ['database' => $db, 'cache' => true, 'storage' => true]], $status);
 })->name('health.ready');
 
@@ -82,13 +95,74 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/tournaments', [TournamentController::class, 'index'])->name('tournaments.index');
 Route::get('/tournaments/{tournament:slug}', [TournamentController::class, 'show'])->name('tournaments.show');
 Route::get('/leaderboard/{tournament}', [LeaderboardController::class, 'show'])->name('leaderboard.show');
+
+// --- Phase 20: public marketing / trust surfaces (P0 launch links) ---
+Route::get('/privacy', [MarketingPageController::class, 'privacy'])->name('marketing.privacy');
+Route::get('/terms', [MarketingPageController::class, 'terms'])->name('marketing.terms');
+Route::get('/faq', [MarketingPageController::class, 'faq'])->name('marketing.faq');
+Route::get('/contact', [MarketingPageController::class, 'contact'])->name('marketing.contact');
+
+// --- Phase 20: lead capture (newsletter / contact), rate-limited ---
+Route::post('/newsletter', [MarketingLeadController::class, 'store'])
+    ->middleware('throttle:20,1')->name('marketing.leads.store');
+Route::post('/contact', [MarketingLeadController::class, 'store'])
+    ->middleware('throttle:10,1')->name('marketing.contact.store');
+Route::get('/marketing/unsubscribe/{token}', [MarketingLeadController::class, 'unsubscribe'])
+    ->name('marketing.unsubscribe');
+
+// --- Phase 20: consent + first-party conversion events (§40 taxonomy) ---
+Route::post('/marketing/event', [MarketingTrackingController::class, 'event'])
+    ->middleware('throttle:60,1')->name('marketing.event');
+Route::post('/marketing/consent', [MarketingTrackingController::class, 'consent'])
+    ->middleware('throttle:30,1')->name('marketing.consent');
+
+// --- Phase 20: campaign landing pages ---
+Route::get('/campaign/{slug}', [MarketingCampaignController::class, 'show'])
+    ->name('marketing.campaigns.show');
+
+// --- Phase 21: affiliate program (public referral redirect + auth'd dashboard) ---
+Route::get('/r/{code}', [MarketingAffiliateController::class, 'click'])
+    ->middleware('throttle:60,1')->name('marketing.referral.click');
+Route::get('/affiliates/dashboard', [MarketingAffiliateController::class, 'dashboard'])
+    ->middleware('auth')->name('marketing.affiliate.dashboard');
+Route::post('/affiliates', [MarketingAffiliateController::class, 'store'])
+    ->middleware(['auth', 'throttle:5,1'])->name('marketing.affiliate.store');
+
+// --- Phase 21: promo codes (server-computed discounts only) ---
+Route::post('/marketing/promo/apply', [MarketingPromoCodeController::class, 'apply'])
+    ->middleware(['auth', 'throttle:10,1'])->name('marketing.promo.apply');
+
+// --- Phase 21: blog / SEO content engine ---
+Route::get('/blog', [MarketingArticleController::class, 'index'])->name('marketing.articles.index');
+Route::get('/blog/{slug}', [MarketingArticleController::class, 'show'])
+    ->middleware('throttle:60,1')->name('marketing.articles.show');
+
+// --- Phase 21: A/B experiments (deterministic assignment for the current visitor) ---
+Route::get('/marketing/experiments/{key}/assign', [MarketingExperimentController::class, 'assign'])
+    ->middleware('throttle:60,1')->name('marketing.experiments.assign');
+Route::post('/marketing/experiments/{key}/convert', [MarketingExperimentController::class, 'convert'])
+    ->middleware('throttle:60,1')->name('marketing.experiments.convert');
+
+// --- Phase 21: push re-engagement subscriptions ---
+Route::post('/marketing/push/subscribe', [MarketingPushController::class, 'subscribe'])
+    ->middleware('throttle:20,1')->name('marketing.push.subscribe');
+Route::post('/marketing/push/unsubscribe', [MarketingPushController::class, 'unsubscribe'])
+    ->middleware('throttle:20,1')->name('marketing.push.unsubscribe');
+
+// --- Phase 21: admin marketing management (experiments + lifecycle automations) ---
+Route::middleware(['auth', 'active', 'admin'])->prefix('admin/marketing')->name('admin.marketing.')->group(function () {
+    Route::get('/experiments', [MarketingExperimentController::class, 'adminIndex'])->name('experiments.index');
+    Route::post('/experiments', [MarketingExperimentController::class, 'adminStore'])->name('experiments.store');
+    Route::get('/automations', [MarketingAutomationController::class, 'index'])->name('automations.index');
+    Route::post('/automations/{automation}/toggle', [MarketingAutomationController::class, 'toggle'])->name('automations.toggle');
+});
 // Matches are tournament-scoped: the canonical path carries the tournament
 // so every match is validated against its own event.
 Route::get('/tournaments/{tournament}/matches/{match}', [MatchController::class, 'show'])->name('matches.show');
 
 // Legacy single-match URL stays alive: it resolves the match's own
 // tournament and continues to the canonical page.
-Route::get('/matches/{match}', function (\App\Models\GameMatch $match) {
+Route::get('/matches/{match}', function (GameMatch $match) {
     abort_if($match->tournament === null, 404);
 
     return redirect()->route('matches.show', [$match->tournament, $match]);
@@ -105,7 +179,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
-    
+
     Route::get('/forgot-password', [LoginController::class, 'showForgotForm'])->name('password.request');
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email')->middleware('throttle:password-reset');
     Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
@@ -114,8 +188,6 @@ Route::middleware('guest')->group(function () {
     // Google OAuth is served by the canonical AuthController implementation
     // (state + link-intent handling); Auth\GoogleAuthController keeps the
     // provider plumbing it exposes.
-
-
 
     Route::get('/auth/phone', [PhoneAuthController::class, 'showPhoneForm'])->name('auth.phone');
     Route::post('/auth/phone/request', [PhoneAuthController::class, 'requestOtp'])->name('auth.phone.request')->middleware('throttle:otp-request');
@@ -215,12 +287,12 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Legacy single-payment URLs stay alive: they resolve the payment's own
     // tournament/team and continue to the canonical pending page.
-    Route::get('/payments/{payment}', function (\App\Models\Payment $payment) {
+    Route::get('/payments/{payment}', function (Payment $payment) {
         abort_if($payment->tournament === null || $payment->team === null, 404);
 
         return redirect()->route('payment.pending', [$payment->tournament, $payment->team, $payment]);
     })->name('payment.detail');
-    Route::get('/payments/{payment}/pending', function (\App\Models\Payment $payment) {
+    Route::get('/payments/{payment}/pending', function (Payment $payment) {
         abort_if($payment->tournament === null || $payment->team === null, 404);
 
         return redirect()->route('payment.pending', [$payment->tournament, $payment->team, $payment]);
@@ -272,7 +344,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Legacy team URL stays alive: it resolves the team's own tournament and
     // continues to the canonical page.
-    Route::get('/teams/{team}', function (\App\Models\Team $team) {
+    Route::get('/teams/{team}', function (Team $team) {
         abort_if($team->tournament === null, 404);
 
         return redirect()->route('teams.show', [$team->tournament, $team]);
@@ -291,7 +363,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Legacy dispute URLs stay alive as resolvers onto the canonical,
     // match-scoped routes (a dispute can only exist against a match).
-    Route::get('/disputes/create/{match}', function (\App\Models\GameMatch $match) {
+    Route::get('/disputes/create/{match}', function (GameMatch $match) {
         abort_if($match->tournament === null, 404);
 
         return redirect()->route('matches.disputes.create', [$match->tournament, $match]);
@@ -299,7 +371,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/disputes', function () {
         return back()->with('error', 'Open a dispute from the match page so it is linked to the match.');
     })->name('disputes.store')->middleware('throttle:dispute');
-    Route::get('/disputes/{dispute}', function (\App\Models\Dispute $dispute) {
+    Route::get('/disputes/{dispute}', function (Dispute $dispute) {
         return redirect()->route('matches.disputes.show', [$dispute->tournament_id, $dispute->match_id, $dispute->id]);
     })->name('disputes.show');
 
@@ -386,7 +458,6 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
 // --- Guest: OAuth (Google), phone-login OTP, and the signed verify link ---
 Route::middleware('guest')->group(function () {
 
-
     Route::get('/login/phone', [AuthController::class, 'showPhoneLogin'])->name('phone.login');
     Route::get('/phone/verify', [AuthController::class, 'showPhoneVerify'])->name('phone.verify');
     Route::post('/phone/request', [AuthController::class, 'requestPhoneOtp'])->name('phone.request')->middleware('throttle:otp-request');
@@ -465,6 +536,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/organizer/tournaments/create', [TournamentController::class, 'create'])->name('tournaments.create');
     Route::post('/organizer/tournaments', [TournamentController::class, 'store'])->name('organizer.tournaments.store');
     Route::post('/tournaments', [TournamentController::class, 'store'])->name('tournaments.store');
+    Route::get('/tournaments/{tournament}/edit', [TournamentController::class, 'edit'])->name('tournaments.edit');
     Route::put('/tournaments/{tournament}', [TournamentController::class, 'update'])->name('tournaments.update');
 
     // Tournament lifecycle (Phase 02/04/05): every state change runs through
@@ -480,6 +552,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/tournaments/{tournament}/analytics', [AnalyticsController::class, 'tournament'])->name('tournaments.analytics');
     Route::get('/tournaments/{tournament}/scoring', [ScoringRuleController::class, 'show'])->name('tournaments.scoring.show');
     Route::post('/tournaments/{tournament}/scoring', [ScoringRuleController::class, 'store'])->name('tournaments.scoring.store');
+    Route::post('/tournaments/{tournament}/scoring/{rule}/activate', [ScoringRuleController::class, 'activate'])->name('tournaments.scoring.activate');
 
     // Checkout / payment initiation
     Route::post('/checkout/{tournament}/{team}', [CheckoutController::class, 'initiate'])->name('payment.initiate');
@@ -510,6 +583,8 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
     Route::get('/payouts', [PayoutController::class, 'index'])->name('payouts.index');
     Route::post('/payouts/{payout}/approve', [PayoutController::class, 'approve'])->name('payouts.approve');
     Route::post('/payouts/{payout}/process', [PayoutController::class, 'process'])->name('payouts.process');
+    Route::post('/payouts/{payout}/process-override', [PayoutController::class, 'processOverride'])->name('payouts.process_override');
+    Route::post('/payouts/{payout}/complete', [PayoutController::class, 'complete'])->name('payouts.complete');
     Route::post('/payouts/{payout}/fail', [PayoutController::class, 'fail'])->name('payouts.fail');
     Route::post('/payouts/{payout}/cancel', [PayoutController::class, 'cancel'])->name('payouts.cancel');
 
@@ -545,9 +620,8 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
     Route::post('/security/restrict/{user}', [SecurityController::class, 'restrict'])->name('security.restrict');
     Route::post('/security/lift/{restriction}', [SecurityController::class, 'liftRestriction'])->name('security.lift');
     Route::post('/security/verify/{user}', [SecurityController::class, 'verifyIdentity'])->name('security.verify');
+    Route::post('/security/reject/{user}', [SecurityController::class, 'rejectIdentity'])->name('security.reject');
 });
-
-
 
 // --- Google OAuth entry points (guest sign-in *and* signed-in linking) ---
 Route::middleware('web')->group(function () {

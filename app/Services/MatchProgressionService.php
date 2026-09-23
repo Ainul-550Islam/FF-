@@ -20,8 +20,7 @@ class MatchProgressionService
     public function __construct(
         protected BracketService $bracket,
         protected LiveEventService $live,
-    ) {
-    }
+    ) {}
 
     /**
      * Record a winner and complete a match, then advance the bracket.

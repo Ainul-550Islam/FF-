@@ -35,8 +35,7 @@ class DisputeService
         protected ScoringService $scoring,
         protected NotificationService $notifications,
         protected LiveEventService $live,
-    ) {
-    }
+    ) {}
 
     /**
      * Whether the user is staff for the given dispute (platform staff or the
@@ -186,8 +185,8 @@ class DisputeService
         $this->assertSafeFile($type, $file);
 
         $extension = strtolower($file->getClientOriginalExtension());
-        $filename = (string) Str::uuid() . '.' . $extension;
-        $directory = 'dispute_evidence/' . $dispute->id;
+        $filename = (string) Str::uuid().'.'.$extension;
+        $directory = 'dispute_evidence/'.$dispute->id;
 
         try {
             $path = $file->storeAs($directory, $filename, 'local');
@@ -258,7 +257,7 @@ class DisputeService
      * score inputs) and finalize. The match returns to `completed` and the
      * bracket is re-advanced with the confirmed winner.
      *
-     * @param array<int, array{team_id:int, kills?:int|null, placement?:int|null}> $corrections
+     * @param  array<int, array{team_id:int, kills?:int|null, placement?:int|null}>  $corrections
      */
     public function resolve(Dispute $dispute, User $actor, Team $winner, string $resolution, array $corrections = []): void
     {
@@ -305,7 +304,7 @@ class DisputeService
             $dispute,
             $match,
             'Dispute resolved',
-            'A dispute on your match in ' . $match->tournament->name . ' was resolved.'
+            'A dispute on your match in '.$match->tournament->name.' was resolved.'
         );
 
         // Phase 12 — staff-only live event (best-effort).
@@ -354,7 +353,7 @@ class DisputeService
             $dispute,
             $dispute->match,
             'Dispute rejected',
-            'A dispute on your match in ' . $dispute->match->tournament->name . ' was rejected; the original result stands.'
+            'A dispute on your match in '.$dispute->match->tournament->name.' was rejected; the original result stands.'
         );
 
         // Phase 12 — staff-only live event (best-effort).
@@ -408,7 +407,7 @@ class DisputeService
             $dispute,
             $dispute->match,
             'Dispute cancelled',
-            'A dispute on your match in ' . $dispute->match->tournament->name . ' was cancelled.'
+            'A dispute on your match in '.$dispute->match->tournament->name.' was cancelled.'
         );
 
         // Phase 12 — staff-only live event (best-effort).
@@ -471,7 +470,7 @@ class DisputeService
                     $captain,
                     Notification::TYPE_DISPUTE_OPENED,
                     'Dispute opened on your match',
-                    'A dispute has been opened on your match in ' . $tournament->name . '.',
+                    'A dispute has been opened on your match in '.$tournament->name.'.',
                     $link,
                     ['dispute_id' => $dispute->id],
                 );
@@ -485,7 +484,7 @@ class DisputeService
                 $organizer,
                 Notification::TYPE_DISPUTE_OPENED,
                 'New dispute in your tournament',
-                'A dispute was opened in ' . $tournament->name . '.',
+                'A dispute was opened in '.$tournament->name.'.',
                 $link,
                 ['dispute_id' => $dispute->id],
             );
@@ -499,7 +498,7 @@ class DisputeService
                     $member,
                     Notification::TYPE_DISPUTE_OPENED,
                     'Dispute awaiting review',
-                    'A new dispute needs review in ' . $tournament->name . '.',
+                    'A new dispute needs review in '.$tournament->name.'.',
                     $link,
                     ['dispute_id' => $dispute->id],
                 );
@@ -697,7 +696,7 @@ class DisputeService
     protected function assertSafeFile(string $type, UploadedFile $file): void
     {
         if ($file->getSize() > DisputeEvidence::MAX_KB * 1024) {
-            throw new DomainException('Evidence files must be smaller than ' . DisputeEvidence::MAX_KB . ' KB.');
+            throw new DomainException('Evidence files must be smaller than '.DisputeEvidence::MAX_KB.' KB.');
         }
 
         $extension = strtolower($file->getClientOriginalExtension());

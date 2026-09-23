@@ -13,8 +13,8 @@ use App\Models\RiskProfile;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
-use App\Services\AuditLogService;
 use App\Services\AntiCheatService;
+use App\Services\AuditLogService;
 use App\Services\IdentityVerificationService;
 use App\Services\IpIntelligenceService;
 use App\Services\RestrictionService;
@@ -36,8 +36,7 @@ class SecurityController extends Controller
         protected AntiCheatService $antiCheat,
         protected IpIntelligenceService $ipIntel,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     // ------------------------------------------------------------------
     // Risk dashboard (admin)
@@ -195,7 +194,7 @@ class SecurityController extends Controller
             'match_id' => 'nullable|integer|exists:matches,id',
             'team_id' => 'nullable|integer|exists:teams,id',
             'accused_user_id' => 'nullable|integer|exists:users,id',
-            'category' => 'required|in:' . implode(',', AntiCheatService::CATEGORIES),
+            'category' => 'required|in:'.implode(',', AntiCheatService::CATEGORIES),
             'severity' => 'required|in:low,medium,high,critical',
             'description' => 'nullable|string|max:5000',
             'evidence_reference' => 'nullable|string|max:120',
@@ -246,7 +245,7 @@ class SecurityController extends Controller
         $this->authorize('resolve', $incident);
 
         $data = $request->validate([
-            'resolution' => 'required|in:' . implode(',', AntiCheatIncident::RESOLUTIONS),
+            'resolution' => 'required|in:'.implode(',', AntiCheatIncident::RESOLUTIONS),
             'resolution_text' => 'required|string|max:5000',
         ]);
 
@@ -274,7 +273,7 @@ class SecurityController extends Controller
         $this->authorize('manageRestrictions', RiskProfile::class);
 
         $data = $request->validate([
-            'type' => 'required|in:' . implode(',', Restriction::TYPES),
+            'type' => 'required|in:'.implode(',', Restriction::TYPES),
             'reason' => 'required|string|max:255',
             'expires_in_days' => 'nullable|integer|min:1|max:3650',
         ]);

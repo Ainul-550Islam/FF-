@@ -7,6 +7,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationService;
 use DomainException;
+use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -178,7 +179,7 @@ class NotificationServiceTest extends TestCase
         $user = $this->makeUser();
 
         foreach (range(1, 5) as $i) {
-            $this->service()->send($user, 'system', 'Title ' . $i, 'Body ' . $i);
+            $this->service()->send($user, 'system', 'Title '.$i, 'Body '.$i);
         }
 
         $this->assertSame(5, $this->service()->unreadCount($user));
@@ -210,7 +211,7 @@ class NotificationServiceTest extends TestCase
                 'body' => 'Injected',
             ]);
             $this->fail('Notification accepted mass assignment.');
-        } catch (\Illuminate\Database\Eloquent\MassAssignmentException $e) {
+        } catch (MassAssignmentException $e) {
             $this->addToAssertionCount(1);
         }
     }

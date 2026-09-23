@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\GameMatch;
 use App\Models\Payment;
+use App\Models\Score;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
@@ -33,7 +34,7 @@ class SecurityAuthorizationTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = $overrides['name'] ?? 'Test Tournament';
-        $t->slug = $overrides['slug'] ?? ('test-tournament-' . Str::random(8));
+        $t->slug = $overrides['slug'] ?? ('test-tournament-'.Str::random(8));
         $t->game_mode = $overrides['game_mode'] ?? 'squad';
         $t->map = $overrides['map'] ?? 'Bermuda';
         $t->entry_fee = $overrides['entry_fee'] ?? 100;
@@ -53,10 +54,10 @@ class SecurityAuthorizationTest extends TestCase
         $t = new Team();
         $t->tournament_id = $tournament->id;
         $t->captain_id = $captain?->id;
-        $t->name = 'Team ' . Str::random(6);
+        $t->name = 'Team '.Str::random(6);
         $t->captain_name = $captain?->name ?? 'Captain';
         $t->phone = '01700000000';
-        $t->game_uid = 'UID' . rand(100000, 999999);
+        $t->game_uid = 'UID'.rand(100000, 999999);
         $t->status = $status;
         $t->save();
 
@@ -84,7 +85,7 @@ class SecurityAuthorizationTest extends TestCase
         $p->team_id = $team->id;
         $p->amount = $tournament->entry_fee;
         $p->method = 'bkash';
-        $p->trx_id = 'TRX' . Str::upper(Str::random(8));
+        $p->trx_id = 'TRX'.Str::upper(Str::random(8));
         $p->status = $status;
         $p->save();
 
@@ -298,7 +299,7 @@ class SecurityAuthorizationTest extends TestCase
             'team_id' => $teamA->id, 'kills' => 9, 'placement' => 1,
         ])->assertStatus(403);
 
-        $this->assertSame(1, \App\Models\Score::where('match_id', $match->id)->where('team_id', $teamA->id)->count());
+        $this->assertSame(1, Score::where('match_id', $match->id)->where('team_id', $teamA->id)->count());
     }
 
     public function test_negative_kills_are_rejected(): void

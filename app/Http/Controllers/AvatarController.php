@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class AvatarController extends Controller
 {
@@ -19,18 +20,18 @@ class AvatarController extends Controller
         // Authorization: user can view own avatar, or any avatar if authenticated (public profile)
         // For privacy, we allow authenticated users to view any avatar (since profiles are public in tournaments)
         // But we still require auth to prevent scraping
-        if (!$request->user()) {
+        if (! $request->user()) {
             abort(401);
         }
 
-        if (!$user->avatar_path) {
+        if (! $user->avatar_path) {
             return $this->fallbackAvatar($user);
         }
 
         $disk = 'local';
         $path = $user->avatar_path;
 
-        if (!Storage::disk($disk)->exists($path)) {
+        if (! Storage::disk($disk)->exists($path)) {
             // Try public disk fallback
             if (Storage::disk('public')->exists($path)) {
                 $disk = 'public';
@@ -46,7 +47,7 @@ class AvatarController extends Controller
 
         // Cache headers for performance
         $lastModified = Storage::disk($disk)->lastModified($path);
-        $etag = md5($path . $lastModified);
+        $etag = md5($path.$lastModified);
 
         if ($request->header('If-None-Match') === $etag) {
             return response()->noContent(304);
@@ -54,14 +55,14 @@ class AvatarController extends Controller
 
         $mime = Storage::disk($disk)->mimeType($path) ?? 'image/jpeg';
         $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        if (!in_array($mime, $allowedMimes)) {
+        if (! in_array($mime, $allowedMimes)) {
             $mime = 'image/jpeg';
         }
 
         $content = Storage::disk($disk)->get($path);
 
         // Audit log for avatar access (optional, for security monitoring)
-        if (app()->bound(\App\Services\AuditLogService::class)) {
+        if (app()->bound(AuditLogService::class)) {
             // Don't log every avatar view to avoid spam, only log if suspicious
         }
 
@@ -70,7 +71,7 @@ class AvatarController extends Controller
             'Content-Length' => strlen($content),
             'Cache-Control' => 'public, max-age=86400, immutable',
             'ETag' => $etag,
-            'Last-Modified' => gmdate('D, d M Y H:i:s', $lastModified) . ' GMT',
+            'Last-Modified' => gmdate('D, d M Y H:i:s', $lastModified).' GMT',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }

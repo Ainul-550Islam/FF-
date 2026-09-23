@@ -28,7 +28,7 @@ $required = ['tournaments', 'teams', 'users', 'notifications', 'audit_logs', 'pa
 foreach ($required as $table) {
     try {
         DB::table($table)->selectRaw('1')->limit(1)->get();
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         fwrite(STDERR, "ERROR: table '{$table}' unavailable — run migrations first. ({$e->getMessage()})\n");
         exit(1);
     }
@@ -125,19 +125,19 @@ $plan = function (string $label, string $sql, array $bindings = []) use (&$plans
 
 try {
     $plan('standings aggregation', 'SELECT team_id, SUM(points) AS total FROM scores GROUP BY team_id ORDER BY total DESC LIMIT 24');
-} catch (\Throwable $e) {
+} catch (Throwable $e) {
     echo "plan skipped: {$e->getMessage()}\n";
 }
 
 try {
     $plan('payments by status', 'SELECT * FROM payments WHERE status IN (?, ?) ORDER BY id DESC LIMIT 50', ['pending', 'processing']);
-} catch (\Throwable $e) {
+} catch (Throwable $e) {
     echo "plan skipped: {$e->getMessage()}\n";
 }
 
 try {
     $plan('teams by tournament', 'SELECT * FROM teams WHERE tournament_id = ? AND status IN (?, ?)', [1, 'pending', 'confirmed']);
-} catch (\Throwable $e) {
+} catch (Throwable $e) {
     echo "plan skipped: {$e->getMessage()}\n";
 }
 

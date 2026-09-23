@@ -38,16 +38,16 @@ class TitanBadge extends Model
     {
         static::creating(function ($badge) {
             // Sync week and week_number for compatibility
-            if (!empty($badge->week) && empty($badge->week_number)) {
+            if (! empty($badge->week) && empty($badge->week_number)) {
                 $badge->week_number = $badge->week;
             }
-            if (!empty($badge->week_number) && empty($badge->week)) {
+            if (! empty($badge->week_number) && empty($badge->week)) {
                 $badge->week = $badge->week_number;
             }
-            if (!empty($badge->rank) && empty($badge->rank_at_end)) {
+            if (! empty($badge->rank) && empty($badge->rank_at_end)) {
                 $badge->rank_at_end = $badge->rank;
             }
-            if (!empty($badge->rank_at_end) && empty($badge->rank)) {
+            if (! empty($badge->rank_at_end) && empty($badge->rank)) {
                 $badge->rank = $badge->rank_at_end;
             }
             if (empty($badge->week_number)) {
@@ -82,7 +82,7 @@ class TitanBadge extends Model
 
     public function scopeForWeek($query, int $week, int $year)
     {
-        return $query->where(function ($q) use ($week, $year) {
+        return $query->where(function ($q) use ($week) {
             $q->where('week_number', $week)->orWhere('week', $week);
         })->where('year', $year);
     }
@@ -90,13 +90,19 @@ class TitanBadge extends Model
     // Accessors for compatibility
     public function getWeekAttribute($value)
     {
-        if ($value !== null) return $value;
+        if ($value !== null) {
+            return $value;
+        }
+
         return $this->attributes['week_number'] ?? null;
     }
 
     public function getRankAttribute($value)
     {
-        if ($value !== null) return $value;
+        if ($value !== null) {
+            return $value;
+        }
+
         return $this->attributes['rank_at_end'] ?? null;
     }
 }

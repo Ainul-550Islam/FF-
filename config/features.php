@@ -1,4 +1,5 @@
 <?php
+
 return [
     'tournament_format_round_robin' => env('FEATURE_ROUND_ROBIN', false),
     'tournament_format_double_elimination' => env('FEATURE_DOUBLE_ELIMINATION', false),

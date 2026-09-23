@@ -38,7 +38,7 @@ class PaymentProvidersTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'Provider Tournament';
-        $t->slug = 'prov-' . Str::random(8);
+        $t->slug = 'prov-'.Str::random(8);
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = $entryFee;
@@ -58,10 +58,10 @@ class PaymentProvidersTest extends TestCase
         $team = new Team();
         $team->tournament_id = $tournament->id;
         $team->captain_id = $captain->id;
-        $team->name = 'Team ' . Str::random(6);
+        $team->name = 'Team '.Str::random(6);
         $team->captain_name = $captain->name;
         $team->phone = '01700000000';
-        $team->game_uid = 'UID' . Str::random(6);
+        $team->game_uid = 'UID'.Str::random(6);
         $team->status = Team::STATUS_PENDING;
         $team->save();
 

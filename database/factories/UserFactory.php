@@ -1,12 +1,16 @@
 <?php
+
 namespace Database\Factories;
+
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+
 class UserFactory extends Factory
 {
     protected $model = User::class;
+
     public function definition(): array
     {
         return [
@@ -27,5 +31,9 @@ class UserFactory extends Factory
             'locale' => 'en',
         ];
     }
-    public function admin(): static { return $this->state(fn(array $a)=>['is_admin'=>true,'is_staff'=>true]); }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $a) => ['is_admin' => true, 'is_staff' => true]);
+    }
 }

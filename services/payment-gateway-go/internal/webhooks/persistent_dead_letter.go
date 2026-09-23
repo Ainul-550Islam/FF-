@@ -1,11 +1,10 @@
 package webhooks
 
 import (
-    "context"
-    "database/sql"
-    "encoding/json"
-    "fmt"
-    "time"
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
 )
 
 // PersistentDeadLetterQueue with DB storage

@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use App\Models\Payment;
 use App\Models\Team;
 use App\Models\Tournament;
@@ -17,7 +19,8 @@ class PaymentController extends Controller
 
     public function methods(Request $request)
     {
-        $methods = [['id'=>'bkash','name'=>'bKash','type'=>'mobile'],['id'=>'nagad','name'=>'Nagad','type'=>'mobile'],['id'=>'rocket','name'=>'Rocket','type'=>'mobile'],['id'=>'manual','name'=>'Manual','type'=>'bank']];
+        $methods = [['id' => 'bkash', 'name' => 'bKash', 'type' => 'mobile'], ['id' => 'nagad', 'name' => 'Nagad', 'type' => 'mobile'], ['id' => 'rocket', 'name' => 'Rocket', 'type' => 'mobile'], ['id' => 'manual', 'name' => 'Manual', 'type' => 'bank']];
+
         return view('payment.methods', compact('methods'));
     }
 

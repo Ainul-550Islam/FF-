@@ -1,8 +1,11 @@
 <?php
+
 namespace Database\Seeders;
-use Illuminate\Database\Seeder;
+
 use App\Models\User;
 use App\Services\Gameberry\MagicChestService;
+use Illuminate\Database\Seeder;
+
 class GameberryChestSeeder extends Seeder
 {
     public function run(): void

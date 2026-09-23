@@ -29,8 +29,7 @@ class SupportTicketService
         protected NotificationService $notifications,
         protected LiveEventService $live,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * Create a ticket from an authenticated user, seeding the first message.
@@ -56,7 +55,7 @@ class SupportTicketService
             $user,
             Notification::TYPE_SUPPORT_CREATED,
             'Support ticket created',
-            'Your ticket "' . $ticket->subject . '" has been created. We will reply as soon as possible.',
+            'Your ticket "'.$ticket->subject.'" has been created. We will reply as soon as possible.',
             self::ticketLink($ticket),
             ['ticket_id' => $ticket->id],
         );
@@ -109,7 +108,7 @@ class SupportTicketService
                 $ticket->user,
                 Notification::TYPE_SUPPORT_REPLY,
                 'Support replied to your ticket',
-                'A staff member replied to "' . $ticket->subject . '".',
+                'A staff member replied to "'.$ticket->subject.'".',
                 self::ticketLink($ticket),
                 ['ticket_id' => $ticket->id],
             );
@@ -118,7 +117,7 @@ class SupportTicketService
                 $ticket->assignee,
                 Notification::TYPE_SUPPORT_REPLY,
                 'User replied to a ticket',
-                $author->name . ' replied to "' . $ticket->subject . '".',
+                $author->name.' replied to "'.$ticket->subject.'".',
                 self::ticketLink($ticket),
                 ['ticket_id' => $ticket->id],
             );
@@ -187,7 +186,7 @@ class SupportTicketService
                 $assignee,
                 Notification::TYPE_SUPPORT_ASSIGNED,
                 'Ticket assigned to you',
-                'You were assigned "' . $ticket->subject . '".',
+                'You were assigned "'.$ticket->subject.'".',
                 self::ticketLink($ticket),
                 ['ticket_id' => $ticket->id],
             );
@@ -196,7 +195,7 @@ class SupportTicketService
                 $ticket->user,
                 Notification::TYPE_SUPPORT_ASSIGNED,
                 'Your ticket was assigned',
-                'A staff member is now handling "' . $ticket->subject . '".',
+                'A staff member is now handling "'.$ticket->subject.'".',
                 self::ticketLink($ticket),
                 ['ticket_id' => $ticket->id],
             );
@@ -261,7 +260,7 @@ class SupportTicketService
             $ticket->user,
             $type,
             'Support ticket update',
-            'Your ticket "' . $ticket->subject . '" is now ' . $ticket->statusLabel() . '.',
+            'Your ticket "'.$ticket->subject.'" is now '.$ticket->statusLabel().'.',
             self::ticketLink($ticket),
             ['ticket_id' => $ticket->id, 'status' => $status],
         );
@@ -304,7 +303,7 @@ class SupportTicketService
                 $ticket->assignee,
                 Notification::TYPE_SUPPORT_STATUS,
                 'Ticket closed by user',
-                $user->name . ' closed "' . $ticket->subject . '".',
+                $user->name.' closed "'.$ticket->subject.'".',
                 self::ticketLink($ticket),
                 ['ticket_id' => $ticket->id],
             );
@@ -350,7 +349,7 @@ class SupportTicketService
                 $ticket->user,
                 Notification::TYPE_SUPPORT_REOPENED,
                 'Ticket reopened',
-                'Your ticket "' . $ticket->subject . '" was reopened.',
+                'Your ticket "'.$ticket->subject.'" was reopened.',
                 self::ticketLink($ticket),
                 ['ticket_id' => $ticket->id],
             );
@@ -359,7 +358,7 @@ class SupportTicketService
                 $ticket->assignee,
                 Notification::TYPE_SUPPORT_REOPENED,
                 'Ticket reopened',
-                $actor->name . ' reopened "' . $ticket->subject . '".',
+                $actor->name.' reopened "'.$ticket->subject.'".',
                 self::ticketLink($ticket),
                 ['ticket_id' => $ticket->id],
             );

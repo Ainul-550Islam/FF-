@@ -61,8 +61,8 @@ class RequestIdTest extends Phase16TestCase
         RequestContext::start(Request::create('/x', 'GET'), 'req-abc-1234');
 
         try {
-            $processor = new RequestContextProcessor;
-            $record = new LogRecord(new \DateTimeImmutable, 'test', Level::Info, 'message', [], []);
+            $processor = new RequestContextProcessor();
+            $record = new LogRecord(new \DateTimeImmutable(), 'test', Level::Info, 'message', [], []);
 
             $processed = $processor($record);
 
@@ -75,10 +75,10 @@ class RequestIdTest extends Phase16TestCase
 
     public function test_redaction_processor_scrubs_secrets_from_logs(): void
     {
-        $processor = new RedactSensitiveDataProcessor;
+        $processor = new RedactSensitiveDataProcessor();
 
         $record = new LogRecord(
-            new \DateTimeImmutable,
+            new \DateTimeImmutable(),
             'test',
             Level::Info,
             'login with password=sup3rs3cret and bearer abc123',

@@ -189,3 +189,15 @@ func (dpb *DistributedProviderBulkheads) Execute(ctx context.Context, provider s
     defer cancel()
     return bulkhead.Execute(ctx, fn)
 }
+
+// Stats snapshots every provider's distributed bulkhead, mirroring
+// ProviderBulkheads.Stats for the /api/v1/bulkhead/stats and health endpoints.
+func (dpb *DistributedProviderBulkheads) Stats() map[string]BulkheadStats {
+	dpb.mu.RLock()
+	defer dpb.mu.RUnlock()
+	stats := make(map[string]BulkheadStats)
+	for provider, bulkhead := range dpb.bulkheads {
+		stats[provider] = bulkhead.Stats()
+	}
+	return stats
+}

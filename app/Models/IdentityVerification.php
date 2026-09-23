@@ -23,10 +23,15 @@ class IdentityVerification extends Model
     use HasFactory;
 
     public const STATUS_UNVERIFIED = 'unverified';
+
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_VERIFIED = 'verified';
+
     public const STATUS_REJECTED = 'rejected';
+
     public const STATUS_EXPIRED = 'expired';
+
     public const STATUS_REVIEW_REQUIRED = 'review_required';
 
     public const STATUSES = [

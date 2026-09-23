@@ -17,13 +17,21 @@ class ModerationEvent extends Model
     use HasFactory;
 
     public const EVENT_DISPUTE_OPENED = 'dispute.opened';
+
     public const EVENT_EVIDENCE_ADDED = 'dispute.evidence_added';
+
     public const EVENT_EVIDENCE_REMOVED = 'dispute.evidence_removed';
+
     public const EVENT_STATUS_CHANGED = 'dispute.status_changed';
+
     public const EVENT_ASSIGNED = 'dispute.assigned';
+
     public const EVENT_RESOLVED = 'dispute.resolved';
+
     public const EVENT_REJECTED = 'dispute.rejected';
+
     public const EVENT_CANCELLED = 'dispute.cancelled';
+
     public const EVENT_RESULT_CORRECTED = 'result.corrected';
 
     protected $fillable = [];

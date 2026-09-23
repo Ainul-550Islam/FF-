@@ -1,19 +1,22 @@
 <?php
+
 namespace App\Services\Gameberry\Final;
-use Illuminate\Support\Facades\DB;
-use App\Models\User;
-use App\Services\Gameberry\GoldEconomyService;
-use App\Services\Gameberry\GemEconomyService;
+
 use App\Services\Gameberry\DiceCollectionService;
+use App\Services\Gameberry\GemEconomyService;
+use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\LeagueService;
-use App\Services\Gameberry\SocialService;
-use App\Services\Gameberry\PrivateTableService;
-use App\Services\Gameberry\MagicChestService;
-use App\Services\Gameberry\VideoAdService;
-use App\Services\Gameberry\SpinService;
-use App\Services\Gameberry\ReferralService;
 use App\Services\Gameberry\LevelService;
+use App\Services\Gameberry\MagicChestService;
+use App\Services\Gameberry\PrivateTableService;
 use App\Services\Gameberry\ReconciliationService;
+use App\Services\Gameberry\ReferralService;
+use App\Services\Gameberry\SocialService;
+use App\Services\Gameberry\SpinService;
+use App\Services\Gameberry\TrophyService;
+use App\Services\Gameberry\VideoAdService;
+use Illuminate\Support\Facades\DB;
+
 class Final484Service
 {
     public function getComprehensiveStats(int $userId): array
@@ -30,6 +33,7 @@ class Final484Service
         $referralService = app(ReferralService::class);
         $levelService = app(LevelService::class);
         $reconcileService = app(ReconciliationService::class);
+
         return [
             'user_id' => $userId,
             'feature_484_value' => 484 * 100,
@@ -56,6 +60,7 @@ class Final484Service
             'existing_logic_preserved' => true,
         ];
     }
+
     public function processFullGameFlow(int $userId, string $gameMode = 'classic', int $betAmount = 100): array
     {
         return DB::transaction(function () use ($userId, $gameMode, $betAmount) {
@@ -63,10 +68,12 @@ class Final484Service
             $levelService = app(LevelService::class);
             $leagueService = app(LeagueService::class);
             $chestService = app(MagicChestService::class);
-            $trophyService = app(\App\Services\Gameberry\TrophyService::class);
-            if (!$goldService->canAffordBet($userId, $betAmount)) throw new \Exception('Insufficient gold for bet - gold at stake');
+            $trophyService = app(TrophyService::class);
+            if (! $goldService->canAffordBet($userId, $betAmount)) {
+                throw new \Exception('Insufficient gold for bet - gold at stake');
+            }
             $betTx = $goldService->placeBet($userId, $betAmount, 'FINAL484_TABLE');
-            $isWin = (bool) rand(0,1);
+            $isWin = (bool) rand(0, 1);
             if ($isWin) {
                 $winAmount = $betAmount * 2;
                 $goldService->winGold($userId, $winAmount, 'FINAL484_TABLE');
@@ -81,7 +88,10 @@ class Final484Service
                 $result = 'loss';
             }
             $reconcile = app(ReconciliationService::class)->reconcileAll($userId);
-            if (!$reconcile['all_balanced']) throw new \Exception('Reconciliation failed - STOP - financial totals must reconcile - G1 constraint');
+            if (! $reconcile['all_balanced']) {
+                throw new \Exception('Reconciliation failed - STOP - financial totals must reconcile - G1 constraint');
+            }
+
             return ['user_id' => $userId, 'game_mode' => $gameMode, 'bet_amount' => $betAmount, 'result' => $result, 'level' => $level, 'league' => $league, 'chest' => $chest, 'reconcile' => $reconcile, 'bet_tx' => $betTx, 'feature_484' => true];
         });
     }

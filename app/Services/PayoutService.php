@@ -32,8 +32,7 @@ class PayoutService
         protected PayoutGatewayManager $gateways,
         protected FraudRiskService $risk,
         protected NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     /**
      * Process an approved payout.
@@ -54,7 +53,7 @@ class PayoutService
 
         if ($action !== FraudRiskService::ACTION_ALLOW) {
             throw new PayoutReviewRequiredException(
-                'This payout requires fraud review before it can be processed (recipient risk action: ' . $action . ').'
+                'This payout requires fraud review before it can be processed (recipient risk action: '.$action.').'
             );
         }
 
@@ -125,7 +124,7 @@ class PayoutService
                 $wallet,
                 $fresh->amountMinor(),
                 LedgerEntry::TYPE_PAYOUT,
-                'Prize payout — ' . ($fresh->tournament?->name ?? 'Tournament') . ' (' . $this->ordinal((int) $fresh->rank) . ' place)',
+                'Prize payout — '.($fresh->tournament?->name ?? 'Tournament').' ('.$this->ordinal((int) $fresh->rank).' place)',
                 $actor,
                 'payout',
                 $fresh->id,
@@ -143,7 +142,7 @@ class PayoutService
                 $recipient,
                 Notification::TYPE_PAYOUT_PROCESSED,
                 'Prize payout received',
-                'You received ' . $this->moneyLabel($fresh->amountMinor()) . ' for ' . ($fresh->tournament?->name ?? 'a tournament') . '.',
+                'You received '.$this->moneyLabel($fresh->amountMinor()).' for '.($fresh->tournament?->name ?? 'a tournament').'.',
                 NotificationService::link('wallet.index'),
                 ['payout_id' => $fresh->id, 'amount_minor' => $fresh->amountMinor()],
             );
@@ -246,7 +245,7 @@ class PayoutService
                     $recipient,
                     Notification::TYPE_PAYOUT_FAILED,
                     'Prize payout failed',
-                    'A prize payout for ' . ($payout->tournament?->name ?? 'a tournament') . ' could not be processed.',
+                    'A prize payout for '.($payout->tournament?->name ?? 'a tournament').' could not be processed.',
                     NotificationService::link('wallet.index'),
                     ['payout_id' => $payout->id],
                 );
@@ -323,7 +322,7 @@ class PayoutService
      */
     protected function moneyLabel(int $amountMinor): string
     {
-        return '৳' . number_format($amountMinor / 100, 2);
+        return '৳'.number_format($amountMinor / 100, 2);
     }
 
     /**
@@ -334,9 +333,9 @@ class PayoutService
         $suffixes = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th'];
 
         if (($rank % 100) >= 11 && ($rank % 100) <= 13) {
-            return $rank . 'th';
+            return $rank.'th';
         }
 
-        return $rank . $suffixes[$rank % 10];
+        return $rank.$suffixes[$rank % 10];
     }
 }

@@ -2,14 +2,15 @@
 
 namespace Tests\Feature\Gameberry;
 
-use Tests\TestCase;
 use App\Models\User;
-use App\Services\Gameberry\GoldEconomyService;
+use App\Models\VideoAdReward;
 use App\Services\Gameberry\GemEconomyService;
-use App\Services\Gameberry\VideoAdService;
+use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\MagicChestService;
 use App\Services\Gameberry\SpinService;
+use App\Services\Gameberry\VideoAdService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class EconomyTest extends TestCase
 {
@@ -61,7 +62,7 @@ class EconomyTest extends TestCase
         for ($i = 0; $i < 5; $i++) {
             // Bypass cooldown for test by deleting last or mocking time
             if ($i > 0) {
-                \App\Models\VideoAdReward::where('user_id', $user->id)->delete();
+                VideoAdReward::where('user_id', $user->id)->delete();
             }
             $reward = $videoService->watchAd($user->id, 'admob');
             $this->assertEquals(100, $reward->gold_reward);
@@ -100,7 +101,7 @@ class EconomyTest extends TestCase
 
         $spin = $spinService->spin($user->id, true); // free spin
         $this->assertNotNull($spin->result);
-        $this->assertContains($spin->result, ['gold','gems','dice','jackpot']);
+        $this->assertContains($spin->result, ['gold', 'gems', 'dice', 'jackpot']);
     }
 
     public function test_gold_at_stake_flow(): void

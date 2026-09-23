@@ -30,6 +30,7 @@ class SpinApiController extends Controller
         $userId = $request->user()->id;
         try {
             $spin = $this->spinService->spin($userId, $request->boolean('use_free', false));
+
             return response()->json(['success' => true, 'data' => $spin, 'message' => "Result: {$spin->result} +{$spin->gold_amount} gold +{$spin->gem_amount} gems"]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 400);
@@ -39,6 +40,7 @@ class SpinApiController extends Controller
     public function stats(Request $request)
     {
         $userId = $request->user()->id;
+
         return response()->json(['success' => true, 'data' => $this->spinService->getSpinStats($userId)]);
     }
 
@@ -46,6 +48,7 @@ class SpinApiController extends Controller
     {
         $userId = $request->user()->id;
         $history = $this->spinService->getSpinHistory($userId, 50);
+
         return response()->json(['success' => true, 'data' => $history]);
     }
 }

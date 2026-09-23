@@ -19,8 +19,7 @@ class PlayerController extends Controller
 {
     public function __construct(
         protected ProfileService $profiles,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/players/{user}

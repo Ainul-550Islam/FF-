@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\SupportTicket;
 use App\Models\Team;
 
 /**
@@ -19,12 +20,12 @@ class ApiIdempotencyTest extends ApiTestCase
 
         $first = $this->asUser($player, ['tournaments:register'])
             ->withHeaders(['Idempotency-Key' => 'reg-1'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $payload);
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $payload);
         $first->assertStatus(201);
 
         $replay = $this->asUser($player, ['tournaments:register'])
             ->withHeaders(['Idempotency-Key' => 'reg-1'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $payload);
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $payload);
         $replay->assertStatus(201);
         $this->assertSame('true', $replay->headers->get('Idempotency-Replayed'));
 
@@ -40,13 +41,13 @@ class ApiIdempotencyTest extends ApiTestCase
 
         $this->asUser($player, ['tournaments:register'])
             ->withHeaders(['Idempotency-Key' => 'reg-2'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $this->registrationPayload('Team One', 'UIDIDEM002'))
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $this->registrationPayload('Team One', 'UIDIDEM002'))
             ->assertStatus(201);
 
         // Same key, different body → 409 conflict, no second team.
         $this->asUser($player, ['tournaments:register'])
             ->withHeaders(['Idempotency-Key' => 'reg-2'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $this->registrationPayload('Team Two', 'UIDIDEM003'))
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $this->registrationPayload('Team Two', 'UIDIDEM003'))
             ->assertStatus(409);
 
         $this->assertSame(1, Team::where('captain_id', $player->id)->count());
@@ -69,6 +70,6 @@ class ApiIdempotencyTest extends ApiTestCase
         $replay->assertStatus(201);
         $this->assertSame('true', $replay->headers->get('Idempotency-Replayed'));
 
-        $this->assertSame(1, \App\Models\SupportTicket::where('user_id', $user->id)->count());
+        $this->assertSame(1, SupportTicket::where('user_id', $user->id)->count());
     }
 }

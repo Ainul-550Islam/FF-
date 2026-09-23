@@ -38,7 +38,7 @@ class TournamentLifecycleTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = $overrides['name'] ?? 'Lifecycle Tournament';
-        $t->slug = $overrides['slug'] ?? ('lifecycle-' . Str::random(8));
+        $t->slug = $overrides['slug'] ?? ('lifecycle-'.Str::random(8));
         $t->game_mode = $overrides['game_mode'] ?? 'squad';
         $t->map = $overrides['map'] ?? 'Bermuda';
         $t->entry_fee = $overrides['entry_fee'] ?? 100;
@@ -58,10 +58,10 @@ class TournamentLifecycleTest extends TestCase
         $t = new Team();
         $t->tournament_id = $tournament->id;
         $t->captain_id = $captain?->id;
-        $t->name = 'Team ' . Str::random(6);
+        $t->name = 'Team '.Str::random(6);
         $t->captain_name = $captain?->name ?? 'Captain';
         $t->phone = '01700000000';
-        $t->game_uid = 'UID' . rand(100000, 999999);
+        $t->game_uid = 'UID'.rand(100000, 999999);
         $t->status = $status;
         $t->save();
 

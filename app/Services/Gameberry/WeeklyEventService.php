@@ -4,16 +4,18 @@ namespace App\Services\Gameberry;
 
 use App\Models\WeeklyEvent;
 use App\Models\WeeklyEventParticipant;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class WeeklyEventService
 {
-    public function getActiveEvents(): \Illuminate\Database\Eloquent\Collection
+    public function getActiveEvents(): Collection
     {
         return WeeklyEvent::active()->orderBy('starts_at')->get();
     }
 
-    public function getUpcomingEvents(): \Illuminate\Database\Eloquent\Collection
+    public function getUpcomingEvents(): Collection
     {
         return WeeklyEvent::upcoming()->orderBy('starts_at')->get();
     }
@@ -22,7 +24,7 @@ class WeeklyEventService
     {
         $event = WeeklyEvent::findOrFail($eventId);
 
-        if (!$event->isActive()) {
+        if (! $event->isActive()) {
             throw new \Exception('Event not active');
         }
 
@@ -48,11 +50,12 @@ class WeeklyEventService
             }
 
             $participant->save();
+
             return $participant;
         });
     }
 
-    public function getLeaderboard(int $eventId, int $limit = 100): \Illuminate\Database\Eloquent\Collection
+    public function getLeaderboard(int $eventId, int $limit = 100): Collection
     {
         return WeeklyEventParticipant::with('user')
             ->where('weekly_event_id', $eventId)
@@ -65,11 +68,11 @@ class WeeklyEventService
     {
         $participant = WeeklyEventParticipant::where('weekly_event_id', $eventId)->where('user_id', $userId)->firstOrFail();
 
-        if (!$participant->is_completed) {
+        if (! $participant->is_completed) {
             throw new \Exception('Event not completed');
         }
 
-        if (!empty($participant->rewards_claimed)) {
+        if (! empty($participant->rewards_claimed)) {
             throw new \Exception('Rewards already claimed');
         }
 
@@ -77,11 +80,11 @@ class WeeklyEventService
         $rewards = $event->rewards ?? ['gold' => 100, 'gems' => 5];
 
         DB::transaction(function () use ($participant, $rewards, $userId, $eventId) {
-            if (!empty($rewards['gold'])) {
-                app(GoldEconomyService::class)->getOrCreateWallet($userId)->addGold($rewards['gold'], 'weekly_event', 'weekly_event', (string)$eventId, 'Weekly event reward');
+            if (! empty($rewards['gold'])) {
+                app(GoldEconomyService::class)->getOrCreateWallet($userId)->addGold($rewards['gold'], 'weekly_event', 'weekly_event', (string) $eventId, 'Weekly event reward');
             }
-            if (!empty($rewards['gems'])) {
-                app(GemEconomyService::class)->getOrCreateWallet($userId)->addGems($rewards['gems'], 'weekly_event', 'weekly_event', (string)$eventId, 'Weekly event reward');
+            if (! empty($rewards['gems'])) {
+                app(GemEconomyService::class)->getOrCreateWallet($userId)->addGems($rewards['gems'], 'weekly_event', 'weekly_event', (string) $eventId, 'Weekly event reward');
             }
 
             $participant->rewards_claimed = $rewards;
@@ -95,7 +98,7 @@ class WeeklyEventService
     {
         return WeeklyEvent::create([
             'name' => $data['name'],
-            'slug' => \Illuminate\Support\Str::slug($data['name']) . '-' . time(),
+            'slug' => Str::slug($data['name']).'-'.time(),
             'description' => $data['description'] ?? '',
             'type' => $data['type'] ?? 'special',
             'starts_at' => $data['starts_at'] ?? now(),
@@ -110,8 +113,10 @@ class WeeklyEventService
     public function getUserProgress(int $userId): array
     {
         $active = $this->getActiveEvents();
+
         return $active->map(function ($event) use ($userId) {
             $participant = WeeklyEventParticipant::where('weekly_event_id', $event->id)->where('user_id', $userId)->first();
+
             return [
                 'event' => $event,
                 'progress' => $participant?->progress ?? 0,

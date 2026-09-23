@@ -2,16 +2,20 @@
 
 namespace App\Services\Gameberry;
 
-use App\Models\GoldWallet;
 use App\Models\GoldTransaction;
-use Illuminate\Support\Facades\DB;
+use App\Models\GoldWallet;
+use Illuminate\Database\Eloquent\Collection;
 
 class GoldEconomyService
 {
     const INITIAL_GOLD = 5000;
+
     const MIN_BET = 100;
+
     const MAX_BET = 100000;
+
     const DAILY_BONUS = 500;
+
     const VIDEO_AD_REWARD = 100;
 
     public function getOrCreateWallet(int $userId): GoldWallet
@@ -38,57 +42,65 @@ class GoldEconomyService
         if ($betAmount < self::MIN_BET || $betAmount > self::MAX_BET) {
             return false;
         }
+
         return $this->getBalance($userId) >= $betAmount;
     }
 
     public function placeBet(int $userId, int $amount, string $tableCode): GoldTransaction
     {
-        if (!$this->canAffordBet($userId, $amount)) {
+        if (! $this->canAffordBet($userId, $amount)) {
             throw new \Exception('Insufficient gold or invalid bet amount');
         }
 
         $wallet = $this->getOrCreateWallet($userId);
+
         return $wallet->spendGold($amount, 'bet', 'private_table', $tableCode, "Gold at stake for table {$tableCode}");
     }
 
     public function winGold(int $userId, int $amount, string $tableCode): GoldTransaction
     {
         $wallet = $this->getOrCreateWallet($userId);
+
         return $wallet->addGold($amount, 'win', 'private_table', $tableCode, "Won gold from table {$tableCode}");
     }
 
     public function refundBet(int $userId, int $amount, string $tableCode, string $reason = 'refund'): GoldTransaction
     {
         $wallet = $this->getOrCreateWallet($userId);
+
         return $wallet->addGold($amount, 'refund', 'private_table', $tableCode, "Refund: {$reason}");
     }
 
-    public function rewardVideoAd(int $userId, int $reward = null): GoldTransaction
+    public function rewardVideoAd(int $userId, ?int $reward = null): GoldTransaction
     {
         $reward = $reward ?? self::VIDEO_AD_REWARD;
         $wallet = $this->getOrCreateWallet($userId);
+
         return $wallet->addGold($reward, 'video_ad', 'video_ad_reward', null, 'Free gold from video ad');
     }
 
     public function rewardDailyBonus(int $userId): GoldTransaction
     {
         $wallet = $this->getOrCreateWallet($userId);
+
         return $wallet->addGold(self::DAILY_BONUS, 'daily_bonus', null, null, 'Daily login bonus');
     }
 
     public function rewardMagicChest(int $userId, int $goldAmount, string $chestId): GoldTransaction
     {
         $wallet = $this->getOrCreateWallet($userId);
+
         return $wallet->addGold($goldAmount, 'magic_chest', 'magic_chest', $chestId, 'Magic chest reward');
     }
 
     public function purchaseWithGold(int $userId, int $amount, string $itemType, string $itemId): GoldTransaction
     {
         $wallet = $this->getOrCreateWallet($userId);
+
         return $wallet->spendGold($amount, 'purchase', $itemType, $itemId, "Purchase {$itemType}");
     }
 
-    public function getTransactionHistory(int $userId, int $limit = 50): \Illuminate\Database\Eloquent\Collection
+    public function getTransactionHistory(int $userId, int $limit = 50): Collection
     {
         return GoldTransaction::where('user_id', $userId)->orderByDesc('created_at')->limit($limit)->get();
     }
@@ -96,6 +108,7 @@ class GoldEconomyService
     public function getStats(int $userId): array
     {
         $wallet = $this->getOrCreateWallet($userId);
+
         return [
             'balance' => $wallet->gold_balance,
             'total_earned' => $wallet->total_earned,
@@ -123,7 +136,7 @@ class GoldEconomyService
 
         // If wallet was created with initial gold but no transaction, adjust
         $hasInitialTx = $transactions->where('type', 'initial')->count() > 0;
-        if (!$hasInitialTx) {
+        if (! $hasInitialTx) {
             $computed = $computed; // already includes initial
         }
 

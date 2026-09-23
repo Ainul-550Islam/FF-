@@ -17,8 +17,7 @@ class PaymentMethodService
 {
     public function __construct(
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * The user's saved payment methods (active first, default first).
@@ -141,7 +140,7 @@ class PaymentMethodService
         $digits = preg_replace('/\D/', '', $identifier) ?? '';
         $last = substr($digits, -4);
 
-        return '****' . str_repeat('*', max(0, strlen($digits) - 4)) . $last;
+        return '****'.str_repeat('*', max(0, strlen($digits) - 4)).$last;
     }
 
     protected function assertOwned(User $user, PaymentMethod $method): void

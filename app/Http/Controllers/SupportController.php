@@ -18,8 +18,7 @@ class SupportController extends Controller
 {
     public function __construct(
         protected SupportTicketService $tickets,
-    ) {
-    }
+    ) {}
 
     /**
      * The authenticated user's tickets.
@@ -49,8 +48,8 @@ class SupportController extends Controller
     {
         $data = $request->validate([
             'subject' => 'required|string|max:255',
-            'category' => 'required|in:' . implode(',', SupportTicket::CATEGORIES),
-            'priority' => 'nullable|in:' . implode(',', SupportTicket::PRIORITIES),
+            'category' => 'required|in:'.implode(',', SupportTicket::CATEGORIES),
+            'priority' => 'nullable|in:'.implode(',', SupportTicket::PRIORITIES),
             'message' => 'required|string|max:10000',
         ]);
 

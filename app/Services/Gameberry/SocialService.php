@@ -2,11 +2,11 @@
 
 namespace App\Services\Gameberry;
 
+use App\Models\Challenge;
+use App\Models\FriendNotification;
 use App\Models\GameBuddy;
 use App\Models\UserOnlineStatus;
-use App\Models\FriendNotification;
-use App\Models\Challenge;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Collection;
 
 class SocialService
 {
@@ -56,19 +56,20 @@ class SocialService
         GameBuddy::where('user_id', $buddyId)->where('buddy_id', $userId)->delete();
     }
 
-    public function getBuddies(int $userId): \Illuminate\Database\Eloquent\Collection
+    public function getBuddies(int $userId): Collection
     {
         return GameBuddy::with(['buddy', 'buddy.onlineStatus'])->where('user_id', $userId)->where('status', 'accepted')->get();
     }
 
-    public function getPendingRequests(int $userId): \Illuminate\Database\Eloquent\Collection
+    public function getPendingRequests(int $userId): Collection
     {
         return GameBuddy::with('user')->where('buddy_id', $userId)->where('status', 'pending')->get();
     }
 
-    public function getOnlineBuddies(int $userId): \Illuminate\Database\Eloquent\Collection
+    public function getOnlineBuddies(int $userId): Collection
     {
         $buddyIds = GameBuddy::where('user_id', $userId)->where('status', 'accepted')->pluck('buddy_id');
+
         return UserOnlineStatus::with('user')
             ->whereIn('user_id', $buddyIds)
             ->where('is_online', true)
@@ -92,7 +93,7 @@ class SocialService
             $status->goOnline($game, $tableCode);
 
             // Notify friends if setting enabled
-            if ($status->notify_friends_online && !$status->hide_online_status) {
+            if ($status->notify_friends_online && ! $status->hide_online_status) {
                 $this->notifyFriendsOnline($userId);
             }
         } else {
@@ -118,6 +119,7 @@ class SocialService
         );
         $status->hide_online_status = $hide;
         $status->save();
+
         return $status;
     }
 
@@ -129,6 +131,7 @@ class SocialService
         );
         $status->notify_friends_online = $notify;
         $status->save();
+
         return $status;
     }
 
@@ -139,6 +142,7 @@ class SocialService
             ['is_online' => false]
         );
         $status->setAutoMode($autoOn, $reason);
+
         return $status;
     }
 
@@ -146,7 +150,7 @@ class SocialService
     {
         // Check if buddies
         $isBuddy = GameBuddy::where('user_id', $challengerId)->where('buddy_id', $buddyId)->where('status', 'accepted')->exists();
-        if (!$isBuddy) {
+        if (! $isBuddy) {
             throw new \Exception('Not buddies - cannot challenge');
         }
 
@@ -166,7 +170,7 @@ class SocialService
         ]);
     }
 
-    public function getFriendNotifications(int $userId, int $limit = 20): \Illuminate\Database\Eloquent\Collection
+    public function getFriendNotifications(int $userId, int $limit = 20): Collection
     {
         return FriendNotification::with('friend')->where('user_id', $userId)->orderByDesc('created_at')->limit($limit)->get();
     }

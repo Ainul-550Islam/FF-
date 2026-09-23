@@ -37,7 +37,7 @@ class NotificationService
         ?string $link = null,
         array $data = [],
     ): Notification {
-        $notification = new Notification;
+        $notification = new Notification();
         $notification->user_id = $recipient->id;
         $notification->type = $type;
         $notification->title = trim($title);

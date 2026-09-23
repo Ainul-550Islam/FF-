@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Gameberry;
 
 use App\Http\Controllers\Controller;
-use App\Services\Gameberry\PrivateTableService;
+use App\Models\PrivateTable;
 use App\Services\Gameberry\ChatEmojiService;
+use App\Services\Gameberry\PrivateTableService;
 use Illuminate\Http\Request;
 
 class PrivateTableController extends Controller
 {
     protected PrivateTableService $tableService;
+
     protected ChatEmojiService $chatService;
 
     public function __construct(PrivateTableService $tableService, ChatEmojiService $chatService)
@@ -21,14 +23,14 @@ class PrivateTableController extends Controller
     public function index(Request $request)
     {
         $userId = $request->user()->id;
-        $myTables = \App\Models\PrivateTable::with(['participants.user'])
+        $myTables = PrivateTable::with(['participants.user'])
             ->where('host_id', $userId)
             ->where('status', '!=', 'expired')
             ->orderByDesc('created_at')
             ->get();
 
-        $joinedTables = \App\Models\PrivateTable::with(['host', 'participants.user'])
-            ->whereHas('participants', fn($q) => $q->where('user_id', $userId))
+        $joinedTables = PrivateTable::with(['host', 'participants.user'])
+            ->whereHas('participants', fn ($q) => $q->where('user_id', $userId))
             ->where('host_id', '!=', $userId)
             ->where('status', '!=', 'expired')
             ->orderByDesc('created_at')
@@ -69,7 +71,7 @@ class PrivateTableController extends Controller
     public function show(Request $request, string $code)
     {
         $table = $this->tableService->getTableByCode($code);
-        if (!$table) {
+        if (! $table) {
             abort(404, 'Table not found');
         }
 
@@ -85,6 +87,7 @@ class PrivateTableController extends Controller
         $userId = $request->user()->id;
         try {
             $participant = $this->tableService->joinTable($userId, $code);
+
             return redirect()->route('gameberry.private_tables.show', strtoupper($code))->with('success', 'Joined table - gold at stake!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -96,6 +99,7 @@ class PrivateTableController extends Controller
         $userId = $request->user()->id;
         try {
             $this->tableService->leaveTable($userId, $code);
+
             return redirect()->route('gameberry.private_tables.index')->with('success', 'Left table');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -108,6 +112,7 @@ class PrivateTableController extends Controller
         $isReady = $request->boolean('is_ready', true);
         try {
             $this->tableService->setReady($userId, $code, $isReady);
+
             return redirect()->back()->with('success', $isReady ? 'Ready!' : 'Not ready');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -119,7 +124,8 @@ class PrivateTableController extends Controller
         $userId = $request->user()->id;
         try {
             $table = $this->tableService->startGame($userId, $code);
-            $this->chatService->sendSystemMessage($code, "Game started by host!");
+            $this->chatService->sendSystemMessage($code, 'Game started by host!');
+
             return redirect()->route('gameberry.private_tables.show', strtoupper($code))->with('success', 'Game started!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -129,7 +135,9 @@ class PrivateTableController extends Controller
     public function share(Request $request, string $code)
     {
         $table = $this->tableService->getTableByCode($code);
-        if (!$table) abort(404);
+        if (! $table) {
+            abort(404);
+        }
 
         $shareData = [
             'code' => $table->code,
@@ -150,6 +158,7 @@ class PrivateTableController extends Controller
         try {
             $this->tableService->setAutoMode($userId, $code, $autoOn, $reason);
             $msg = $autoOn ? 'Auto mode ON - will play on disconnect' : 'Auto mode OFF';
+
             return redirect()->back()->with('success', $msg);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());

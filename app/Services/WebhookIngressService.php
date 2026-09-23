@@ -23,8 +23,7 @@ class WebhookIngressService
     public function __construct(
         protected WebhookSignatureService $signatures,
         protected PaymentService $payments,
-    ) {
-    }
+    ) {}
 
     /**
      * Accept a provider webhook and dispatch it to the matching handler.
@@ -32,7 +31,7 @@ class WebhookIngressService
      * @return array{event: WebhookEvent, replay: bool, payment?: array}
      *
      * @throws DomainException on invalid provider, signature, timestamp,
-     *                          payload, or business validation failure.
+     *                         payload, or business validation failure.
      */
     public function handle(Request $request, string $provider): array
     {

@@ -15,7 +15,9 @@ use Illuminate\Http\Request;
 class Final7ViewController extends Controller
 {
     protected string $viewPrefix = 'gameberry.final7.feature_';
+
     protected int $low = 1001;
+
     protected int $high = 1050;
 
     public function show(Request $request, int $feature)
@@ -24,6 +26,6 @@ class Final7ViewController extends Controller
             abort(404, 'Feature 1001-1050 only - no file omitted');
         }
 
-        return view($this->viewPrefix . $feature, ['feature' => $feature]);
+        return view($this->viewPrefix.$feature, ['feature' => $feature]);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Contracts\GoogleOAuthProviderInterface;
 use App\Models\LoginEvent;
 use App\Models\Notification;
+use App\Models\RiskEvent;
 use App\Models\User;
 use DomainException;
 use Illuminate\Http\Request;
@@ -30,8 +31,7 @@ class GoogleAuthService
         protected FraudRiskService $risk,
         protected DeviceFingerprintService $devices,
         protected IpIntelligenceService $ipIntel,
-    ) {
-    }
+    ) {}
 
     public function isConfigured(): bool
     {
@@ -71,7 +71,7 @@ class GoogleAuthService
         $this->ipIntel->observe($request, $user);
 
         if ($this->loginEvents->isNewDevice($request, $user)) {
-            $this->risk->recordSignal($user, \App\Models\RiskEvent::TYPE_RISK_FLAG, \App\Models\RiskEvent::SEVERITY_INFO, 'auth', [
+            $this->risk->recordSignal($user, RiskEvent::TYPE_RISK_FLAG, RiskEvent::SEVERITY_INFO, 'auth', [
                 'context' => 'google_login_new_device',
             ]);
 

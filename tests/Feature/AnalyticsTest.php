@@ -32,7 +32,7 @@ class AnalyticsTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'Analytics Tournament';
-        $t->slug = 'analytics-' . Str::random(8);
+        $t->slug = 'analytics-'.Str::random(8);
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = 0;
@@ -53,10 +53,10 @@ class AnalyticsTest extends TestCase
         $team = new Team();
         $team->tournament_id = $tournament->id;
         $team->captain_id = $captain?->id;
-        $team->name = 'Team ' . Str::random(6);
+        $team->name = 'Team '.Str::random(6);
         $team->captain_name = $captain?->name ?? 'Captain';
         $team->phone = '01700000000';
-        $team->game_uid = 'UID' . strtoupper(Str::random(8));
+        $team->game_uid = 'UID'.strtoupper(Str::random(8));
         $team->status = $status;
         $team->checked_in_at = $checkedIn ? now() : null;
         $team->save();

@@ -203,4 +203,3 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('rust/security/health', [RustSecurityController::class, 'health'])->name('rust.security.health');
     });
 });
-

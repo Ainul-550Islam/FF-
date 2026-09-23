@@ -24,7 +24,7 @@ class ErrorReportingTest extends Phase16TestCase
     {
         config(['observability.error_reporting.driver' => 'sentry']);
 
-        $this->assertInstanceOf(LogErrorReporter::class, (new ErrorReporterManager)->driver());
+        $this->assertInstanceOf(LogErrorReporter::class, (new ErrorReporterManager())->driver());
     }
 
     public function test_reporter_records_without_throwing(): void

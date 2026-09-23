@@ -2,23 +2,17 @@
 
 namespace App\Models;
 
-use App\Models\AccountLink;
-use App\Models\AntiCheatIncident;
-use App\Models\IpLink;
-use App\Models\OtpChallenge;
-use App\Models\PaymentMethod;
-use App\Models\RiskEvent;
-use App\Models\Tournament;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class User extends Authenticatable
 {
-    use HasFactory, HasApiTokens, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
         'name',
@@ -122,7 +116,7 @@ class User extends Authenticatable
 
     public function personalAccessTokens()
     {
-        return $this->morphMany(\Laravel\Sanctum\PersonalAccessToken::class, 'tokenable');
+        return $this->morphMany(PersonalAccessToken::class, 'tokenable');
     }
 
     public function wallet()
@@ -270,6 +264,7 @@ class User extends Authenticatable
         }
         // Gravatar fallback or initial avatar
         $hash = md5(strtolower(trim($this->email ?? $this->id)));
+
         return "https://www.gravatar.com/avatar/{$hash}?d=identicon&s=200";
     }
 
@@ -278,8 +273,9 @@ class User extends Authenticatable
         $name = $this->display_name ?: $this->name ?: $this->email;
         $parts = preg_split('/\s+/', trim($name));
         if (count($parts) >= 2) {
-            return strtoupper(substr($parts[0], 0, 1) . substr(end($parts), 0, 1));
+            return strtoupper(substr($parts[0], 0, 1).substr(end($parts), 0, 1));
         }
+
         return strtoupper(substr($name, 0, 2));
     }
 
@@ -290,7 +286,7 @@ class User extends Authenticatable
 
     public function hasAvatar(): bool
     {
-        return !empty($this->avatar_path) && (
+        return ! empty($this->avatar_path) && (
             Storage::disk('local')->exists($this->avatar_path) ||
             Storage::disk('public')->exists($this->avatar_path)
         );
@@ -384,21 +380,23 @@ class User extends Authenticatable
 
     public function canChangeUsername(): bool
     {
-        if (!$this->username_changed_at) {
+        if (! $this->username_changed_at) {
             return true;
         }
+
         return $this->username_changed_at->diffInDays(now()) >= 30;
     }
 
     public function daysUntilUsernameChange(): int
     {
-        if (!$this->username_changed_at) {
+        if (! $this->username_changed_at) {
             return 0;
         }
         $next = $this->username_changed_at->addDays(30);
         if ($next->isPast()) {
             return 0;
         }
+
         return (int) now()->diffInDays($next);
     }
 

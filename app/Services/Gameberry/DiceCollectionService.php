@@ -3,14 +3,16 @@
 namespace App\Services\Gameberry;
 
 use App\Models\Dice;
-use App\Models\UserDice;
 use App\Models\DiceExchange;
 use App\Models\LuckyDice;
+use App\Models\UserDice;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class DiceCollectionService
 {
     const MAX_COLLECTION = 52; // Gameberry 52 max per user dice type? Actually total dice types 250+ but max 52 lucky dice storage
+
     const MAX_TOTAL_DICE_TYPES = 250;
 
     public function getUserCollection(int $userId): array
@@ -66,11 +68,11 @@ class DiceCollectionService
     {
         // Gameberry FAQ: dice exchange Facebook-only, need at least 2 to exchange
         $senderDice = UserDice::where('user_id', $senderId)->where('dice_id', $diceId)->first();
-        if (!$senderDice || $senderDice->quantity < 2) {
+        if (! $senderDice || $senderDice->quantity < 2) {
             throw new \Exception('You need at least 2 of this dice to exchange');
         }
 
-        if (!LuckyDice::canReceiveMore($receiverId)) {
+        if (! LuckyDice::canReceiveMore($receiverId)) {
             throw new \Exception('Receiver cannot receive more dice - max 52 reached');
         }
 
@@ -83,7 +85,7 @@ class DiceCollectionService
         ]);
     }
 
-    public function getAvailableDices(): \Illuminate\Database\Eloquent\Collection
+    public function getAvailableDices(): Collection
     {
         return Dice::where('is_active', true)->orderBy('rarity')->orderBy('name')->get();
     }
@@ -91,10 +93,10 @@ class DiceCollectionService
     public function getRarityCounts(int $userId): array
     {
         return [
-            'common' => UserDice::where('user_id', $userId)->whereHas('dice', fn($q) => $q->where('rarity', 'common'))->count(),
-            'rare' => UserDice::where('user_id', $userId)->whereHas('dice', fn($q) => $q->where('rarity', 'rare'))->count(),
-            'epic' => UserDice::where('user_id', $userId)->whereHas('dice', fn($q) => $q->where('rarity', 'epic'))->count(),
-            'legendary' => UserDice::where('user_id', $userId)->whereHas('dice', fn($q) => $q->where('rarity', 'legendary'))->count(),
+            'common' => UserDice::where('user_id', $userId)->whereHas('dice', fn ($q) => $q->where('rarity', 'common'))->count(),
+            'rare' => UserDice::where('user_id', $userId)->whereHas('dice', fn ($q) => $q->where('rarity', 'rare'))->count(),
+            'epic' => UserDice::where('user_id', $userId)->whereHas('dice', fn ($q) => $q->where('rarity', 'epic'))->count(),
+            'legendary' => UserDice::where('user_id', $userId)->whereHas('dice', fn ($q) => $q->where('rarity', 'legendary'))->count(),
         ];
     }
 
@@ -106,6 +108,7 @@ class DiceCollectionService
             $userDice = UserDice::where('user_id', $userId)->where('dice_id', $diceId)->firstOrFail();
             $userDice->is_equipped = true;
             $userDice->save();
+
             return $userDice;
         });
     }
@@ -113,8 +116,9 @@ class DiceCollectionService
     public function toggleFavorite(int $userId, int $diceId): UserDice
     {
         $userDice = UserDice::where('user_id', $userId)->where('dice_id', $diceId)->firstOrFail();
-        $userDice->is_favorite = !$userDice->is_favorite;
+        $userDice->is_favorite = ! $userDice->is_favorite;
         $userDice->save();
+
         return $userDice;
     }
 
@@ -125,13 +129,13 @@ class DiceCollectionService
             'Classic White', 'Midnight Black', 'Ruby Red', 'Emerald Green', 'Sapphire Blue',
             'Golden Crown', 'Silver Star', 'Bronze Age', 'Diamond Shine', 'Titan Fury',
             'Ludo King', 'Parchisi Master', 'Lucky Seven', 'Mystic Eye', 'Dragon Scale',
-            'Phoenix Feather', 'Unicorn Horn', 'Mermaid Tear', 'Wizard Staff', 'Knight Shield'
+            'Phoenix Feather', 'Unicorn Horn', 'Mermaid Tear', 'Wizard Staff', 'Knight Shield',
         ];
 
         for ($i = 1; $i <= 250; $i++) {
-            $name = $diceNames[array_rand($diceNames)] . " #{$i}";
+            $name = $diceNames[array_rand($diceNames)]." #{$i}";
             Dice::firstOrCreate(
-                ['slug' => 'dice-' . $i],
+                ['slug' => 'dice-'.$i],
                 [
                     'name' => $name,
                     'description' => "Collectible dice {$i} - part of LudoStar 250+ collection",

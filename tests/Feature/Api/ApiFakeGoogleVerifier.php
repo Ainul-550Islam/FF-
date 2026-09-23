@@ -16,8 +16,7 @@ class ApiFakeGoogleVerifier implements GoogleIdTokenVerifierInterface
         protected array $user,
         protected ?\Throwable $error = null,
         protected bool $configured = true,
-    ) {
-    }
+    ) {}
 
     public function isConfigured(): bool
     {

@@ -9,6 +9,7 @@ use App\Http\Resources\Api\V1\LiveEventResource;
 use App\Http\Resources\Api\V1\MatchResource;
 use App\Http\Resources\Api\V1\TeamResource;
 use App\Http\Resources\Api\V1\TournamentResource;
+use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\AuditLogService;
 use App\Services\FraudRiskService;
@@ -37,8 +38,7 @@ class TournamentController extends Controller
         protected ScoringService $scoring,
         protected LiveEventService $live,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/tournaments
@@ -75,7 +75,7 @@ class TournamentController extends Controller
 
         $search = trim((string) $request->query('q', ''));
         if ($search !== '') {
-            $query->where('name', 'like', '%' . addcslashes($search, '%_') . '%');
+            $query->where('name', 'like', '%'.addcslashes($search, '%_').'%');
         }
 
         $tournaments = $query->orderBy($order, $direction)->paginate($perPage);
@@ -165,7 +165,7 @@ class TournamentController extends Controller
             ->orderBy('bracket')->orderBy('round')->orderBy('match_no')
             ->get();
 
-        $byRound = $matches->groupBy(fn ($m) => $m->bracket . ':' . $m->round)
+        $byRound = $matches->groupBy(fn ($m) => $m->bracket.':'.$m->round)
             ->map(fn ($group) => MatchResource::collection($group));
 
         return ApiResponse::data([
@@ -219,7 +219,7 @@ class TournamentController extends Controller
             'team_id' => 'required|integer|exists:teams,id',
         ]);
 
-        $team = \App\Models\Team::find($data['team_id']);
+        $team = Team::find($data['team_id']);
 
         if ($team === null || ! $team->belongsToTournament($tournament)) {
             return ApiResponse::error('not_found', 'Team not found in this tournament.', [], 404);

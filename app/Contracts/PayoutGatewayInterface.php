@@ -39,7 +39,7 @@ interface PayoutGatewayInterface
      * @return array{status: string, provider_reference: ?string}
      *
      * @throws DomainException when external disbursement is not supported
-     *                          (e.g. no live credentials or manual flow).
+     *                         (e.g. no live credentials or manual flow).
      */
     public function disburseExternal(Payout $payout): array;
 }

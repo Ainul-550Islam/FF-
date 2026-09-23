@@ -184,7 +184,7 @@ class AccountSecurityTest extends TestCase
         $tournament = new Tournament();
         $tournament->organizer_id = $org->id;
         $tournament->name = 'T';
-        $tournament->slug = 't-' . Str::random(6);
+        $tournament->slug = 't-'.Str::random(6);
         $tournament->game_mode = 'squad';
         $tournament->map = 'Bermuda';
         $tournament->entry_fee = 100;
@@ -202,7 +202,7 @@ class AccountSecurityTest extends TestCase
         $team->name = 'Team';
         $team->captain_name = $user->name;
         $team->phone = '01700000000';
-        $team->game_uid = 'UID' . Str::random(6);
+        $team->game_uid = 'UID'.Str::random(6);
         $team->status = Team::STATUS_PENDING;
         $team->save();
 

@@ -46,6 +46,7 @@ class AutoModeLog extends Model
         if ($this->auto_on_at && $this->auto_off_at) {
             return $this->auto_on_at->diffInSeconds($this->auto_off_at);
         }
+
         return null;
     }
 }

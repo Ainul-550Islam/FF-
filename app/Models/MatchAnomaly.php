@@ -18,7 +18,9 @@ class MatchAnomaly extends Model
     use HasFactory;
 
     public const SEVERITY_ANOMALY = 'anomaly';
+
     public const SEVERITY_SUSPICIOUS = 'suspicious';
+
     public const SEVERITY_REQUIRES_REVIEW = 'requires_review';
 
     public const SEVERITIES = [
@@ -28,7 +30,9 @@ class MatchAnomaly extends Model
     ];
 
     public const KIND_ABNORMAL_KILL_RATIO = 'abnormal_kill_ratio';
+
     public const KIND_REPEATED_PATTERN = 'repeated_pattern';
+
     public const KIND_UNEXPECTED_PARTICIPATION = 'unexpected_participation';
 
     public const UPDATED_AT = null;

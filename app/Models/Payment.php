@@ -1,10 +1,14 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+
 class Payment extends Model
 {
     use HasFactory;
+
     /**
      * The tournament/team/payer, the amounts, the currency, the status and
      * the provider state are server-controlled (derived from the tournament's
@@ -15,11 +19,34 @@ class Payment extends Model
         'method',
         'trx_id',
     ];
-    protected $casts = ['amount_minor'=>'integer','metadata'=>'array','authorized_at'=>'datetime','succeeded_at'=>'datetime','failed_at'=>'datetime','paid_at'=>'datetime','refunded_at'=>'datetime'];
-    public const STATUS_CREATED='created'; public const STATUS_PENDING='pending'; public const STATUS_PROCESSING='processing'; public const STATUS_AUTHORIZED='authorized'; public const STATUS_SUCCEEDED='succeeded'; public const STATUS_FAILED='failed'; public const STATUS_EXPIRED='expired'; public const STATUS_CANCELLED='cancelled'; public const STATUS_REFUNDING='refunding'; public const STATUS_REFUNDED='refunded';
+
+    protected $casts = ['amount_minor' => 'integer', 'metadata' => 'array', 'authorized_at' => 'datetime', 'succeeded_at' => 'datetime', 'failed_at' => 'datetime', 'paid_at' => 'datetime', 'refunded_at' => 'datetime'];
+
+    public const STATUS_CREATED = 'created';
+
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_PROCESSING = 'processing';
+
+    public const STATUS_AUTHORIZED = 'authorized';
+
+    public const STATUS_SUCCEEDED = 'succeeded';
+
+    public const STATUS_FAILED = 'failed';
+
+    public const STATUS_EXPIRED = 'expired';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
+    public const STATUS_REFUNDING = 'refunding';
+
+    public const STATUS_REFUNDED = 'refunded';
+
     // Legacy (Phase 01-07) statuses — `verified` = manually verified,
     // `paid` = provider-confirmed (kept distinct, per financial-architecture).
-    public const STATUS_VERIFIED='verified'; public const STATUS_PAID='paid';
+    public const STATUS_VERIFIED = 'verified';
+
+    public const STATUS_PAID = 'paid';
 
     // Statuses that represent a successfully completed payment (both
     // generations: provider-confirmed `succeeded`/`paid` and the legacy
@@ -81,6 +108,7 @@ class Payment extends Model
         if ($this->amount_minor !== null) {
             return (int) $this->amount_minor;
         }
+
         return (int) round(((float) ($this->amount ?? 0)) * 100);
     }
 

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\AuditLogService;
+use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -91,7 +92,7 @@ class AuditLogTest extends TestCase
                 'before' => ['role' => 'admin'],
             ]);
             $this->fail('AuditLog accepted mass assignment.');
-        } catch (\Illuminate\Database\Eloquent\MassAssignmentException $e) {
+        } catch (MassAssignmentException $e) {
             $this->addToAssertionCount(1);
         }
     }

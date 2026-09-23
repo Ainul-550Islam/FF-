@@ -6,7 +6,6 @@ use App\Models\Dispute;
 use App\Models\DisputeEvidence;
 use App\Models\GameMatch;
 use App\Models\ModerationEvent;
-use App\Models\Score;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;

@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\Gameberry;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Dice;
+use App\Models\User;
 use App\Models\UserDice;
 use App\Services\Gameberry\DiceCollectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class DiceCollectionTest extends TestCase
 {

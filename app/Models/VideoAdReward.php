@@ -40,6 +40,7 @@ class VideoAdReward extends Model
     public function canWatchToday(): bool
     {
         $todayCount = self::where('user_id', $this->user_id)->whereDate('created_at', today())->count();
+
         return $todayCount < ($this->daily_limit ?? 5);
     }
 

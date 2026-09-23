@@ -30,7 +30,7 @@ class BankGateway implements PaymentGatewayInterface
     {
         $config = (array) config('payments.providers.bank', []);
 
-        return ($config['enabled'] ?? false);
+        return $config['enabled'] ?? false;
     }
 
     public function supportsCallbacks(): bool

@@ -21,8 +21,7 @@ class WebhookInboundController extends Controller
 {
     public function __construct(
         protected WebhookIngressService $ingress,
-    ) {
-    }
+    ) {}
 
     /**
      * POST /api/v1/webhooks/inbound/{provider}

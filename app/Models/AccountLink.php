@@ -18,7 +18,9 @@ class AccountLink extends Model
     use HasFactory;
 
     public const STRENGTH_WEAK = 'weak';
+
     public const STRENGTH_MODERATE = 'moderate';
+
     public const STRENGTH_STRONG = 'strong';
 
     public const STRENGTHS = [

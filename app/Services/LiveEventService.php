@@ -6,7 +6,6 @@ use App\Models\LiveEvent;
 use App\Models\Tournament;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Realtime / live-update event log (Phase 12).

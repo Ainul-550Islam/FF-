@@ -1,14 +1,24 @@
 <?php
+
 namespace Tests\Feature\Gameberry\Stats;
-use Tests\TestCase;
+
 use App\Models\User;
 use App\Services\Gameberry\Stats\Stat30Service;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
 class Stat30Test extends TestCase
 {
     use RefreshDatabase;
+
     protected Stat30Service $service;
-    protected function setUp(): void { parent::setUp(); $this->service = app(Stat30Service::class); }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->service = app(Stat30Service::class);
+    }
+
     public function test_stat_30_get_stats(): void
     {
         $user = User::factory()->create();
@@ -34,6 +44,7 @@ class Stat30Test extends TestCase
         $this->assertStringContainsString('scratch cards', $stats['description']);
         $this->assertStringContainsString('reconciliation', $stats['description']);
     }
+
     public function test_stat_30_calculate(): void
     {
         $user = User::factory()->create();

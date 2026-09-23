@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\IdentityService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -13,7 +14,7 @@ class MeResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $identities = app(\App\Services\IdentityService::class);
+        $identities = app(IdentityService::class);
 
         return [
             'id' => $this->id,

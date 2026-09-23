@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Feature\R10;
 
 use Tests\TestCase;
@@ -26,7 +27,7 @@ class ProviderRetryAndCircuitBreakerTest extends TestCase
     {
         $providers = ['bKash', 'Nagad', 'Rocket'];
         $this->assertCount(3, $providers);
-        
+
         $states = ['closed', 'open', 'half-open'];
         $this->assertCount(3, $states);
     }

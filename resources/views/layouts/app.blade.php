@@ -16,19 +16,28 @@
         <meta name="robots" content="noindex, nofollow">
     @endif
 
-    {{-- Open Graph / social previews (only publicly accessible data) --}}
+    {{-- Open Graph / social previews (only publicly accessible data).
+         Phase 20: every page falls back to the branded 1200x630 share card
+         so social previews are always a controlled FF Arena card, and the
+         Twitter/X card carries the same image. --}}
+    @php
+        $ogImage = $seo['og_image'] ?? asset((string) config('marketing.og.default_image', 'img/og-default.png'));
+        $ogImageAlt = $seo['og_image_alt'] ?? (string) config('marketing.og.default_image_alt', 'FF Arena');
+    @endphp
     <meta property="og:site_name" content="{{ config('app.name', 'FF Arena') }}">
     <meta property="og:title" content="@yield('title', $seo['title'])">
     <meta property="og:description" content="{{ $seo['description'] }}">
     <meta property="og:type" content="{{ $seo['og_type'] }}">
     <meta property="og:url" content="{{ $seo['canonical'] }}">
-    @if ($seo['og_image'])
-        <meta property="og:image" content="{{ $seo['og_image'] }}">
-        @if ($seo['og_image_alt'])<meta property="og:image:alt" content="{{ $seo['og_image_alt'] }}">@endif
-    @endif
+    <meta property="og:image" content="{{ $ogImage }}">
+    <meta property="og:image:alt" content="{{ $ogImageAlt }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="@yield('title', $seo['title'])">
     <meta name="twitter:description" content="{{ $seo['description'] }}">
+    <meta name="twitter:image" content="{{ $ogImage }}">
+    @if (config('marketing.og.twitter_site'))
+        <meta name="twitter:site" content="{{ config('marketing.og.twitter_site') }}">
+    @endif
 
     {{-- Site identity --}}
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
@@ -185,6 +194,14 @@
             <nav aria-label="{{ __('ui.footer_navigation') }}">
                 <a href="{{ route('tournaments.index') }}">{{ __('ui.tournaments') }}</a>
                 &middot;
+                <a href="{{ route('marketing.privacy') }}">Privacy</a>
+                &middot;
+                <a href="{{ route('marketing.terms') }}">Terms</a>
+                &middot;
+                <a href="{{ route('marketing.faq') }}">FAQ</a>
+                &middot;
+                <a href="{{ route('marketing.contact') }}">Contact</a>
+                &middot;
                 <a href="{{ route('sitemap') }}">Sitemap</a>
                 &middot;
                 <a href="{{ route('robots') }}">robots.txt</a>
@@ -210,5 +227,11 @@
             updateBanner();
         })();
     </script>
+
+    {{-- Phase 20 — consent banner + consent-aware marketing trackers.
+         Both are inert by default: no decision → only the banner shows;
+         no credentials configured → no third-party tag is emitted. --}}
+    <x-marketing-consent />
+    <x-marketing-tracking />
 </body>
 </html>

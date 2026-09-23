@@ -20,8 +20,7 @@ class SupportController extends Controller
 {
     public function __construct(
         protected SupportTicketService $tickets,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/me/support

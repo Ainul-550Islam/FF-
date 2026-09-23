@@ -19,8 +19,7 @@ class WebhookSubscriptionController extends Controller
 {
     public function __construct(
         protected WebhookSubscriptionService $subscriptions,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/admin/webhooks/endpoints

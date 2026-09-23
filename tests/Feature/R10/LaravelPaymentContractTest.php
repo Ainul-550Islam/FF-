@@ -1,9 +1,10 @@
 <?php
+
 namespace Tests\Feature\R10;
 
-use Tests\TestCase;
 use App\Services\GoPaymentGatewayAdapter;
 use App\Services\Integration\ServiceAuthenticator;
+use Tests\TestCase;
 
 class LaravelPaymentContractTest extends TestCase
 {
@@ -19,11 +20,11 @@ class LaravelPaymentContractTest extends TestCase
     {
         // Laravel must not contain bKash/Nagad-specific HTTP implementation
         $adapterFile = file_get_contents(app_path('Services/GoPaymentGatewayAdapter.php'));
-        
+
         // Should use Go service URL, not direct bKash/Nagad URLs
         $this->assertStringNotContainsString('tokenized.sandbox.bka.sh', $adapterFile, 'Laravel should not directly call bKash API');
         $this->assertStringNotContainsString('sandbox.mynagad.com', $adapterFile, 'Laravel should not directly call Nagad API');
-        
+
         // Should use service authenticator
         $this->assertStringContainsString('ServiceAuthenticator', $adapterFile, 'Uses service authenticator');
     }
@@ -31,7 +32,7 @@ class LaravelPaymentContractTest extends TestCase
     public function test_service_authentication_headers(): void
     {
         $this->assertTrue(method_exists(ServiceAuthenticator::class, 'generateHeaders'), 'Service authenticator has generateHeaders');
-        
+
         $secret = config('services_go_rust.service_auth.secret', 'test-secret');
         $headers = ServiceAuthenticator::generateHeaders($secret, 'POST', '/api/v1/payments', '{"test":1}');
         $this->assertArrayHasKey('X-Service-ID', $headers);

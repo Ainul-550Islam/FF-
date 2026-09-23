@@ -20,7 +20,6 @@ use App\Support\ApiResponse;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Phase 15 — payment methods + payment initiation.
@@ -39,8 +38,7 @@ class PaymentController extends Controller
         protected NotificationService $notifications,
         protected LiveEventService $live,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/payments/methods — honest per-provider status + saved methods.
@@ -60,7 +58,7 @@ class PaymentController extends Controller
     {
         $data = $request->validate([
             'team_id' => 'required|integer|exists:teams,id',
-            'provider' => 'required|in:' . implode(',', $this->gateways->providers()),
+            'provider' => 'required|in:'.implode(',', $this->gateways->providers()),
         ]);
 
         $team = Team::find($data['team_id']);
@@ -114,7 +112,7 @@ class PaymentController extends Controller
             $request->user(),
             Notification::TYPE_PAYMENT_INITIATED,
             'Payment started',
-            'Your entry fee payment for ' . $tournament->name . ' has been started (' . $gateway->label() . ').',
+            'Your entry fee payment for '.$tournament->name.' has been started ('.$gateway->label().').',
             NotificationService::link('payment.pending', [$tournament, $team, $payment]),
             ['payment_id' => $payment->id, 'provider' => $provider],
         );

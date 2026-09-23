@@ -49,7 +49,7 @@ class PrivateTable extends Model
                 $table->code = strtoupper(Str::random(6)); // 6-char code for sharing
             }
             if (empty($table->link)) {
-                $table->link = url('/private-tables/join/' . $table->code);
+                $table->link = url('/private-tables/join/'.$table->code);
             }
             if (empty($table->expires_at)) {
                 $table->expires_at = now()->addHours(2);
@@ -79,7 +79,7 @@ class PrivateTable extends Model
 
     public function isWaiting(): bool
     {
-        return $this->status === 'waiting' && !$this->isExpired();
+        return $this->status === 'waiting' && ! $this->isExpired();
     }
 
     public function canJoin(): bool

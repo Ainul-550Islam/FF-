@@ -8,8 +8,8 @@ use App\Models\ScoringRule;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\AntiCheatService;
-use App\Services\FraudRiskService;
 use App\Services\AuditLogService;
+use App\Services\FraudRiskService;
 use App\Services\MatchProgressionService;
 use App\Services\ScoringService;
 use DomainException;
@@ -23,8 +23,7 @@ class MatchController extends Controller
         protected FraudRiskService $risk,
         protected AntiCheatService $antiCheat,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     public function show(Tournament $tournament, GameMatch $match)
     {
@@ -90,7 +89,7 @@ class MatchController extends Controller
         $data = $request->validate([
             'team_id' => 'required|integer|exists:teams,id',
             'kills' => 'required|integer|min:0',
-            'placement' => 'required|integer|min:1|max:' . ScoringRule::MAX_PLACEMENT,
+            'placement' => 'required|integer|min:1|max:'.ScoringRule::MAX_PLACEMENT,
             'screenshot' => 'nullable|image|max:2048',
         ]);
 

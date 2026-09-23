@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\GameMatch;
 use App\Models\Payout;
 use App\Models\PrizeDistribution;
+use App\Models\Restriction;
 use App\Models\Score;
 use App\Models\Team;
 use App\Models\TeamMember;
@@ -37,7 +38,7 @@ class AuditIntegrationTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'Audit Tournament';
-        $t->slug = 'audit-' . Str::random(8);
+        $t->slug = 'audit-'.Str::random(8);
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = 0;
@@ -58,10 +59,10 @@ class AuditIntegrationTest extends TestCase
         $team = new Team();
         $team->tournament_id = $tournament->id;
         $team->captain_id = $captain?->id;
-        $team->name = 'Team ' . Str::random(6);
+        $team->name = 'Team '.Str::random(6);
         $team->captain_name = $captain?->name ?? 'Captain';
         $team->phone = '01700000000';
-        $team->game_uid = 'UID' . strtoupper(Str::random(8));
+        $team->game_uid = 'UID'.strtoupper(Str::random(8));
         $team->status = $status;
         $team->save();
 
@@ -119,14 +120,14 @@ class AuditIntegrationTest extends TestCase
         $user = $this->makeUser('player');
 
         $this->actingAs($admin)->post(route('admin.security.restrict', $user), [
-            'type' => \App\Models\Restriction::TYPE_TOURNAMENT_PARTICIPATION_BLOCKED,
+            'type' => Restriction::TYPE_TOURNAMENT_PARTICIPATION_BLOCKED,
             'reason' => 'Suspected ban evasion',
         ])->assertRedirect();
 
         $log = AuditLog::where('action', 'restriction.applied')->firstOrFail();
 
         $this->assertSame($user->id, $log->target_user_id);
-        $this->assertSame(\App\Models\Restriction::TYPE_TOURNAMENT_PARTICIPATION_BLOCKED, $log->metadata['type']);
+        $this->assertSame(Restriction::TYPE_TOURNAMENT_PARTICIPATION_BLOCKED, $log->metadata['type']);
     }
 
     public function test_identity_verification_is_audited(): void

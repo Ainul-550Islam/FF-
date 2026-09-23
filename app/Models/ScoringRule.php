@@ -123,6 +123,6 @@ class ScoringRule extends Model
 
     public function label(): string
     {
-        return $this->name ?: ('Scoring rules v' . $this->version);
+        return $this->name ?: ('Scoring rules v'.$this->version);
     }
 }

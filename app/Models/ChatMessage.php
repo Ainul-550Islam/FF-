@@ -44,7 +44,7 @@ class ChatMessage extends Model
 
     public function isEmoji(): bool
     {
-        return $this->type === 'emoji' && !empty($this->emoji);
+        return $this->type === 'emoji' && ! empty($this->emoji);
     }
 
     public function isSystem(): bool

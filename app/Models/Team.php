@@ -13,10 +13,15 @@ class Team extends Model
      * Team lifecycle statuses.
      */
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_CONFIRMED = 'confirmed';
+
     public const STATUS_REJECTED = 'rejected';
+
     public const STATUS_WITHDRAWN = 'withdrawn';
+
     public const STATUS_WAITLISTED = 'waitlisted';
+
     public const STATUS_NO_SHOW = 'no_show';
 
     /**

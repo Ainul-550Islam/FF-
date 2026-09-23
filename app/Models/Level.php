@@ -69,7 +69,10 @@ class Level extends Model
 
     public function winRate(): float
     {
-        if ($this->total_games === 0) return 0;
+        if ($this->total_games === 0) {
+            return 0;
+        }
+
         return round(($this->total_wins / $this->total_games) * 100, 2);
     }
 
@@ -93,13 +96,13 @@ class Level extends Model
     private function unlockFeaturesForLevel(): void
     {
         $features = $this->unlocked_features ?? [];
-        if ($this->level === 4 && !in_array('bronze_league', $features)) {
+        if ($this->level === 4 && ! in_array('bronze_league', $features)) {
             $features[] = 'bronze_league';
         }
-        if ($this->level === 6 && !in_array('gold_league', $features)) {
+        if ($this->level === 6 && ! in_array('gold_league', $features)) {
             $features[] = 'gold_league';
         }
-        if ($this->level === 12 && !in_array('titan_league', $features)) {
+        if ($this->level === 12 && ! in_array('titan_league', $features)) {
             $features[] = 'titan_league';
         }
         $this->unlocked_features = $features;

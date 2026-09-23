@@ -1,8 +1,11 @@
 <?php
+
 namespace Database\Seeders;
-use Illuminate\Database\Seeder;
+
 use App\Models\User;
 use App\Services\Gameberry\ReferralService;
+use Illuminate\Database\Seeder;
+
 class GameberryReferralSeeder extends Seeder
 {
     public function run(): void

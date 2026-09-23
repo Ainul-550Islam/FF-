@@ -32,7 +32,7 @@ class LiveHttpTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'Live Tournament';
-        $t->slug = 'live-' . Str::random(8);
+        $t->slug = 'live-'.Str::random(8);
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = 0;

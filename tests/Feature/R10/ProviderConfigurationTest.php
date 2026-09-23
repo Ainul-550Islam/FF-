@@ -1,8 +1,9 @@
 <?php
+
 namespace Tests\Feature\R10;
 
-use Tests\TestCase;
 use Illuminate\Support\Facades\Config;
+use Tests\TestCase;
 
 class ProviderConfigurationTest extends TestCase
 {
@@ -34,12 +35,12 @@ class ProviderConfigurationTest extends TestCase
             base_path('config/services_go_rust.php'),
             base_path('services/payment-gateway-go/internal/config/config.go'),
         ];
-        
+
         foreach ($files as $file) {
             if (file_exists($file)) {
                 $content = file_get_contents($file);
                 // Should not contain hardcoded production credentials
-                $this->assertStringNotContainsString('sandboxTokenizedUser02@12345', $content, 'No hardcoded bKash password in ' . $file);
+                $this->assertStringNotContainsString('sandboxTokenizedUser02@12345', $content, 'No hardcoded bKash password in '.$file);
                 // Private keys should be loaded from env, not hardcoded
                 if (str_contains($file, '.php')) {
                     // Check that config uses env()
@@ -66,11 +67,11 @@ class ProviderConfigurationTest extends TestCase
             'PAYMENT_PROVIDER_NAGAD_ENABLED',
             'PAYMENT_PROVIDER_ROCKET_ENABLED',
         ];
-        
+
         foreach ($flags as $flag) {
             $this->assertIsString($flag);
         }
-        
+
         $this->assertTrue(true, 'Feature flags exist without bypassing security');
     }
 }

@@ -32,7 +32,7 @@ class EnsureActiveAccount
                 $isActive = (bool) $user->is_active;
             }
 
-            if (!$isActive) {
+            if (! $isActive) {
                 if ($request->expectsJson() || $request->is('api/*')) {
                     return response()->json(['error' => 'account_inactive', 'message' => 'Account is inactive or banned'], 403);
                 }
@@ -40,6 +40,7 @@ class EnsureActiveAccount
                 auth()->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
+
                 return redirect()->route('login')->with('error', 'Your account is inactive or banned. Contact support.');
             }
         }

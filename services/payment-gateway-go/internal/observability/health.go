@@ -2,7 +2,12 @@ package observability
 import ("encoding/json"; "net/http"; "sync"; "time")
 type HealthStatus string
 const (StatusOK HealthStatus="ok"; StatusDegraded HealthStatus="degraded"; StatusDown HealthStatus="down")
-type CheckResult struct{Status HealthStatus `json:"status"`; Message string `json:"message,omitempty"`; Latency int64 `json:"latency_ms,omitempty"`}
+type CheckResult struct {
+	Status  HealthStatus           `json:"status"`
+	Message string                 `json:"message,omitempty"`
+	Latency int64                  `json:"latency_ms,omitempty"`
+	Data    map[string]interface{} `json:"data,omitempty"`
+}
 type HealthChecker struct{mu sync.RWMutex; checks map[string]func() CheckResult}
 func NewHealthChecker() *HealthChecker {return &HealthChecker{checks: make(map[string]func() CheckResult)}}
 func (h *HealthChecker) Register(name string, check func() CheckResult){h.mu.Lock(); defer h.mu.Unlock(); h.checks[name]=check}

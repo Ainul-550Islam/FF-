@@ -21,6 +21,7 @@ class ChatApiController extends Controller
         $userId = $request->user()->id;
         try {
             $message = $this->chatService->sendMessage($userId, $code, $request->message, $request->get('type', 'text'));
+
             return response()->json(['success' => true, 'data' => $message->load('user')]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 400);
@@ -33,6 +34,7 @@ class ChatApiController extends Controller
         $userId = $request->user()->id;
         try {
             $message = $this->chatService->sendEmoji($userId, $code, $request->emoji_key);
+
             return response()->json(['success' => true, 'data' => $message->load('user')]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 400);
@@ -45,6 +47,7 @@ class ChatApiController extends Controller
         $userId = $request->user()->id;
         try {
             $message = $this->chatService->sendQuickMessage($userId, $code, $request->quick_message);
+
             return response()->json(['success' => true, 'data' => $message->load('user')]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 400);
@@ -55,6 +58,7 @@ class ChatApiController extends Controller
     {
         try {
             $messages = $this->chatService->getMessages($code, 50);
+
             return response()->json(['success' => true, 'data' => $messages, 'emojis' => $this->chatService->getEmojis(), 'quick_messages' => $this->chatService->getQuickMessages()]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 400);

@@ -31,10 +31,17 @@ class MagicChestController extends Controller
         $userId = $request->user()->id;
         try {
             $rewards = $this->chestService->openChest($userId, $chestId);
-            $msg = "Chest opened! ";
-            if ($rewards['gold'] > 0) $msg .= "+{$rewards['gold']} gold ";
-            if ($rewards['gems'] > 0) $msg .= "+{$rewards['gems']} gems ";
-            if (!empty($rewards['dices'])) $msg .= "+".count($rewards['dices'])." dice";
+            $msg = 'Chest opened! ';
+            if ($rewards['gold'] > 0) {
+                $msg .= "+{$rewards['gold']} gold ";
+            }
+            if ($rewards['gems'] > 0) {
+                $msg .= "+{$rewards['gems']} gems ";
+            }
+            if (! empty($rewards['dices'])) {
+                $msg .= '+'.count($rewards['dices']).' dice';
+            }
+
             return redirect()->back()->with('success', $msg);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -50,6 +57,7 @@ class MagicChestController extends Controller
         $userId = $request->user()->id;
         try {
             $chest = $this->chestService->createChest($userId, $request->type);
+
             return redirect()->back()->with('success', "Got {$chest->type} chest - {$chest->gold_reward} gold, {$chest->gem_reward} gems inside!");
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());

@@ -199,7 +199,7 @@ class AccountAuthTest extends TestCase
         );
 
         // Tamper with the id in the path after signing.
-        $tampered = str_replace("/verify-email/{$user->id}/", '/verify-email/' . ($user->id + 1) . '/', $url);
+        $tampered = str_replace("/verify-email/{$user->id}/", '/verify-email/'.($user->id + 1).'/', $url);
 
         $this->actingAs($user)->get($tampered)->assertForbidden();
         $this->assertFalse($user->fresh()->hasVerifiedEmail());

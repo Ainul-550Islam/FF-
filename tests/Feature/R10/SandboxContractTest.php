@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Feature\R10;
 
 use Tests\TestCase;

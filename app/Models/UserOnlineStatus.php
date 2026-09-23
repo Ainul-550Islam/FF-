@@ -39,20 +39,24 @@ class UserOnlineStatus extends Model
 
     public function isVisibleOnline(): bool
     {
-        return $this->is_online && !$this->hide_online_status;
+        return $this->is_online && ! $this->hide_online_status;
     }
 
     public function shouldNotifyFriends(): bool
     {
-        return $this->notify_friends_online && $this->is_online && !$this->hide_online_status;
+        return $this->notify_friends_online && $this->is_online && ! $this->hide_online_status;
     }
 
     public function goOnline(?string $game = null, ?string $tableCode = null): void
     {
         $this->is_online = true;
         $this->last_online_at = now();
-        if ($game) $this->current_game = $game;
-        if ($tableCode) $this->current_table_code = $tableCode;
+        if ($game) {
+            $this->current_game = $game;
+        }
+        if ($tableCode) {
+            $this->current_table_code = $tableCode;
+        }
         $this->save();
     }
 
@@ -70,13 +74,13 @@ class UserOnlineStatus extends Model
         $this->is_in_auto_mode = $auto;
         $this->save();
 
-        \App\Models\AutoModeLog::create([
+        AutoModeLog::create([
             'user_id' => $this->user_id,
             'private_table_id' => null,
             'reason' => $reason,
             'is_auto_on' => $auto,
             'auto_on_at' => $auto ? now() : null,
-            'auto_off_at' => !$auto ? now() : null,
+            'auto_off_at' => ! $auto ? now() : null,
         ]);
     }
 

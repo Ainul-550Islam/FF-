@@ -9,16 +9,19 @@ use Illuminate\Support\Facades\Log;
 class Final101382Controller extends Controller
 {
     protected $service;
+
     protected int $feature;
+
     protected string $view;
+
     protected string $serviceNumber;
 
     public function __construct()
     {
         $this->feature = 1382;
         $this->serviceNumber = '1362';
-        $this->view = 'gameberry.final10.feature_' . 1312;
-        $serviceClass = 'App\\Services\\Gameberry\\Final10\\Final10' . $this->serviceNumber . 'Service';
+        $this->view = 'gameberry.final10.feature_'. 1312;
+        $serviceClass = 'App\\Services\\Gameberry\\Final10\\Final10'.$this->serviceNumber.'Service';
         $this->service = app($serviceClass);
     }
 
@@ -28,7 +31,7 @@ class Final101382Controller extends Controller
         $stats = $this->service->getFullStats($userId);
 
         // G1 financial totals must reconcile - STOP if mismatch
-        if (isset($stats['all_balanced']) && !$stats['all_balanced']) {
+        if (isset($stats['all_balanced']) && ! $stats['all_balanced']) {
             Log::critical('G1 Financial totals must reconcile - STOP - Final101382Controller', [
                 'user_id' => $userId,
                 'stats' => $stats,
@@ -54,13 +57,13 @@ class Final101382Controller extends Controller
             $result = $this->service->play($userId, $mode, $bet);
 
             // Reconciliation must hold STOP if mismatch G1
-            if (!$result['reconcile']['is_balanced'] && !$result['reconcile']['all_balanced']) {
-                return redirect()->back()->with('error', 'G1 Financial totals must reconcile - STOP - Gold wallet ' . ($result['reconcile']['gold']['wallet_balance'] ?? 0) . ' != computed ' . ($result['reconcile']['gold']['computed_balance'] ?? 0));
+            if (! $result['reconcile']['is_balanced'] && ! $result['reconcile']['all_balanced']) {
+                return redirect()->back()->with('error', 'G1 Financial totals must reconcile - STOP - Gold wallet '.($result['reconcile']['gold']['wallet_balance'] ?? 0).' != computed '.($result['reconcile']['gold']['computed_balance'] ?? 0));
             }
 
-            return redirect()->back()->with('success', 'Final10 Production 1300+ Full Code No Skip Existing Logic Preserved 1382 result: ' . ($result['is_win'] ? 'win' : 'loss') . ' - Gold at stake ' . $bet . ', win ' . $result['win_amount'] . ', balance ' . $result['gold_balance'] . ', magic chest, Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening');
+            return redirect()->back()->with('success', 'Final10 Production 1300+ Full Code No Skip Existing Logic Preserved 1382 result: '.($result['is_win'] ? 'win' : 'loss').' - Gold at stake '.$bet.', win '.$result['win_amount'].', balance '.$result['gold_balance'].', magic chest, Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Final101382 play failed: ' . $e->getMessage() . ' - G1 Must Reconcile STOP');
+            return redirect()->back()->with('error', 'Final101382 play failed: '.$e->getMessage().' - G1 Must Reconcile STOP');
         }
     }
 

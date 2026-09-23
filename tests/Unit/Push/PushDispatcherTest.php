@@ -23,7 +23,7 @@ class PushDispatcherTest extends TestCase
         $user->account_status = 'active';
         $user->save();
 
-        $device = new MobileDevice;
+        $device = new MobileDevice();
         $device->user_id = $user->id;
         $device->platform = $provider === 'apns' ? 'ios' : 'android';
         $device->provider = $provider;
@@ -37,7 +37,7 @@ class PushDispatcherTest extends TestCase
 
     private function notification(int $userId, string $type = 'match.completed'): Notification
     {
-        $n = new Notification;
+        $n = new Notification();
         $n->user_id = $userId;
         $n->type = $type;
         $n->title = 'Title';
@@ -132,7 +132,7 @@ class PushDispatcherTest extends TestCase
         $this->configureFcm(200);
         [$user] = $this->userWithDevice('fcm');
 
-        $pref = new NotificationPreference;
+        $pref = new NotificationPreference();
         $pref->user_id = $user->id;
         $pref->push_match = false;
         $pref->save();
@@ -149,7 +149,7 @@ class PushDispatcherTest extends TestCase
         [$user] = $this->userWithDevice('fcm');
 
         // Even with every toggleable category off, security still delivers.
-        $pref = new NotificationPreference;
+        $pref = new NotificationPreference();
         $pref->user_id = $user->id;
         $pref->push_tournament = false;
         $pref->push_match = false;
@@ -173,7 +173,7 @@ class PushDispatcherTest extends TestCase
         $this->configureFcm(200);
         [$user] = $this->userWithDevice('fcm');
 
-        $notification = new Notification;
+        $notification = new Notification();
         $notification->user_id = $user->id;
         $notification->type = 'payment.verified';
         $notification->title = 'Payment verified';

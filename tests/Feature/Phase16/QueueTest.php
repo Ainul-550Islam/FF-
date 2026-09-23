@@ -16,12 +16,12 @@ class QueueTest extends Phase16TestCase
 {
     public function test_job_processing_and_failure_are_recorded(): void
     {
-        $metrics = new RecordingMetrics;
+        $metrics = new RecordingMetrics();
         $this->app->instance(MetricsInterface::class, $metrics);
 
         config(['queue.default' => 'database']);
 
-        Queue::push(new FailingTestJob);
+        Queue::push(new FailingTestJob());
 
         // Process one job; it fails and lands in the failed table.
         Artisan::call('queue:work', ['--once' => true, '--stop-when-empty' => true]);
@@ -34,7 +34,7 @@ class QueueTest extends Phase16TestCase
     {
         config(['queue.default' => 'database']);
 
-        Queue::push(new FailingTestJob);
+        Queue::push(new FailingTestJob());
         Artisan::call('queue:work', ['--once' => true, '--stop-when-empty' => true]);
 
         $ops = app(OperationsService::class);
@@ -57,8 +57,8 @@ class QueueTest extends Phase16TestCase
     {
         config(['queue.default' => 'database']);
 
-        Queue::push(new FailingTestJob);
-        Queue::push(new FailingTestJob);
+        Queue::push(new FailingTestJob());
+        Queue::push(new FailingTestJob());
         Artisan::call('queue:work', ['--once' => true, '--stop-when-empty' => true]);
         Artisan::call('queue:work', ['--once' => true, '--stop-when-empty' => true]);
 
@@ -72,7 +72,7 @@ class QueueTest extends Phase16TestCase
     public function test_failed_job_records_expose_a_closed_column_set(): void
     {
         config(['queue.default' => 'database']);
-        Queue::push(new FailingTestJob);
+        Queue::push(new FailingTestJob());
         Artisan::call('queue:work', ['--once' => true, '--stop-when-empty' => true]);
 
         $listing = app(OperationsService::class)->failedJobs();

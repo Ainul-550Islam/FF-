@@ -3,17 +3,20 @@
 namespace App\Http\Controllers\Gameberry;
 
 use App\Http\Controllers\Controller;
-use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\GemEconomyService;
-use App\Services\Gameberry\VideoAdService;
+use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\MagicChestService;
+use App\Services\Gameberry\VideoAdService;
 use Illuminate\Http\Request;
 
 class EconomyController extends Controller
 {
     protected GoldEconomyService $goldService;
+
     protected GemEconomyService $gemService;
+
     protected VideoAdService $videoAdService;
+
     protected MagicChestService $chestService;
 
     public function __construct(GoldEconomyService $goldService, GemEconomyService $gemService, VideoAdService $videoAdService, MagicChestService $chestService)
@@ -43,6 +46,7 @@ class EconomyController extends Controller
     {
         $userId = $request->user()->id;
         $transactions = $this->goldService->getTransactionHistory($userId, 100);
+
         return view('gameberry.economy.gold_history', compact('transactions'));
     }
 
@@ -50,6 +54,7 @@ class EconomyController extends Controller
     {
         $userId = $request->user()->id;
         $transactions = $this->gemService->getTransactionHistory($userId, 100);
+
         return view('gameberry.economy.gem_history', compact('transactions'));
     }
 
@@ -58,6 +63,7 @@ class EconomyController extends Controller
         $userId = $request->user()->id;
         $stats = $this->videoAdService->getStats($userId);
         $history = $this->videoAdService->getHistory($userId, 20);
+
         return view('gameberry.economy.video_ads', compact('stats', 'history'));
     }
 
@@ -70,6 +76,7 @@ class EconomyController extends Controller
         $userId = $request->user()->id;
         try {
             $reward = $this->videoAdService->watchAd($userId, $request->get('provider', 'admob'));
+
             return redirect()->back()->with('success', "Watched ad! +{$reward->gold_reward} gold, +{$reward->gem_reward} gems");
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -92,6 +99,7 @@ class EconomyController extends Controller
         $userId = $request->user()->id;
         try {
             $rewards = $this->chestService->openChest($userId, $chestId);
+
             return redirect()->back()->with('success', "Chest opened! +{$rewards['gold']} gold, +{$rewards['gems']} gems");
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -107,6 +115,7 @@ class EconomyController extends Controller
         $userId = $request->user()->id;
         try {
             $chest = $this->chestService->createChest($userId, $request->get('type', 'bronze'));
+
             return redirect()->back()->with('success', "Got {$chest->type} chest!");
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());

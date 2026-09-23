@@ -17,8 +17,11 @@ class RiskProfile extends Model
     use HasFactory;
 
     public const LEVEL_LOW = 'low';
+
     public const LEVEL_MEDIUM = 'medium';
+
     public const LEVEL_HIGH = 'high';
+
     public const LEVEL_CRITICAL = 'critical';
 
     public const LEVELS = [
@@ -29,7 +32,9 @@ class RiskProfile extends Model
     ];
 
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_RESTRICTED = 'restricted';
+
     public const STATUS_SUSPENDED = 'suspended';
 
     protected $fillable = [];

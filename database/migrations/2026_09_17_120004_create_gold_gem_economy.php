@@ -4,11 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('gold_wallets')) {
+        if (! Schema::hasTable('gold_wallets')) {
             Schema::create('gold_wallets', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
@@ -21,7 +21,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('gem_wallets')) {
+        if (! Schema::hasTable('gem_wallets')) {
             Schema::create('gem_wallets', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
@@ -33,7 +33,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('gold_transactions')) {
+        if (! Schema::hasTable('gold_transactions')) {
             Schema::create('gold_transactions', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -51,7 +51,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('gem_transactions')) {
+        if (! Schema::hasTable('gem_transactions')) {
             Schema::create('gem_transactions', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -69,7 +69,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('magic_chests')) {
+        if (! Schema::hasTable('magic_chests')) {
             Schema::create('magic_chests', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -87,7 +87,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('video_ad_rewards')) {
+        if (! Schema::hasTable('video_ad_rewards')) {
             Schema::create('video_ad_rewards', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -106,7 +106,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('spin2win_rewards')) {
+        if (! Schema::hasTable('spin2win_rewards')) {
             Schema::create('spin2win_rewards', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -122,7 +122,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('auto_mode_logs')) {
+        if (! Schema::hasTable('auto_mode_logs')) {
             Schema::create('auto_mode_logs', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();

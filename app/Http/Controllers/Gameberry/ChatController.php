@@ -29,11 +29,13 @@ class ChatController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['success' => true, 'message' => $message->load('user')]);
             }
+
             return redirect()->back();
         } catch (\Exception $e) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'error' => $e->getMessage()], 400);
             }
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -51,11 +53,13 @@ class ChatController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['success' => true, 'message' => $message->load('user')]);
             }
+
             return redirect()->back();
         } catch (\Exception $e) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'error' => $e->getMessage()], 400);
             }
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -73,11 +77,13 @@ class ChatController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['success' => true, 'message' => $message->load('user')]);
             }
+
             return redirect()->back();
         } catch (\Exception $e) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'error' => $e->getMessage()], 400);
             }
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -86,6 +92,7 @@ class ChatController extends Controller
     {
         try {
             $messages = $this->chatService->getMessages($code, 50);
+
             return response()->json(['success' => true, 'messages' => $messages]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 400);

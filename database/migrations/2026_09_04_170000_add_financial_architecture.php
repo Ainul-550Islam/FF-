@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     /**
      * Phase 08 — payments + wallet + immutable ledger + refunds.
@@ -35,20 +35,20 @@ return new class extends Migration
         // 000002-000007 set) already created some of these tables or columns.
         // Each statement is applied only when its target is missing, so the
         // result is the union of both generations and nothing is destructive.
-        $guardCreate = function (string $table, \Closure $def) {
-            if (!Schema::hasTable($table)) {
+        $guardCreate = function (string $table, Closure $def) {
+            if (! Schema::hasTable($table)) {
                 Schema::create($table, $def);
             }
         };
-        $guardColumn = function (string $table, string $col, \Closure $def) {
-            if (Schema::hasTable($table) && !Schema::hasColumn($table, $col)) {
+        $guardColumn = function (string $table, string $col, Closure $def) {
+            if (Schema::hasTable($table) && ! Schema::hasColumn($table, $col)) {
                 Schema::table($table, $def);
             }
         };
-        $tolerant = function (\Closure $def) {
+        $tolerant = function (Closure $def) {
             try {
                 $def();
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $m = $e->getMessage();
                 if (str_contains($m, 'duplicate index') || str_contains($m, 'already exists') || str_contains($m, 'no such column')) {
                     return; // index/unique already present, or base column added later
@@ -58,20 +58,48 @@ return new class extends Migration
         };
 
         // payments — Phase-08 minor-unit + provider state-machine columns
-        $guardColumn('payments', 'amount_minor', function (Blueprint $table) { $table->bigInteger('amount_minor')->default(0)->after('amount'); });
-        $guardColumn('payments', 'currency', function (Blueprint $table) { $table->string('currency', 8)->default('BDT')->after('amount_minor'); });
-        $guardColumn('payments', 'provider', function (Blueprint $table) { $table->string('provider', 30)->nullable()->after('method'); });
-        $guardColumn('payments', 'provider_reference', function (Blueprint $table) { $table->string('provider_reference', 80)->nullable()->after('provider'); });
-        $guardColumn('payments', 'idempotency_key', function (Blueprint $table) { $table->string('idempotency_key', 64)->nullable()->after('provider_reference'); });
-        $guardColumn('payments', 'payer_user_id', function (Blueprint $table) { $table->foreignId('payer_user_id')->nullable()->after('trx_id')->constrained('users')->nullOnDelete(); });
-        $guardColumn('payments', 'paid_at', function (Blueprint $table) { $table->timestamp('paid_at')->nullable()->after('status'); });
-        $guardColumn('payments', 'refunded_at', function (Blueprint $table) { $table->timestamp('refunded_at')->nullable()->after('paid_at'); });
+        $guardColumn('payments', 'amount_minor', function (Blueprint $table) {
+            $table->bigInteger('amount_minor')->default(0)->after('amount');
+        });
+        $guardColumn('payments', 'currency', function (Blueprint $table) {
+            $table->string('currency', 8)->default('BDT')->after('amount_minor');
+        });
+        $guardColumn('payments', 'provider', function (Blueprint $table) {
+            $table->string('provider', 30)->nullable()->after('method');
+        });
+        $guardColumn('payments', 'provider_reference', function (Blueprint $table) {
+            $table->string('provider_reference', 80)->nullable()->after('provider');
+        });
+        $guardColumn('payments', 'idempotency_key', function (Blueprint $table) {
+            $table->string('idempotency_key', 64)->nullable()->after('provider_reference');
+        });
+        $guardColumn('payments', 'payer_user_id', function (Blueprint $table) {
+            $table->foreignId('payer_user_id')->nullable()->after('trx_id')->constrained('users')->nullOnDelete();
+        });
+        $guardColumn('payments', 'paid_at', function (Blueprint $table) {
+            $table->timestamp('paid_at')->nullable()->after('status');
+        });
+        $guardColumn('payments', 'refunded_at', function (Blueprint $table) {
+            $table->timestamp('refunded_at')->nullable()->after('paid_at');
+        });
 
-        $tolerant(function () { Schema::table('payments', function (Blueprint $table) { $table->unique('idempotency_key', 'payments_idempotency_key_unique'); }); });
+        $tolerant(function () {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->unique('idempotency_key', 'payments_idempotency_key_unique');
+            });
+        });
         if (Schema::hasColumn('payments', 'team_id')) {
-            $tolerant(function () { Schema::table('payments', function (Blueprint $table) { $table->index('team_id', 'payments_team_index'); }); });
+            $tolerant(function () {
+                Schema::table('payments', function (Blueprint $table) {
+                    $table->index('team_id', 'payments_team_index');
+                });
+            });
         }
-        $tolerant(function () { Schema::table('payments', function (Blueprint $table) { $table->index('status', 'payments_status_index'); }); });
+        $tolerant(function () {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->index('status', 'payments_status_index');
+            });
+        });
 
         $guardCreate('wallets', function (Blueprint $table) {
             $table->id();
@@ -83,7 +111,9 @@ return new class extends Migration
 
             $table->unique('user_id', 'wallets_user_unique');
         });
-        $guardColumn('wallets', 'status', function (Blueprint $table) { $table->string('status')->default('active'); });
+        $guardColumn('wallets', 'status', function (Blueprint $table) {
+            $table->string('status')->default('active');
+        });
 
         $guardCreate('ledger_entries', function (Blueprint $table) {
             $table->id();
@@ -105,9 +135,15 @@ return new class extends Migration
         // When the earlier generation created ledger_entries, pick up the
         // Phase-08 columns it lacks (type/description are also guaranteed by
         // the later union migration; actor_id belongs to this generation).
-        $guardColumn('ledger_entries', 'type', function (Blueprint $table) { $table->string('type', 30)->nullable(); });
-        $guardColumn('ledger_entries', 'description', function (Blueprint $table) { $table->string('description')->nullable(); });
-        $guardColumn('ledger_entries', 'actor_id', function (Blueprint $table) { $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete(); });
+        $guardColumn('ledger_entries', 'type', function (Blueprint $table) {
+            $table->string('type', 30)->nullable();
+        });
+        $guardColumn('ledger_entries', 'description', function (Blueprint $table) {
+            $table->string('description')->nullable();
+        });
+        $guardColumn('ledger_entries', 'actor_id', function (Blueprint $table) {
+            $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
+        });
 
         $guardCreate('refunds', function (Blueprint $table) {
             $table->id();
@@ -153,7 +189,7 @@ return new class extends Migration
      */
     protected function backfillExistingPayments(): void
     {
-        if (!Schema::hasTable('payments') || !Schema::hasColumn('payments', 'amount_minor')) {
+        if (! Schema::hasTable('payments') || ! Schema::hasColumn('payments', 'amount_minor')) {
             return;
         }
 

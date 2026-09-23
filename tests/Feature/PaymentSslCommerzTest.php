@@ -116,7 +116,7 @@ class PaymentSslCommerzTest extends TestCase
 
     protected function makeTournament(User $organizer, float $entryFee = 100): Tournament
     {
-        $t = new Tournament;
+        $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'SSLCommerz Tournament';
         $t->slug = 'ssl-'.Str::random(8);
@@ -136,7 +136,7 @@ class PaymentSslCommerzTest extends TestCase
 
     protected function makeTeam(Tournament $tournament, User $captain): Team
     {
-        $team = new Team;
+        $team = new Team();
         $team->tournament_id = $tournament->id;
         $team->captain_id = $captain->id;
         $team->name = 'Team '.Str::random(6);
@@ -339,7 +339,7 @@ class PaymentSslCommerzTest extends TestCase
         $payment->trx_id = 'BANK123';
         $payment->save();
 
-        $refund = new Refund;
+        $refund = new Refund();
         $refund->payment_id = $payment->id;
         $refund->amount_minor = $payment->amountMinor();
         $refund->currency = 'BDT';
@@ -362,7 +362,7 @@ class PaymentSslCommerzTest extends TestCase
 
         $payment = app(PaymentService::class)->createForTeam($tournament, $team, $captain, 'sslcommerz', 'PENDING', 'sslcommerz', null);
 
-        $refund = new Refund;
+        $refund = new Refund();
         $refund->payment_id = $payment->id;
         $refund->amount_minor = $payment->amountMinor();
         $refund->currency = 'BDT';

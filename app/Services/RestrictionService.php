@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Notification;
 use App\Models\Restriction;
 use App\Models\RiskEvent;
+use App\Models\RiskProfile;
 use App\Models\User;
 use DomainException;
 use Illuminate\Database\Eloquent\Collection;
@@ -25,8 +26,7 @@ class RestrictionService
     public function __construct(
         protected FraudRiskService $risk,
         protected NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     /**
      * Apply a restriction to a user.
@@ -75,7 +75,7 @@ class RestrictionService
             // even without reading the restrictions table.
             if ($type === Restriction::TYPE_ACCOUNT_SUSPENDED) {
                 $profile = $this->risk->profileFor($user);
-                $profile->status = \App\Models\RiskProfile::STATUS_SUSPENDED;
+                $profile->status = RiskProfile::STATUS_SUSPENDED;
                 $profile->restricted_until = $expiresAt;
                 $profile->save();
             }
@@ -86,7 +86,7 @@ class RestrictionService
                 $user,
                 Notification::TYPE_RESTRICTION_APPLIED,
                 'Account restriction applied',
-                'Your account has been restricted: ' . $reason,
+                'Your account has been restricted: '.$reason,
                 null,
                 ['restriction_id' => $restriction->id, 'type' => $type],
             );
@@ -120,7 +120,7 @@ class RestrictionService
 
                 if (! $stillSuspended) {
                     $profile = $this->risk->profileFor($restriction->user);
-                    $profile->status = \App\Models\RiskProfile::STATUS_ACTIVE;
+                    $profile->status = RiskProfile::STATUS_ACTIVE;
                     $profile->restricted_until = null;
                     $profile->save();
                 }

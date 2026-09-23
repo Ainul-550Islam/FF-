@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Gameberry;
 
-use Tests\TestCase;
+use App\Models\AutoModeLog;
+use App\Models\PrivateTableParticipant;
 use App\Models\User;
-use App\Models\PrivateTable;
+use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\PrivateTableService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class PrivateTableTest extends TestCase
 {
@@ -39,14 +41,14 @@ class PrivateTableTest extends TestCase
         $player = User::factory()->create();
 
         // Create wallets
-        app(\App\Services\Gameberry\GoldEconomyService::class)->getOrCreateWallet($host->id);
-        app(\App\Services\Gameberry\GoldEconomyService::class)->getOrCreateWallet($player->id);
+        app(GoldEconomyService::class)->getOrCreateWallet($host->id);
+        app(GoldEconomyService::class)->getOrCreateWallet($player->id);
 
         $table = $this->service->createTable($host->id, ['game_mode' => 'quick', 'bet_amount' => 100]);
 
-        $initialGold = app(\App\Services\Gameberry\GoldEconomyService::class)->getBalance($player->id);
+        $initialGold = app(GoldEconomyService::class)->getBalance($player->id);
         $participant = $this->service->joinTable($player->id, $table->code);
-        $afterGold = app(\App\Services\Gameberry\GoldEconomyService::class)->getBalance($player->id);
+        $afterGold = app(GoldEconomyService::class)->getBalance($player->id);
 
         $this->assertEquals($initialGold - 100, $afterGold);
         $this->assertEquals($player->id, $participant->user_id);
@@ -65,18 +67,18 @@ class PrivateTableTest extends TestCase
     {
         $host = User::factory()->create();
         $player = User::factory()->create();
-        app(\App\Services\Gameberry\GoldEconomyService::class)->getOrCreateWallet($player->id);
+        app(GoldEconomyService::class)->getOrCreateWallet($player->id);
 
         $table = $this->service->createTable($host->id, ['game_mode' => 'classic', 'bet_amount' => 100]);
         $this->service->joinTable($player->id, $table->code);
 
         $this->service->setAutoMode($player->id, $table->code, true, 'disconnect');
 
-        $participant = \App\Models\PrivateTableParticipant::where('private_table_id', $table->id)->where('user_id', $player->id)->first();
+        $participant = PrivateTableParticipant::where('private_table_id', $table->id)->where('user_id', $player->id)->first();
         $this->assertTrue($participant->is_in_auto_mode);
         $this->assertNotNull($participant->auto_mode_on_at);
 
-        $log = \App\Models\AutoModeLog::where('user_id', $player->id)->where('private_table_id', $table->id)->first();
+        $log = AutoModeLog::where('user_id', $player->id)->where('private_table_id', $table->id)->first();
         $this->assertNotNull($log);
         $this->assertEquals('disconnect', $log->reason);
     }

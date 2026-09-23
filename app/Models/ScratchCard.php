@@ -34,7 +34,7 @@ class ScratchCard extends Model
     {
         static::creating(function ($card) {
             if (empty($card->code)) {
-                $card->code = 'SCRATCH-' . strtoupper(Str::random(8));
+                $card->code = 'SCRATCH-'.strtoupper(Str::random(8));
             }
             if (empty($card->expires_at)) {
                 $card->expires_at = now()->addDays(7);
@@ -49,7 +49,7 @@ class ScratchCard extends Model
 
     public function isUnscratched(): bool
     {
-        return $this->status === 'unscratched' && (!$this->expires_at || $this->expires_at->isFuture());
+        return $this->status === 'unscratched' && (! $this->expires_at || $this->expires_at->isFuture());
     }
 
     public function isExpired(): bool
@@ -59,7 +59,7 @@ class ScratchCard extends Model
 
     public function scratch(): array
     {
-        if (!$this->isUnscratched()) {
+        if (! $this->isUnscratched()) {
             throw new \Exception('Card not available to scratch');
         }
 

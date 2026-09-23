@@ -24,8 +24,7 @@ class PhoneOtpService
 {
     public function __construct(
         protected PhoneOtpProviderInterface $provider,
-    ) {
-    }
+    ) {}
 
     /**
      * Normalize a Bangladeshi phone number to E.164 (+8801XXXXXXXXX).
@@ -44,10 +43,10 @@ class PhoneOtpService
 
         // Local 11-digit form: 01XXXXXXXXX.
         if (strlen($digits) === 11 && str_starts_with($digits, '0')) {
-            $digits = '880' . substr($digits, 1);
+            $digits = '880'.substr($digits, 1);
         }
 
-        $normalized = '+' . $digits;
+        $normalized = '+'.$digits;
 
         if (! preg_match('/^\+8801\d{9}$/', $normalized)) {
             throw new DomainException('Enter a valid Bangladeshi mobile number (e.g. 01712345678).');
@@ -60,7 +59,7 @@ class PhoneOtpService
      * Issue a new OTP challenge and deliver the code.
      *
      * @throws DomainException on invalid phone/purpose, cooldown, daily cap
-     *                          or delivery failure.
+     *                         or delivery failure.
      */
     public function issue(?User $user, string $phone, string $purpose): OtpChallenge
     {

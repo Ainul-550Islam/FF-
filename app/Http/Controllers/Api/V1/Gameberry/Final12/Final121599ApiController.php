@@ -9,14 +9,16 @@ use Illuminate\Support\Facades\Log;
 class Final121599ApiController extends Controller
 {
     protected $service;
+
     protected int $feature;
+
     protected string $serviceNumber;
 
     public function __construct()
     {
         $this->feature = 1599;
         $this->serviceNumber = '1564';
-        $serviceClass = 'App\\Services\\Gameberry\\Final12\\Final12' . $this->serviceNumber . 'Service';
+        $serviceClass = 'App\\Services\\Gameberry\\Final12\\Final12'.$this->serviceNumber.'Service';
         $this->service = app($serviceClass);
     }
 
@@ -29,8 +31,8 @@ class Final121599ApiController extends Controller
             'success' => true,
             'data' => $stats,
             'feature' => $this->feature,
-            'view' => 'gameberry.final12.feature_' . 1514,
-            'service' => 'Final12' . $this->serviceNumber . 'Service',
+            'view' => 'gameberry.final12.feature_'. 1514,
+            'service' => 'Final12'.$this->serviceNumber.'Service',
             'production_ready' => true,
             'no_shortening' => true,
             'existing_logic_preserved' => true,
@@ -94,7 +96,7 @@ class Final121599ApiController extends Controller
         try {
             $result = $this->service->play($userId, $mode, $bet);
 
-            if (isset($result['reconcile']['all_balanced']) && !$result['reconcile']['all_balanced']) {
+            if (isset($result['reconcile']['all_balanced']) && ! $result['reconcile']['all_balanced']) {
                 Log::critical('G1 Financial totals must reconcile - STOP - Final121599ApiController', [
                     'user_id' => $userId,
                     'result' => $result,
@@ -111,7 +113,7 @@ class Final121599ApiController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $result,
-                'message' => 'Final12 Production 1500+ Full Code No Skip Existing Logic Preserved 1599 result: ' . ($result['is_win'] ? 'win' : 'loss') . ' - Gold at stake, magic chest, Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening',
+                'message' => 'Final12 Production 1500+ Full Code No Skip Existing Logic Preserved 1599 result: '.($result['is_win'] ? 'win' : 'loss').' - Gold at stake, magic chest, Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening',
                 'feature' => $this->feature,
                 'production_ready' => true,
                 'no_shortening' => true,
@@ -119,7 +121,7 @@ class Final121599ApiController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Final121599 play failed: ' . $e->getMessage() . ' - G1 Must Reconcile STOP',
+                'message' => 'Final121599 play failed: '.$e->getMessage().' - G1 Must Reconcile STOP',
                 'feature' => $this->feature,
             ], 400);
         }

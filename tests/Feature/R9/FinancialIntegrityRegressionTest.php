@@ -1,7 +1,8 @@
 <?php
+
 namespace Tests\Feature\R9;
+
 use App\Models\FinancialSettlement;
-use App\Models\LedgerEntry;
 use App\Models\Payment;
 use App\Models\Payout;
 use App\Models\Tournament;
@@ -9,20 +10,133 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WebhookEvent;
 use App\Services\WalletService;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+
 class FinancialIntegrityRegressionTest extends TestCase
 {
     use RefreshDatabase;
-    public function test_wallet_credit(): void{$user=User::factory()->create(); $service=app(WalletService::class); $entry=$service->credit($user->id,1000,'BDT','test','ref-credit'); $this->assertEquals('credit',$entry->direction); $this->assertEquals(1000,$entry->amount_minor); $this->assertEquals(1000,$entry->balance_after_minor); $wallet=Wallet::where('user_id',$user->id)->first(); $this->assertEquals(1000,$wallet->balance_minor);}
-    public function test_wallet_debit(): void{$user=User::factory()->create(); $service=app(WalletService::class); $service->credit($user->id,1000,'BDT','test','ref-1'); $entry=$service->debit($user->id,300,'BDT','test','ref-2'); $this->assertEquals('debit',$entry->direction); $this->assertEquals(300,$entry->amount_minor); $this->assertEquals(700,$entry->balance_after_minor);}
-    public function test_payment_idempotency(): void{$user=User::factory()->create(); $wallet=Wallet::create(['user_id'=>$user->id,'currency'=>'BDT','balance_minor'=>0]); $idemKey='idem-'.uniqid(); $this->createRow(Payment::class, ['user_id'=>$user->id,'wallet_id'=>$wallet->id,'provider'=>'manual','external_id'=>'ext-'.uniqid(),'amount_minor'=>1000,'currency'=>'BDT','status'=>Payment::STATUS_CREATED,'idempotency_key'=>$idemKey]); $this->expectException(\Illuminate\Database\QueryException::class); $this->createRow(Payment::class, ['user_id'=>$user->id,'wallet_id'=>$wallet->id,'provider'=>'manual','external_id'=>'ext-'.uniqid(),'amount_minor'=>1000,'currency'=>'BDT','status'=>Payment::STATUS_CREATED,'idempotency_key'=>$idemKey]);}
-    public function test_ledger_sum_equals_wallet_balance(): void{$user=User::factory()->create(); $service=app(WalletService::class); $service->credit($user->id,1000,'BDT','test','ref-1'); $service->credit($user->id,500,'BDT','test','ref-2'); $service->debit($user->id,200,'BDT','test','ref-3'); $wallet=Wallet::where('user_id',$user->id)->first(); $calculated=$service->calculateBalance($wallet->id); $this->assertEquals(1300,$wallet->balance_minor); $this->assertEquals(1300,$calculated); $this->assertEquals($wallet->balance_minor,$calculated);}
-    public function test_balance_after_correctness(): void{$user=User::factory()->create(); $service=app(WalletService::class); $e1=$service->credit($user->id,1000,'BDT','test','ref-1'); $e2=$service->credit($user->id,500,'BDT','test','ref-2'); $e3=$service->debit($user->id,200,'BDT','test','ref-3'); $this->assertEquals(1000,$e1->balance_after_minor); $this->assertEquals(1500,$e2->balance_after_minor); $this->assertEquals(1300,$e3->balance_after_minor); $wallet=Wallet::where('user_id',$user->id)->first(); $this->assertTrue($service->verifyLedgerIntegrity($wallet->id));}
-    public function test_no_duplicate_payment(): void{$user=User::factory()->create(); $wallet=Wallet::create(['user_id'=>$user->id,'currency'=>'BDT','balance_minor'=>0]); $externalId='ext-dup-'.uniqid(); $this->createRow(Payment::class, ['user_id'=>$user->id,'wallet_id'=>$wallet->id,'provider'=>'manual','external_id'=>$externalId,'amount_minor'=>1000,'currency'=>'BDT','status'=>Payment::STATUS_CREATED,'idempotency_key'=>'idem-'.uniqid()]); $this->expectException(\Illuminate\Database\QueryException::class); $this->createRow(Payment::class, ['user_id'=>$user->id,'wallet_id'=>$wallet->id,'provider'=>'manual','external_id'=>$externalId,'amount_minor'=>1000,'currency'=>'BDT','status'=>Payment::STATUS_CREATED,'idempotency_key'=>'idem-'.uniqid()]);}
-    public function test_no_duplicate_credit(): void{$user=User::factory()->create(); $service=app(WalletService::class); $idemKey='idem-credit-'.uniqid(); $entry1=$service->credit($user->id,1000,'BDT','test','ref-dup',$idemKey); $entry2=$service->credit($user->id,1000,'BDT','test','ref-dup',$idemKey); $this->assertEquals($entry1->id,$entry2->id); $wallet=Wallet::where('user_id',$user->id)->first(); $this->assertEquals(1000,$wallet->balance_minor);}
-    public function test_no_duplicate_refund(): void{$user=User::factory()->create(); $service=app(WalletService::class); $service->credit($user->id,1000,'BDT','test','ref-1'); $idemKey='idem-refund-'.uniqid(); $service->credit($user->id,500,'BDT','refund','refund-ref',$idemKey); $wallet=Wallet::where('user_id',$user->id)->first(); $this->assertEquals(1500,$wallet->balance_minor);}
-    public function test_no_duplicate_payout(): void{$user=User::factory()->create(); $tournament=Tournament::factory()->create(); $idemKey='idem-payout-'.uniqid(); $this->createRow(Payout::class, ['user_id'=>$user->id,'tournament_id'=>$tournament->id,'amount_minor'=>5000,'currency'=>'BDT','status'=>'pending','external_id'=>'ext-'.uniqid(),'idempotency_key'=>$idemKey]); $this->expectException(\Illuminate\Database\QueryException::class); $this->createRow(Payout::class, ['user_id'=>$user->id,'tournament_id'=>$tournament->id,'amount_minor'=>5000,'currency'=>'BDT','status'=>'pending','external_id'=>'ext-'.uniqid(),'idempotency_key'=>$idemKey]);}
-    public function test_no_duplicate_webhook_financial_effect(): void{$eventId='evt-'.uniqid(); WebhookEvent::create(['provider'=>'bkash','event_type'=>'payment.succeeded','event_id'=>$eventId,'payload'=>['amount'=>1000],'state'=>'processed']); $this->expectException(\Illuminate\Database\QueryException::class); WebhookEvent::create(['provider'=>'bkash','event_type'=>'payment.succeeded','event_id'=>$eventId,'payload'=>['amount'=>1000],'state'=>'received']);}
-    public function test_no_duplicate_prize_distribution(): void{$tournament=Tournament::factory()->create(); $idemKey='settlement-'.uniqid(); $settlement=$this->createRow(FinancialSettlement::class, ['tournament_id'=>$tournament->id,'total_amount_minor'=>10000,'currency'=>'BDT','status'=>'completed','idempotency_key'=>$idemKey,'completed_at'=>now()]); $this->assertEquals('completed',$settlement->status); $this->expectException(\Illuminate\Database\QueryException::class); $this->createRow(FinancialSettlement::class, ['tournament_id'=>$tournament->id,'total_amount_minor'=>10000,'currency'=>'BDT','status'=>'completed','idempotency_key'=>$idemKey]);}
+
+    public function test_wallet_credit(): void
+    {
+        $user = User::factory()->create();
+        $service = app(WalletService::class);
+        $entry = $service->credit($user->id, 1000, 'BDT', 'test', 'ref-credit');
+        $this->assertEquals('credit', $entry->direction);
+        $this->assertEquals(1000, $entry->amount_minor);
+        $this->assertEquals(1000, $entry->balance_after_minor);
+        $wallet = Wallet::where('user_id', $user->id)->first();
+        $this->assertEquals(1000, $wallet->balance_minor);
+    }
+
+    public function test_wallet_debit(): void
+    {
+        $user = User::factory()->create();
+        $service = app(WalletService::class);
+        $service->credit($user->id, 1000, 'BDT', 'test', 'ref-1');
+        $entry = $service->debit($user->id, 300, 'BDT', 'test', 'ref-2');
+        $this->assertEquals('debit', $entry->direction);
+        $this->assertEquals(300, $entry->amount_minor);
+        $this->assertEquals(700, $entry->balance_after_minor);
+    }
+
+    public function test_payment_idempotency(): void
+    {
+        $user = User::factory()->create();
+        $wallet = Wallet::create(['user_id' => $user->id, 'currency' => 'BDT', 'balance_minor' => 0]);
+        $idemKey = 'idem-'.uniqid();
+        $this->createRow(Payment::class, ['user_id' => $user->id, 'wallet_id' => $wallet->id, 'provider' => 'manual', 'external_id' => 'ext-'.uniqid(), 'amount_minor' => 1000, 'currency' => 'BDT', 'status' => Payment::STATUS_CREATED, 'idempotency_key' => $idemKey]);
+        $this->expectException(QueryException::class);
+        $this->createRow(Payment::class, ['user_id' => $user->id, 'wallet_id' => $wallet->id, 'provider' => 'manual', 'external_id' => 'ext-'.uniqid(), 'amount_minor' => 1000, 'currency' => 'BDT', 'status' => Payment::STATUS_CREATED, 'idempotency_key' => $idemKey]);
+    }
+
+    public function test_ledger_sum_equals_wallet_balance(): void
+    {
+        $user = User::factory()->create();
+        $service = app(WalletService::class);
+        $service->credit($user->id, 1000, 'BDT', 'test', 'ref-1');
+        $service->credit($user->id, 500, 'BDT', 'test', 'ref-2');
+        $service->debit($user->id, 200, 'BDT', 'test', 'ref-3');
+        $wallet = Wallet::where('user_id', $user->id)->first();
+        $calculated = $service->calculateBalance($wallet->id);
+        $this->assertEquals(1300, $wallet->balance_minor);
+        $this->assertEquals(1300, $calculated);
+        $this->assertEquals($wallet->balance_minor, $calculated);
+    }
+
+    public function test_balance_after_correctness(): void
+    {
+        $user = User::factory()->create();
+        $service = app(WalletService::class);
+        $e1 = $service->credit($user->id, 1000, 'BDT', 'test', 'ref-1');
+        $e2 = $service->credit($user->id, 500, 'BDT', 'test', 'ref-2');
+        $e3 = $service->debit($user->id, 200, 'BDT', 'test', 'ref-3');
+        $this->assertEquals(1000, $e1->balance_after_minor);
+        $this->assertEquals(1500, $e2->balance_after_minor);
+        $this->assertEquals(1300, $e3->balance_after_minor);
+        $wallet = Wallet::where('user_id', $user->id)->first();
+        $this->assertTrue($service->verifyLedgerIntegrity($wallet->id));
+    }
+
+    public function test_no_duplicate_payment(): void
+    {
+        $user = User::factory()->create();
+        $wallet = Wallet::create(['user_id' => $user->id, 'currency' => 'BDT', 'balance_minor' => 0]);
+        $externalId = 'ext-dup-'.uniqid();
+        $this->createRow(Payment::class, ['user_id' => $user->id, 'wallet_id' => $wallet->id, 'provider' => 'manual', 'external_id' => $externalId, 'amount_minor' => 1000, 'currency' => 'BDT', 'status' => Payment::STATUS_CREATED, 'idempotency_key' => 'idem-'.uniqid()]);
+        $this->expectException(QueryException::class);
+        $this->createRow(Payment::class, ['user_id' => $user->id, 'wallet_id' => $wallet->id, 'provider' => 'manual', 'external_id' => $externalId, 'amount_minor' => 1000, 'currency' => 'BDT', 'status' => Payment::STATUS_CREATED, 'idempotency_key' => 'idem-'.uniqid()]);
+    }
+
+    public function test_no_duplicate_credit(): void
+    {
+        $user = User::factory()->create();
+        $service = app(WalletService::class);
+        $idemKey = 'idem-credit-'.uniqid();
+        $entry1 = $service->credit($user->id, 1000, 'BDT', 'test', 'ref-dup', $idemKey);
+        $entry2 = $service->credit($user->id, 1000, 'BDT', 'test', 'ref-dup', $idemKey);
+        $this->assertEquals($entry1->id, $entry2->id);
+        $wallet = Wallet::where('user_id', $user->id)->first();
+        $this->assertEquals(1000, $wallet->balance_minor);
+    }
+
+    public function test_no_duplicate_refund(): void
+    {
+        $user = User::factory()->create();
+        $service = app(WalletService::class);
+        $service->credit($user->id, 1000, 'BDT', 'test', 'ref-1');
+        $idemKey = 'idem-refund-'.uniqid();
+        $service->credit($user->id, 500, 'BDT', 'refund', 'refund-ref', $idemKey);
+        $wallet = Wallet::where('user_id', $user->id)->first();
+        $this->assertEquals(1500, $wallet->balance_minor);
+    }
+
+    public function test_no_duplicate_payout(): void
+    {
+        $user = User::factory()->create();
+        $tournament = Tournament::factory()->create();
+        $idemKey = 'idem-payout-'.uniqid();
+        $this->createRow(Payout::class, ['user_id' => $user->id, 'tournament_id' => $tournament->id, 'amount_minor' => 5000, 'currency' => 'BDT', 'status' => 'pending', 'external_id' => 'ext-'.uniqid(), 'idempotency_key' => $idemKey]);
+        $this->expectException(QueryException::class);
+        $this->createRow(Payout::class, ['user_id' => $user->id, 'tournament_id' => $tournament->id, 'amount_minor' => 5000, 'currency' => 'BDT', 'status' => 'pending', 'external_id' => 'ext-'.uniqid(), 'idempotency_key' => $idemKey]);
+    }
+
+    public function test_no_duplicate_webhook_financial_effect(): void
+    {
+        $eventId = 'evt-'.uniqid();
+        WebhookEvent::create(['provider' => 'bkash', 'event_type' => 'payment.succeeded', 'event_id' => $eventId, 'payload' => ['amount' => 1000], 'state' => 'processed']);
+        $this->expectException(QueryException::class);
+        WebhookEvent::create(['provider' => 'bkash', 'event_type' => 'payment.succeeded', 'event_id' => $eventId, 'payload' => ['amount' => 1000], 'state' => 'received']);
+    }
+
+    public function test_no_duplicate_prize_distribution(): void
+    {
+        $tournament = Tournament::factory()->create();
+        $idemKey = 'settlement-'.uniqid();
+        $settlement = $this->createRow(FinancialSettlement::class, ['tournament_id' => $tournament->id, 'total_amount_minor' => 10000, 'currency' => 'BDT', 'status' => 'completed', 'idempotency_key' => $idemKey, 'completed_at' => now()]);
+        $this->assertEquals('completed', $settlement->status);
+        $this->expectException(QueryException::class);
+        $this->createRow(FinancialSettlement::class, ['tournament_id' => $tournament->id, 'total_amount_minor' => 10000, 'currency' => 'BDT', 'status' => 'completed', 'idempotency_key' => $idemKey]);
+    }
 }

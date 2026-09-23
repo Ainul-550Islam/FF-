@@ -6,6 +6,7 @@ use App\Exceptions\PayoutReviewRequiredException;
 use App\Models\AntiCheatIncident;
 use App\Models\IdentityVerification;
 use App\Models\Payout;
+use App\Models\PayoutEvent;
 use App\Models\PrizeDistribution;
 use App\Models\Restriction;
 use App\Models\RiskEvent;
@@ -41,7 +42,7 @@ class AntiFraudSecurityHttpTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'Test Tournament';
-        $t->slug = 'test-tournament-' . Str::random(8);
+        $t->slug = 'test-tournament-'.Str::random(8);
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = 100;
@@ -363,7 +364,7 @@ class AntiFraudSecurityHttpTest extends TestCase
         $this->assertSame(Payout::STATUS_COMPLETED, $processed->status);
         $this->assertSame(10000, $recipient->wallet()->first()->balance_minor);
 
-        $event = $payout->events()->where('event', \App\Models\PayoutEvent::EVENT_PROCESSING)->first();
+        $event = $payout->events()->where('event', PayoutEvent::EVENT_PROCESSING)->first();
         $this->assertTrue((bool) ($event->metadata['override'] ?? false));
         $this->assertSame('manual review cleared — prize is legitimate', $event->metadata['reason'] ?? null);
     }

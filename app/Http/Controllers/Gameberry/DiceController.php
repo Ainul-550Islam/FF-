@@ -3,15 +3,18 @@
 namespace App\Http\Controllers\Gameberry;
 
 use App\Http\Controllers\Controller;
-use App\Services\Gameberry\DiceCollectionService;
-use App\Services\Gameberry\GemEconomyService;
+use App\Models\Dice;
 use App\Models\DiceExchange;
 use App\Models\LuckyDice;
+use App\Models\UserDice;
+use App\Services\Gameberry\DiceCollectionService;
+use App\Services\Gameberry\GemEconomyService;
 use Illuminate\Http\Request;
 
 class DiceController extends Controller
 {
     protected DiceCollectionService $diceService;
+
     protected GemEconomyService $gemService;
 
     public function __construct(DiceCollectionService $diceService, GemEconomyService $gemService)
@@ -34,13 +37,15 @@ class DiceController extends Controller
     {
         $userId = $request->user()->id;
         $collection = $this->diceService->getUserCollection($userId);
+
         return view('gameberry.dice.collection', compact('collection'));
     }
 
     public function show(Request $request, int $diceId)
     {
-        $dice = \App\Models\Dice::findOrFail($diceId);
-        $userDice = \App\Models\UserDice::where('user_id', $request->user()->id)->where('dice_id', $diceId)->first();
+        $dice = Dice::findOrFail($diceId);
+        $userDice = UserDice::where('user_id', $request->user()->id)->where('dice_id', $diceId)->first();
+
         return view('gameberry.dice.show', compact('dice', 'userDice'));
     }
 
@@ -49,6 +54,7 @@ class DiceController extends Controller
         $userId = $request->user()->id;
         try {
             $userDice = $this->diceService->equipDice($userId, $diceId);
+
             return redirect()->back()->with('success', "Equipped {$userDice->dice->name}");
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -61,6 +67,7 @@ class DiceController extends Controller
         try {
             $userDice = $this->diceService->toggleFavorite($userId, $diceId);
             $msg = $userDice->is_favorite ? 'Added to favorites' : 'Removed from favorites';
+
             return redirect()->back()->with('success', $msg);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -77,6 +84,7 @@ class DiceController extends Controller
         $senderId = $request->user()->id;
         try {
             $exchange = $this->diceService->exchangeDice($senderId, $request->receiver_id, $request->dice_id);
+
             return redirect()->back()->with('success', 'Dice exchange request sent - Facebook friends only');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -88,6 +96,7 @@ class DiceController extends Controller
         $userId = $request->user()->id;
         $sent = DiceExchange::with(['receiver', 'dice'])->where('sender_id', $userId)->orderByDesc('created_at')->get();
         $received = DiceExchange::with(['sender', 'dice'])->where('receiver_id', $userId)->orderByDesc('created_at')->get();
+
         return view('gameberry.dice.exchanges', compact('sent', 'received'));
     }
 
@@ -97,6 +106,7 @@ class DiceController extends Controller
         try {
             $exchange = DiceExchange::where('id', $exchangeId)->where('receiver_id', $userId)->firstOrFail();
             $exchange->accept();
+
             return redirect()->back()->with('success', 'Dice exchange accepted');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -109,6 +119,7 @@ class DiceController extends Controller
         try {
             $exchange = DiceExchange::where('id', $exchangeId)->where('receiver_id', $userId)->firstOrFail();
             $exchange->deny();
+
             return redirect()->back()->with('success', 'Dice exchange denied');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -120,6 +131,7 @@ class DiceController extends Controller
         $userId = $request->user()->id;
         $luckyDices = LuckyDice::with(['dice', 'sender'])->where('user_id', $userId)->orderByDesc('created_at')->get();
         $unrolled = $luckyDices->where('is_rolled', false);
+
         return view('gameberry.dice.lucky', compact('luckyDices', 'unrolled'));
     }
 

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\PaymentMethod;
-use App\Services\PaymentMethodService;
 use App\Services\PaymentGatewayManager;
+use App\Services\PaymentMethodService;
 use DomainException;
 use Illuminate\Http\Request;
 
@@ -18,8 +18,7 @@ class PaymentMethodsController extends Controller
     public function __construct(
         protected PaymentMethodService $methods,
         protected PaymentGatewayManager $gateways,
-    ) {
-    }
+    ) {}
 
     public function index()
     {
@@ -38,7 +37,7 @@ class PaymentMethodsController extends Controller
         $this->authorize('create', PaymentMethod::class);
 
         $data = $request->validate([
-            'provider' => 'required|in:' . implode(',', PaymentMethod::PROVIDERS),
+            'provider' => 'required|in:'.implode(',', PaymentMethod::PROVIDERS),
             'label' => 'required|string|max:60',
             'identifier' => 'required|string|max:20',
         ]);

@@ -2,13 +2,14 @@
 
 namespace Tests\Feature\Gameberry;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\League;
+use App\Models\TitanBadge;
+use App\Models\User;
 use App\Models\UserLeague;
-use App\Models\Level;
 use App\Services\Gameberry\LeagueService;
+use Database\Seeders\GameberryLeagueSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class LeagueSystemTest extends TestCase
 {
@@ -21,7 +22,7 @@ class LeagueSystemTest extends TestCase
         parent::setUp();
         $this->service = app(LeagueService::class);
         // Seed leagues
-        $this->seed(\Database\Seeders\GameberryLeagueSeeder::class);
+        $this->seed(GameberryLeagueSeeder::class);
     }
 
     public function test_6_step_league_exists(): void
@@ -29,7 +30,7 @@ class LeagueSystemTest extends TestCase
         $this->assertEquals(6, League::count());
         $this->assertTrue(League::where('slug', 'bronze')->exists());
         $this->assertTrue(League::where('slug', 'titan')->exists());
-        $this->assertEquals(['bronze','silver','gold','platinum','diamond','titan'], League::ordered()->pluck('slug')->toArray());
+        $this->assertEquals(['bronze', 'silver', 'gold', 'platinum', 'diamond', 'titan'], League::ordered()->pluck('slug')->toArray());
     }
 
     public function test_level_4_required_for_bronze(): void
@@ -78,7 +79,7 @@ class LeagueSystemTest extends TestCase
     {
         $user = User::factory()->create();
         $titan = League::where('slug', 'titan')->first();
-        $badge = \App\Models\TitanBadge::create([
+        $badge = TitanBadge::create([
             'user_id' => $user->id,
             'league_id' => $titan->id,
             'season' => $this->service->currentSeason(),

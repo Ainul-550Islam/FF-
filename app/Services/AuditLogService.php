@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Tournament;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -236,7 +237,7 @@ class AuditLogService
      *
      * @param  array<string, mixed>  $filters
      */
-    public function query(array $filters = []): \Illuminate\Database\Eloquent\Builder
+    public function query(array $filters = []): Builder
     {
         $query = AuditLog::query();
 
@@ -349,11 +350,13 @@ class AuditLogService
 
             if (in_array($normalized, $keys, true)) {
                 $result[$key] = '[redacted]';
+
                 continue;
             }
 
             if (is_array($value)) {
                 $result[$key] = $this->redact($value);
+
                 continue;
             }
 
@@ -375,7 +378,7 @@ class AuditLogService
         $max = (int) config('audit.max_value_chars', 500);
 
         return mb_strlen($value) > $max
-            ? mb_substr($value, 0, $max) . '…'
+            ? mb_substr($value, 0, $max).'…'
             : $value;
     }
 

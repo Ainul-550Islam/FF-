@@ -1,14 +1,24 @@
 <?php
+
 namespace Tests\Feature\Gameberry\Stats;
-use Tests\TestCase;
+
 use App\Models\User;
 use App\Services\Gameberry\Stats\Stat5Service;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
 class Stat5Test extends TestCase
 {
     use RefreshDatabase;
+
     protected Stat5Service $service;
-    protected function setUp(): void { parent::setUp(); $this->service = app(Stat5Service::class); }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->service = app(Stat5Service::class);
+    }
+
     public function test_stat_5_get_stats(): void
     {
         $user = User::factory()->create();
@@ -34,6 +44,7 @@ class Stat5Test extends TestCase
         $this->assertStringContainsString('scratch cards', $stats['description']);
         $this->assertStringContainsString('reconciliation', $stats['description']);
     }
+
     public function test_stat_5_calculate(): void
     {
         $user = User::factory()->create();

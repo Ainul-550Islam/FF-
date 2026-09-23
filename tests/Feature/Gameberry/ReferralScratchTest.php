@@ -2,12 +2,13 @@
 
 namespace Tests\Feature\Gameberry;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Referral;
 use App\Models\ScratchCard;
+use App\Models\User;
+use App\Services\Gameberry\GemEconomyService;
+use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\ReferralService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class ReferralScratchTest extends TestCase
 {
@@ -36,20 +37,20 @@ class ReferralScratchTest extends TestCase
         $referrer = User::factory()->create();
         $referred = User::factory()->create();
 
-        app(\App\Services\Gameberry\GoldEconomyService::class)->getOrCreateWallet($referrer->id);
-        app(\App\Services\Gameberry\GoldEconomyService::class)->getOrCreateWallet($referred->id);
-        app(\App\Services\Gameberry\GemEconomyService::class)->getOrCreateWallet($referrer->id);
-        app(\App\Services\Gameberry\GemEconomyService::class)->getOrCreateWallet($referred->id);
+        app(GoldEconomyService::class)->getOrCreateWallet($referrer->id);
+        app(GoldEconomyService::class)->getOrCreateWallet($referred->id);
+        app(GemEconomyService::class)->getOrCreateWallet($referrer->id);
+        app(GemEconomyService::class)->getOrCreateWallet($referred->id);
 
         $code = $this->service->generateReferralCode($referrer->id);
 
-        $referrerGoldBefore = app(\App\Services\Gameberry\GoldEconomyService::class)->getBalance($referrer->id);
-        $referredGoldBefore = app(\App\Services\Gameberry\GoldEconomyService::class)->getBalance($referred->id);
+        $referrerGoldBefore = app(GoldEconomyService::class)->getBalance($referrer->id);
+        $referredGoldBefore = app(GoldEconomyService::class)->getBalance($referred->id);
 
         $referral = $this->service->applyReferralCode($referred->id, $code);
 
-        $referrerGoldAfter = app(\App\Services\Gameberry\GoldEconomyService::class)->getBalance($referrer->id);
-        $referredGoldAfter = app(\App\Services\Gameberry\GoldEconomyService::class)->getBalance($referred->id);
+        $referrerGoldAfter = app(GoldEconomyService::class)->getBalance($referrer->id);
+        $referredGoldAfter = app(GoldEconomyService::class)->getBalance($referred->id);
 
         // Both should get ₹25 = 2500 minor
         $this->assertEquals($referrerGoldBefore + 2500, $referrerGoldAfter);
@@ -62,10 +63,10 @@ class ReferralScratchTest extends TestCase
         $referrer = User::factory()->create();
         $referred = User::factory()->create();
 
-        app(\App\Services\Gameberry\GoldEconomyService::class)->getOrCreateWallet($referrer->id);
-        app(\App\Services\Gameberry\GoldEconomyService::class)->getOrCreateWallet($referred->id);
-        app(\App\Services\Gameberry\GemEconomyService::class)->getOrCreateWallet($referrer->id);
-        app(\App\Services\Gameberry\GemEconomyService::class)->getOrCreateWallet($referred->id);
+        app(GoldEconomyService::class)->getOrCreateWallet($referrer->id);
+        app(GoldEconomyService::class)->getOrCreateWallet($referred->id);
+        app(GemEconomyService::class)->getOrCreateWallet($referrer->id);
+        app(GemEconomyService::class)->getOrCreateWallet($referred->id);
 
         $code = $this->service->generateReferralCode($referrer->id);
         $this->service->applyReferralCode($referred->id, $code);
@@ -77,8 +78,8 @@ class ReferralScratchTest extends TestCase
     public function test_scratch_card_scratch_and_claim(): void
     {
         $user = User::factory()->create();
-        app(\App\Services\Gameberry\GoldEconomyService::class)->getOrCreateWallet($user->id);
-        app(\App\Services\Gameberry\GemEconomyService::class)->getOrCreateWallet($user->id);
+        app(GoldEconomyService::class)->getOrCreateWallet($user->id);
+        app(GemEconomyService::class)->getOrCreateWallet($user->id);
 
         $card = ScratchCard::create([
             'user_id' => $user->id,
@@ -91,15 +92,15 @@ class ReferralScratchTest extends TestCase
 
         $this->assertTrue($card->isUnscratched());
 
-        $goldBefore = app(\App\Services\Gameberry\GoldEconomyService::class)->getBalance($user->id);
+        $goldBefore = app(GoldEconomyService::class)->getBalance($user->id);
         $rewards = $card->scratch();
 
-        app(\App\Services\Gameberry\GoldEconomyService::class)->getOrCreateWallet($user->id)->addGold($rewards['gold'], 'scratch_card', 'scratch_card', (string)$card->id, 'Scratch');
-        app(\App\Services\Gameberry\GemEconomyService::class)->getOrCreateWallet($user->id)->addGems($rewards['gems'], 'scratch_card', 'scratch_card', (string)$card->id, 'Scratch');
+        app(GoldEconomyService::class)->getOrCreateWallet($user->id)->addGold($rewards['gold'], 'scratch_card', 'scratch_card', (string) $card->id, 'Scratch');
+        app(GemEconomyService::class)->getOrCreateWallet($user->id)->addGems($rewards['gems'], 'scratch_card', 'scratch_card', (string) $card->id, 'Scratch');
 
         $card->claim();
 
-        $goldAfter = app(\App\Services\Gameberry\GoldEconomyService::class)->getBalance($user->id);
+        $goldAfter = app(GoldEconomyService::class)->getBalance($user->id);
         $this->assertEquals($goldBefore + 1000, $goldAfter);
         $this->assertEquals('claimed', $card->fresh()->status);
     }

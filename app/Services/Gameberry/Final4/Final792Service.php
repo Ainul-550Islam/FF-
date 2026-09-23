@@ -1,18 +1,20 @@
 <?php
+
 namespace App\Services\Gameberry\Final4;
-use Illuminate\Support\Facades\DB;
-use App\Services\Gameberry\GoldEconomyService;
-use App\Services\Gameberry\GemEconomyService;
+
 use App\Services\Gameberry\DiceCollectionService;
+use App\Services\Gameberry\GemEconomyService;
+use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\LeagueService;
 use App\Services\Gameberry\LevelService;
-use App\Services\Gameberry\ReconciliationService;
-use App\Services\Gameberry\SocialService;
-use App\Services\Gameberry\PrivateTableService;
 use App\Services\Gameberry\MagicChestService;
-use App\Services\Gameberry\VideoAdService;
-use App\Services\Gameberry\SpinService;
+use App\Services\Gameberry\ReconciliationService;
 use App\Services\Gameberry\ReferralService;
+use App\Services\Gameberry\SocialService;
+use App\Services\Gameberry\SpinService;
+use App\Services\Gameberry\VideoAdService;
+use Illuminate\Support\Facades\DB;
+
 class Final792Service
 {
     public function getAllStats(int $userId): array
@@ -38,15 +40,18 @@ class Final792Service
             'g1_financial_totals_must_reconcile' => true,
         ];
     }
+
     public function execute(int $userId, string $mode = 'classic', int $bet = 100): array
     {
         return DB::transaction(function () use ($userId, $mode, $bet) {
             $goldService = app(GoldEconomyService::class);
-            if (!$goldService->canAffordBet($userId, $bet)) throw new \Exception('Insufficient gold - gold at stake - need enough gold for bet');
+            if (! $goldService->canAffordBet($userId, $bet)) {
+                throw new \Exception('Insufficient gold - gold at stake - need enough gold for bet');
+            }
             $betTx = $goldService->placeBet($userId, $bet, 'FINAL4_792');
-            $isWin = (bool) rand(0,1);
+            $isWin = (bool) rand(0, 1);
             if ($isWin) {
-                $goldService->winGold($userId, $bet*2, 'FINAL4_792');
+                $goldService->winGold($userId, $bet * 2, 'FINAL4_792');
                 $level = app(LevelService::class)->addWin($userId);
                 $league = app(LeagueService::class)->addTrophies($userId, 20, true);
                 $chest = app(MagicChestService::class)->rewardForWin($userId, $mode);
@@ -56,7 +61,10 @@ class Final792Service
                 $chest = null;
             }
             $reconcile = app(ReconciliationService::class)->reconcileAll($userId);
-            if (!$reconcile['all_balanced']) throw new \Exception('Reconciliation failed STOP G1 - financial totals must reconcile - difference detected - do not declare complete');
+            if (! $reconcile['all_balanced']) {
+                throw new \Exception('Reconciliation failed STOP G1 - financial totals must reconcile - difference detected - do not declare complete');
+            }
+
             return ['user_id' => $userId, 'mode' => $mode, 'bet' => $bet, 'is_win' => $isWin, 'level' => $level, 'league' => $league, 'chest' => $chest, 'reconcile' => $reconcile, 'bet_tx' => $betTx, 'feature_792' => true];
         });
     }

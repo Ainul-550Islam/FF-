@@ -9,14 +9,16 @@ use Illuminate\Support\Facades\Log;
 class Core191ApiController extends Controller
 {
     protected $service;
+
     protected int $feature;
+
     protected string $serviceNumber;
 
     public function __construct()
     {
         $this->feature = 191;
         $this->serviceNumber = '161';
-        $serviceClass = 'App\\Services\\Gameberry\\Core\\Core' . $this->serviceNumber . 'Service';
+        $serviceClass = 'App\\Services\\Gameberry\\Core\\Core'.$this->serviceNumber.'Service';
         $this->service = app($serviceClass);
     }
 
@@ -29,8 +31,8 @@ class Core191ApiController extends Controller
             'success' => true,
             'data' => $stats,
             'feature' => $this->feature,
-            'view' => 'gameberry.core.feature_' . 121,
-            'service' => 'Core' . $this->serviceNumber . 'Service',
+            'view' => 'gameberry.core.feature_'. 121,
+            'service' => 'Core'.$this->serviceNumber.'Service',
             'production_ready' => true,
             'no_shortening' => true,
             'existing_logic_preserved' => true,
@@ -94,7 +96,7 @@ class Core191ApiController extends Controller
         try {
             $result = $this->service->play($userId, $mode, $bet);
 
-            if (isset($result['reconcile']['all_balanced']) && !$result['reconcile']['all_balanced']) {
+            if (isset($result['reconcile']['all_balanced']) && ! $result['reconcile']['all_balanced']) {
                 Log::critical('G1 Financial totals must reconcile - STOP - Core191ApiController', [
                     'user_id' => $userId,
                     'result' => $result,
@@ -111,7 +113,7 @@ class Core191ApiController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $result,
-                'message' => 'Core Production 121-400 191 result: ' . ($result['is_win'] ? 'win' : 'loss') . ' - Gold at stake, magic chest, Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening',
+                'message' => 'Core Production 121-400 191 result: '.($result['is_win'] ? 'win' : 'loss').' - Gold at stake, magic chest, Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening',
                 'feature' => $this->feature,
                 'production_ready' => true,
                 'no_shortening' => true,
@@ -119,7 +121,7 @@ class Core191ApiController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Core191 play failed: ' . $e->getMessage() . ' - G1 Must Reconcile STOP',
+                'message' => 'Core191 play failed: '.$e->getMessage().' - G1 Must Reconcile STOP',
                 'feature' => $this->feature,
             ], 400);
         }

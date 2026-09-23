@@ -60,9 +60,9 @@ class DatabaseSeeder extends Seeder
             $team->tournament_id = $tournament->id;
             $team->captain_id = null;
             $team->name = $name;
-            $team->captain_name = 'Captain ' . ($i + 1);
-            $team->phone = '017' . str_pad((string) (10000000 + $i), 8, '0', STR_PAD_LEFT);
-            $team->game_uid = 'UID' . (900000000 + $i);
+            $team->captain_name = 'Captain '.($i + 1);
+            $team->phone = '017'.str_pad((string) (10000000 + $i), 8, '0', STR_PAD_LEFT);
+            $team->game_uid = 'UID'.(900000000 + $i);
             $team->status = 'confirmed';
             $team->seed = $i + 1;
             $team->save();
@@ -73,7 +73,7 @@ class DatabaseSeeder extends Seeder
         $done = new Tournament();
         $done->organizer_id = $organizer->id;
         $done->name = 'Duo Battle Royale';
-        $done->slug = 'duo-battle-royale-' . rand(1000, 9999);
+        $done->slug = 'duo-battle-royale-'.rand(1000, 9999);
         $done->game_mode = 'duo';
         $done->map = 'Purgatory';
         $done->entry_fee = 50;
@@ -91,10 +91,10 @@ class DatabaseSeeder extends Seeder
             $t = new Team();
             $t->tournament_id = $done->id;
             $t->captain_id = null;
-            $t->name = 'Duo Team ' . $i;
-            $t->captain_name = 'Cap ' . $i;
-            $t->phone = '017' . str_pad((string) (20000000 + $i), 8, '0', STR_PAD_LEFT);
-            $t->game_uid = 'UID' . (800000000 + $i);
+            $t->name = 'Duo Team '.$i;
+            $t->captain_name = 'Cap '.$i;
+            $t->phone = '017'.str_pad((string) (20000000 + $i), 8, '0', STR_PAD_LEFT);
+            $t->game_uid = 'UID'.(800000000 + $i);
             $t->status = 'confirmed';
             $t->seed = $i;
             $t->save();

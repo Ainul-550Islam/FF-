@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\LoginEvent;
 use App\Models\Notification;
+use App\Models\OtpChallenge;
+use App\Models\RiskEvent;
 use App\Models\User;
+use App\Models\UserIdentity;
 use App\Services\AuditLogService;
 use App\Services\DeviceFingerprintService;
 use App\Services\FraudRiskService;
@@ -33,8 +36,7 @@ class AuthController extends Controller
         protected PhoneOtpService $otp,
         protected IdentityService $identities,
         protected GoogleAuthService $google,
-    ) {
-    }
+    ) {}
 
     // ------------------------------------------------------------------
     // Registration / login / logout
@@ -96,7 +98,7 @@ class AuthController extends Controller
 
         $this->sendVerificationNotification($user);
 
-        return redirect()->route('home')->with('success', 'Welcome to FF Arena, ' . $user->name . '!');
+        return redirect()->route('home')->with('success', 'Welcome to FF Arena, '.$user->name.'!');
     }
 
     public function showLogin()
@@ -124,7 +126,7 @@ class AuthController extends Controller
             $this->loginEvents->record($user, LoginEvent::EVENT_LOGIN_PASSWORD, LoginEvent::STATUS_SUCCESS, $request);
 
             if ($this->loginEvents->isNewDevice($request, $user)) {
-                $this->risk->recordSignal($user, \App\Models\RiskEvent::TYPE_RISK_FLAG, \App\Models\RiskEvent::SEVERITY_INFO, 'auth', [
+                $this->risk->recordSignal($user, RiskEvent::TYPE_RISK_FLAG, RiskEvent::SEVERITY_INFO, 'auth', [
                     'context' => 'password_login_new_device',
                 ]);
 
@@ -341,7 +343,7 @@ class AuthController extends Controller
 
         try {
             $phone = $this->otp->normalize($data['phone']);
-            $this->otp->issue(null, $phone, \App\Models\OtpChallenge::PURPOSE_LOGIN);
+            $this->otp->issue(null, $phone, OtpChallenge::PURPOSE_LOGIN);
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage())->withInput();
         }
@@ -351,7 +353,7 @@ class AuthController extends Controller
         return redirect()
             ->route('phone.verify')
             ->with('phone', $phone)
-            ->with('purpose', \App\Models\OtpChallenge::PURPOSE_LOGIN)
+            ->with('purpose', OtpChallenge::PURPOSE_LOGIN)
             ->with('success', 'We sent a verification code to that number.');
     }
 
@@ -370,7 +372,7 @@ class AuthController extends Controller
             return back()->with('error', $e->getMessage())->withInput();
         }
 
-        $user = $this->identities->userFor(\App\Models\UserIdentity::PROVIDER_PHONE, $phone);
+        $user = $this->identities->userFor(UserIdentity::PROVIDER_PHONE, $phone);
 
         if ($user === null) {
             // No account owns this verified number yet — invite sign-up

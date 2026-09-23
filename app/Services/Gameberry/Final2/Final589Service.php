@@ -1,12 +1,15 @@
 <?php
+
 namespace App\Services\Gameberry\Final2;
-use Illuminate\Support\Facades\DB;
-use App\Services\Gameberry\GoldEconomyService;
-use App\Services\Gameberry\GemEconomyService;
+
 use App\Services\Gameberry\DiceCollectionService;
+use App\Services\Gameberry\GemEconomyService;
+use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\LeagueService;
 use App\Services\Gameberry\LevelService;
 use App\Services\Gameberry\ReconciliationService;
+use Illuminate\Support\Facades\DB;
+
 class Final589Service
 {
     public function getStats(int $userId): array
@@ -17,6 +20,7 @@ class Final589Service
         $leagueService = app(LeagueService::class);
         $levelService = app(LevelService::class);
         $reconcileService = app(ReconciliationService::class);
+
         return [
             'user_id' => $userId,
             'feature_589_value' => 589 * 100,
@@ -33,15 +37,18 @@ class Final589Service
             'existing_logic_preserved' => true,
         ];
     }
+
     public function process(int $userId, string $mode = 'classic', int $bet = 100): array
     {
         return DB::transaction(function () use ($userId, $mode, $bet) {
             $goldService = app(GoldEconomyService::class);
-            if (!$goldService->canAffordBet($userId, $bet)) throw new \Exception('Insufficient gold - gold at stake');
+            if (! $goldService->canAffordBet($userId, $bet)) {
+                throw new \Exception('Insufficient gold - gold at stake');
+            }
             $betTx = $goldService->placeBet($userId, $bet, 'FINAL2_589');
-            $isWin = (bool) rand(0,1);
+            $isWin = (bool) rand(0, 1);
             if ($isWin) {
-                $goldService->winGold($userId, $bet*2, 'FINAL2_589');
+                $goldService->winGold($userId, $bet * 2, 'FINAL2_589');
                 $level = app(LevelService::class)->addWin($userId);
                 $league = app(LeagueService::class)->addTrophies($userId, 20, true);
             } else {
@@ -49,7 +56,10 @@ class Final589Service
                 $league = app(LeagueService::class)->addTrophies($userId, -10, false);
             }
             $reconcile = app(ReconciliationService::class)->reconcileAll($userId);
-            if (!$reconcile['all_balanced']) throw new \Exception('Reconciliation failed STOP G1');
+            if (! $reconcile['all_balanced']) {
+                throw new \Exception('Reconciliation failed STOP G1');
+            }
+
             return ['user_id' => $userId, 'mode' => $mode, 'bet' => $bet, 'is_win' => $isWin, 'level' => $level, 'league' => $league, 'reconcile' => $reconcile, 'bet_tx' => $betTx, 'feature_589' => true];
         });
     }

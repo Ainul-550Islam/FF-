@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Payout;
 use App\Models\Payment;
+use App\Models\Payout;
 use App\Services\IdentityVerificationService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * The authenticated user's wallet: balance, ledger history, payment history
@@ -19,8 +18,7 @@ class WalletController extends Controller
     public function __construct(
         protected WalletService $wallets,
         protected IdentityVerificationService $identity,
-    ) {
-    }
+    ) {}
 
     public function index()
     {

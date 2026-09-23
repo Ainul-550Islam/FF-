@@ -4,11 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('dices')) {
+        if (! Schema::hasTable('dices')) {
             Schema::create('dices', function (Blueprint $table) {
                 $table->id();
                 $table->string('name')->unique();
@@ -30,7 +30,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('user_dices')) {
+        if (! Schema::hasTable('user_dices')) {
             Schema::create('user_dices', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -47,7 +47,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('lucky_dices')) {
+        if (! Schema::hasTable('lucky_dices')) {
             Schema::create('lucky_dices', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -62,7 +62,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('dice_exchanges')) {
+        if (! Schema::hasTable('dice_exchanges')) {
             Schema::create('dice_exchanges', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('sender_id')->constrained('users')->cascadeOnDelete();

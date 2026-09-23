@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,10 +15,15 @@ class Tournament extends Model
      * stored in the `status` column.
      */
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_OPEN = 'open';
+
     public const STATUS_CLOSED = 'closed';
+
     public const STATUS_LIVE = 'live';
+
     public const STATUS_FINISHED = 'finished';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     /**
@@ -58,6 +64,7 @@ class Tournament extends Model
      * as a selectable option.
      */
     public const FORMAT_SINGLE_ELIM = 'single_elim';
+
     public const FORMAT_DOUBLE_ELIM = 'double_elim';
 
     public const FORMATS = [
@@ -185,7 +192,7 @@ class Tournament extends Model
         }
 
         try {
-            return \App\Support\Money::toMinor($raw);
+            return Money::toMinor($raw);
         } catch (\DomainException $e) {
             return 0;
         }
@@ -269,7 +276,7 @@ class Tournament extends Model
         }
 
         try {
-            return \App\Support\Money::toMinor($raw);
+            return Money::toMinor($raw);
         } catch (\DomainException $e) {
             return 0;
         }

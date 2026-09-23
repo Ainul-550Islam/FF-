@@ -5,9 +5,16 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\TeamMemberResource;
 use App\Http\Resources\Api\V1\TeamResource;
+use App\Models\LiveEvent;
+use App\Models\Notification;
+use App\Models\RiskEvent;
 use App\Models\Team;
 use App\Models\TeamMember;
+use App\Models\Tournament;
 use App\Services\AuditLogService;
+use App\Services\FraudRiskService;
+use App\Services\LiveEventService;
+use App\Services\NotificationService;
 use App\Services\RosterService;
 use App\Support\ApiResponse;
 use DomainException;
@@ -24,8 +31,7 @@ class TeamController extends Controller
     public function __construct(
         protected RosterService $roster,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/me/teams — the caller's own teams.
@@ -158,9 +164,9 @@ class TeamController extends Controller
         $tournament = $team->tournament;
 
         if (in_array($tournament->status, [
-            \App\Models\Tournament::STATUS_LIVE,
-            \App\Models\Tournament::STATUS_FINISHED,
-            \App\Models\Tournament::STATUS_CANCELLED,
+            Tournament::STATUS_LIVE,
+            Tournament::STATUS_FINISHED,
+            Tournament::STATUS_CANCELLED,
         ], true)) {
             return ApiResponse::error('withdraw_refused', 'Teams can no longer withdraw from this tournament.', [], 409);
         }
@@ -183,10 +189,10 @@ class TeamController extends Controller
         $threshold = (int) config('antifraud.withdrawal.repeat_threshold', 3);
 
         if ($withdrawals >= $threshold) {
-            app(\App\Services\FraudRiskService::class)->recordSignal(
+            app(FraudRiskService::class)->recordSignal(
                 $request->user(),
-                \App\Models\RiskEvent::TYPE_WITHDRAWAL_REPEAT,
-                \App\Models\RiskEvent::SEVERITY_LOW,
+                RiskEvent::TYPE_WITHDRAWAL_REPEAT,
+                RiskEvent::SEVERITY_LOW,
                 'registration',
                 ['withdrawal_count' => $withdrawals],
                 $tournament
@@ -197,18 +203,18 @@ class TeamController extends Controller
         $organizer = $tournament->organizer;
 
         if ($organizer !== null) {
-            app(\App\Services\NotificationService::class)->send(
+            app(NotificationService::class)->send(
                 $organizer,
-                \App\Models\Notification::TYPE_TEAM_WITHDRAWN,
+                Notification::TYPE_TEAM_WITHDRAWN,
                 'Team withdrew',
-                'Team ' . $team->name . ' withdrew from ' . $tournament->name . '.',
-                \App\Services\NotificationService::link('tournaments.show', [$tournament]),
+                'Team '.$team->name.' withdrew from '.$tournament->name.'.',
+                NotificationService::link('tournaments.show', [$tournament]),
                 ['team_id' => $team->id, 'tournament_id' => $tournament->id],
             );
         }
 
         // Phase 12 — live event (best-effort).
-        app(\App\Services\LiveEventService::class)->recordQuietly($tournament, $request->user(), \App\Models\LiveEvent::TYPE_TEAM_WITHDRAWN, [
+        app(LiveEventService::class)->recordQuietly($tournament, $request->user(), LiveEvent::TYPE_TEAM_WITHDRAWN, [
             'team' => $team->name,
         ]);
 

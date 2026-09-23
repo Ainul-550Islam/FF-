@@ -40,7 +40,7 @@ class CommandsTest extends Phase16TestCase
 
     public function test_cleanup_otp_prunes_only_expired(): void
     {
-        $expired = new OtpChallenge;
+        $expired = new OtpChallenge();
         $expired->phone = '+8801700000001';
         $expired->purpose = 'login';
         $expired->code_hash = 'h1';
@@ -48,7 +48,7 @@ class CommandsTest extends Phase16TestCase
         $expired->created_at = now()->subDays(2);
         $expired->save();
 
-        $fresh = new OtpChallenge;
+        $fresh = new OtpChallenge();
         $fresh->phone = '+8801700000002';
         $fresh->purpose = 'login';
         $fresh->code_hash = 'h2';
@@ -63,7 +63,7 @@ class CommandsTest extends Phase16TestCase
 
     public function test_cleanup_notifications_preserves_unread(): void
     {
-        $read = new Notification;
+        $read = new Notification();
         $read->user_id = $this->makeUser()->id;
         $read->type = 'test';
         $read->title = 'read one';
@@ -72,7 +72,7 @@ class CommandsTest extends Phase16TestCase
         $read->created_at = now()->subDays(400);
         $read->save();
 
-        $unread = new Notification;
+        $unread = new Notification();
         $unread->user_id = $this->makeUser()->id;
         $unread->type = 'test';
         $unread->title = 'unread one';
@@ -91,14 +91,14 @@ class CommandsTest extends Phase16TestCase
     {
         $user = $this->makeUser();
 
-        $old = new LiveEvent;
+        $old = new LiveEvent();
         $old->type = 'team.registered';
         $old->actor_user_id = $user->id;
         $old->payload = [];
         $old->created_at = now()->subDays(100);
         $old->save();
 
-        $new = new LiveEvent;
+        $new = new LiveEvent();
         $new->type = 'team.registered';
         $new->actor_user_id = $user->id;
         $new->payload = [];

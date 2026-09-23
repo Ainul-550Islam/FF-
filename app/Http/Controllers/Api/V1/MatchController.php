@@ -9,6 +9,7 @@ use App\Models\GameMatch;
 use App\Models\Score;
 use App\Models\ScoringRule;
 use App\Models\Team;
+use App\Models\Tournament;
 use App\Services\FraudRiskService;
 use App\Services\ScoringService;
 use App\Support\ApiResponse;
@@ -28,8 +29,7 @@ class MatchController extends Controller
     public function __construct(
         protected ScoringService $scoring,
         protected FraudRiskService $risk,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/matches/{match}
@@ -57,7 +57,7 @@ class MatchController extends Controller
         $data = $request->validate([
             'team_id' => 'required|integer|exists:teams,id',
             'kills' => 'required|integer|min:0',
-            'placement' => 'required|integer|min:1|max:' . ScoringRule::MAX_PLACEMENT,
+            'placement' => 'required|integer|min:1|max:'.ScoringRule::MAX_PLACEMENT,
             // Authoritative totals and match state can never be supplied by a
             // client — they are computed server-side by the scoring engine.
             'points' => 'prohibited',
@@ -120,6 +120,6 @@ class MatchController extends Controller
         $tournament = $match->tournament()->first();
 
         return $tournament !== null
-            && in_array($tournament->status, \App\Models\Tournament::PUBLIC_STATUSES, true);
+            && in_array($tournament->status, Tournament::PUBLIC_STATUSES, true);
     }
 }

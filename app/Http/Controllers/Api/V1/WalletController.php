@@ -21,8 +21,7 @@ class WalletController extends Controller
 {
     public function __construct(
         protected WalletService $wallets,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/me/wallet

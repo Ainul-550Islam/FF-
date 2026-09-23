@@ -27,8 +27,7 @@ class DeviceFingerprintService
     public function __construct(
         protected FraudRiskService $risk,
         protected AccountLinkService $links,
-    ) {
-    }
+    ) {}
 
     /**
      * Derive the pseudonymous device hash from the request (server-side only).
@@ -38,7 +37,7 @@ class DeviceFingerprintService
         $ua = trim((string) $request->userAgent());
         $language = trim((string) $request->header('Accept-Language', ''));
 
-        return hash_hmac('sha256', ($ua ?: 'unknown') . '|' . $language, (string) config('app.key'));
+        return hash_hmac('sha256', ($ua ?: 'unknown').'|'.$language, (string) config('app.key'));
     }
 
     /**
@@ -179,6 +178,6 @@ class DeviceFingerprintService
             $browser = 'Safari';
         }
 
-        return mb_substr($browser . ' on ' . $os, 0, 120);
+        return mb_substr($browser.' on '.$os, 0, 120);
     }
 }

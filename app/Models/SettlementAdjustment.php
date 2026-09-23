@@ -21,6 +21,7 @@ class SettlementAdjustment extends Model
     use HasFactory;
 
     public const TYPE_CORRECTION = 'correction';
+
     public const TYPE_REVERSAL = 'reversal';
 
     public const TYPES = [

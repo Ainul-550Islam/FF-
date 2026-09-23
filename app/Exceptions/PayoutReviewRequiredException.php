@@ -10,6 +10,4 @@ use DomainException;
  * Distinct from a generic DomainException so the distribution processing
  * loop can HOLD (leave the payout pending review) instead of failing it.
  */
-class PayoutReviewRequiredException extends DomainException
-{
-}
+class PayoutReviewRequiredException extends DomainException {}

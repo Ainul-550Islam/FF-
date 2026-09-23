@@ -1,11 +1,13 @@
 <?php
+
 namespace Tests\Feature\R10;
 
-use Tests\TestCase;
-use App\Models\Wallet;
 use App\Models\LedgerEntry;
-use Illuminate\Support\Str;
+use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Tests\TestCase;
 
 class FinancialIntegrityR10Test extends TestCase
 {
@@ -13,9 +15,9 @@ class FinancialIntegrityR10Test extends TestCase
 
     public function test_ledger_sum_equals_wallet_balance(): void
     {
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $wallet = Wallet::create(['user_id' => $user->id, 'currency' => 'BDT', 'balance_minor' => 0]);
-        
+
         $credit = $this->createRow(LedgerEntry::class, [
             'wallet_id' => $wallet->id,
             'user_id' => $user->id,
@@ -23,16 +25,16 @@ class FinancialIntegrityR10Test extends TestCase
             'amount_minor' => 1000,
             'balance_after_minor' => 1000,
             'reference_type' => 'payment',
-            'reference_id' => 'test-' . Str::uuid(),
+            'reference_id' => 'test-'.Str::uuid(),
             'idempotency_key' => (string) Str::uuid(),
         ]);
-        
+
         $wallet->update(['balance_minor' => 1000]);
-        
-        $ledgerSum = LedgerEntry::where('wallet_id', $wallet->id)->get()->reduce(function($carry, $entry) {
+
+        $ledgerSum = LedgerEntry::where('wallet_id', $wallet->id)->get()->reduce(function ($carry, $entry) {
             return $carry + ($entry->direction === 'credit' ? $entry->amount_minor : -$entry->amount_minor);
         }, 0);
-        
+
         $this->assertEquals($wallet->balance_minor, $ledgerSum, 'ledger sum == wallet balance');
     }
 

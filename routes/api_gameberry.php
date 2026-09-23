@@ -1,17 +1,17 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\Gameberry\DiceApiController;
-use App\Http\Controllers\Api\V1\Gameberry\LeagueApiController;
-use App\Http\Controllers\Api\V1\Gameberry\PrivateTableApiController;
-use App\Http\Controllers\Api\V1\Gameberry\EconomyApiController;
-use App\Http\Controllers\Api\V1\Gameberry\SocialApiController;
-use App\Http\Controllers\Api\V1\Gameberry\ReferralApiController;
-use App\Http\Controllers\Api\V1\Gameberry\SpinApiController;
 use App\Http\Controllers\Api\V1\Gameberry\ChatApiController;
-use App\Http\Controllers\Api\V1\Gameberry\WeeklyEventApiController;
-use App\Http\Controllers\Api\V1\Gameberry\VideoAdApiController;
+use App\Http\Controllers\Api\V1\Gameberry\DiceApiController;
+use App\Http\Controllers\Api\V1\Gameberry\EconomyApiController;
+use App\Http\Controllers\Api\V1\Gameberry\LeagueApiController;
 use App\Http\Controllers\Api\V1\Gameberry\MagicChestApiController;
+use App\Http\Controllers\Api\V1\Gameberry\PrivateTableApiController;
+use App\Http\Controllers\Api\V1\Gameberry\ReferralApiController;
+use App\Http\Controllers\Api\V1\Gameberry\SocialApiController;
+use App\Http\Controllers\Api\V1\Gameberry\SpinApiController;
+use App\Http\Controllers\Api\V1\Gameberry\VideoAdApiController;
+use App\Http\Controllers\Api\V1\Gameberry\WeeklyEventApiController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -203,9 +203,9 @@ Route::middleware(['auth:sanctum'])->prefix('v1/gameberry/core')->name('api.v1.g
 Route::middleware(['auth:sanctum'])->prefix('v1/gameberry/stats')->name('api.v1.gameberry.stats.')->group(function () {
     for ($i = 21; $i <= 30; $i++) {
         $controller = "App\\Http\\Controllers\\Api\\V1\\Gameberry\\Stats\\Stat{$i}ApiController";
-        Route::get("/stat-{$i}", [$controller, 'index'])->name('stat_' . $i);
-        Route::get("/stat-{$i}/{userId}", [$controller, 'show'])->name('stat_' . $i . '.show');
-        Route::get("/stat-{$i}/all", [$controller, 'stats'])->name('stat_' . $i . '.all');
+        Route::get("/stat-{$i}", [$controller, 'index'])->name('stat_'.$i);
+        Route::get("/stat-{$i}/{userId}", [$controller, 'show'])->name('stat_'.$i.'.show');
+        Route::get("/stat-{$i}/all", [$controller, 'stats'])->name('stat_'.$i.'.all');
     }
 });
 

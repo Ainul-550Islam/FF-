@@ -6,6 +6,7 @@ use App\Models\LiveEvent;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Services\LiveEventService;
+use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -32,7 +33,7 @@ class LiveEventServiceTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'Live Tournament';
-        $t->slug = 'live-' . Str::random(8);
+        $t->slug = 'live-'.Str::random(8);
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = 0;
@@ -191,7 +192,7 @@ class LiveEventServiceTest extends TestCase
                 'tournament_id' => 1,
             ]);
             $this->fail('LiveEvent accepted mass assignment.');
-        } catch (\Illuminate\Database\Eloquent\MassAssignmentException $e) {
+        } catch (MassAssignmentException $e) {
             $this->addToAssertionCount(1);
         }
     }

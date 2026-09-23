@@ -16,7 +16,9 @@ use Illuminate\Http\Request;
 class CoreFeatureViewController extends Controller
 {
     protected string $viewPrefix = 'gameberry.core.feature_';
+
     protected int $low = 121;
+
     protected int $high = 400;
 
     public static function coveredServices(): array
@@ -30,14 +32,14 @@ class CoreFeatureViewController extends Controller
             abort(404, 'Feature 121-400 only - no file omitted');
         }
 
-        return view($this->viewPrefix . $feature, ['feature' => $feature]);
+        return view($this->viewPrefix.$feature, ['feature' => $feature]);
     }
 
     public function coverage(Request $request)
     {
         $services = [];
         foreach (self::coveredServices() as $number) {
-            $class = 'App\\Services\\Gameberry\\Core\\Core' . $number . 'Service';
+            $class = 'App\\Services\\Gameberry\\Core\\Core'.$number.'Service';
             $services[$number] = class_exists($class);
         }
 
@@ -46,7 +48,7 @@ class CoreFeatureViewController extends Controller
             'part' => 'Core (Parts 1-4) Production 121-400',
             'views' => [$this->low, $this->high],
             'services' => $services,
-            'all_services_present' => !in_array(false, $services, true),
+            'all_services_present' => ! in_array(false, $services, true),
             'no_shortening' => true,
             'existing_logic_preserved' => true,
         ]);

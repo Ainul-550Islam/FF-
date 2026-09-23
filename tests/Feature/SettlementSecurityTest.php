@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\FinancialSettlement;
 use App\Models\GameMatch;
+use App\Models\LedgerEntry;
 use App\Models\Payout;
 use App\Models\PrizeDistribution;
 use App\Models\PrizeSnapshotItem;
@@ -13,9 +14,8 @@ use App\Models\SettlementAdjustment;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
-use App\Services\PrizeDistributionService;
 use App\Services\PayoutService;
-use App\Services\ReconciliationService;
+use App\Services\PrizeDistributionService;
 use App\Services\WalletService;
 use DomainException;
 use Illuminate\Database\Eloquent\MassAssignmentException;
@@ -45,7 +45,7 @@ class SettlementSecurityTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = $o['name'] ?? 'Security Tournament';
-        $t->slug = $o['slug'] ?? ('sec-' . Str::random(8));
+        $t->slug = $o['slug'] ?? ('sec-'.Str::random(8));
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = $o['entry_fee'] ?? 100;
@@ -65,10 +65,10 @@ class SettlementSecurityTest extends TestCase
         $team = new Team();
         $team->tournament_id = $tournament->id;
         $team->captain_id = $captain?->id;
-        $team->name = 'Team ' . Str::random(6);
+        $team->name = 'Team '.Str::random(6);
         $team->captain_name = $captain?->name ?? 'Captain';
         $team->phone = '01700000000';
-        $team->game_uid = 'UID' . strtoupper(Str::random(8));
+        $team->game_uid = 'UID'.strtoupper(Str::random(8));
         $team->status = 'confirmed';
         $team->save();
 
@@ -365,7 +365,7 @@ class SettlementSecurityTest extends TestCase
         $this->assertFalse($dist->canTransitionTo(PrizeDistribution::STATUS_COMPLETED));
         $this->assertFalse($dist->canTransitionTo(PrizeDistribution::STATUS_PROCESSING));
 
-        $this->expectException(\DomainException::class);
+        $this->expectException(DomainException::class);
         $this->distributions()->process($t, $admin);
     }
 
@@ -407,7 +407,7 @@ class SettlementSecurityTest extends TestCase
         $t = $this->makeTournament($org, 'finished', ['prize_pool' => 100]);
 
         // A tier larger than the pool is rejected server-side.
-        $this->expectException(\DomainException::class);
+        $this->expectException(DomainException::class);
 
         $this->distributions()->saveTiers($t, [
             ['position' => 1, 'type' => 'fixed', 'value' => '999999'],
@@ -430,6 +430,6 @@ class SettlementSecurityTest extends TestCase
         $wallet = $this->wallets()->walletFor($captain);
         $this->assertSame(500000, $wallet->balanceMinor());
         $this->assertSame(0, $this->wallets()->reconciliationDelta($wallet));
-        $this->assertSame(1, $wallet->ledgerEntries()->where('type', \App\Models\LedgerEntry::TYPE_PAYOUT)->count());
+        $this->assertSame(1, $wallet->ledgerEntries()->where('type', LedgerEntry::TYPE_PAYOUT)->count());
     }
 }

@@ -53,7 +53,7 @@ class ApiProfilePrivacyTest extends ApiTestCase
         $target = $this->user(['privacy' => 'private', 'bio' => 'Secret bio', 'email' => 'private@example.com']);
         $viewer = $this->user();
 
-        $res = $this->asUser($viewer, ['profile:read'])->getJson('/api/v1/players/' . $target->id);
+        $res = $this->asUser($viewer, ['profile:read'])->getJson('/api/v1/players/'.$target->id);
 
         $res->assertStatus(200)
             ->assertJsonPath('data.visible', false)
@@ -68,7 +68,7 @@ class ApiProfilePrivacyTest extends ApiTestCase
         $target = $this->user(['privacy' => 'public', 'bio' => 'Public bio', 'email' => 'pub@example.com', 'phone' => '+8801712345678']);
         $viewer = $this->user();
 
-        $res = $this->asUser($viewer, ['profile:read'])->getJson('/api/v1/players/' . $target->id);
+        $res = $this->asUser($viewer, ['profile:read'])->getJson('/api/v1/players/'.$target->id);
 
         $res->assertStatus(200)->assertJsonPath('data.visible', true);
 

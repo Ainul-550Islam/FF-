@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\LedgerEntry;
+use App\Models\MarketingAutomation;
 use App\Models\Notification;
 use App\Models\Payment;
 use App\Models\PaymentEvent;
@@ -27,8 +29,7 @@ class PaymentService
         protected PaymentGatewayManager $gateways,
         protected WalletService $wallets,
         protected NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     /**
      * Create a payment intent for a team's entry fee.
@@ -170,11 +171,14 @@ class PaymentService
                     $payer,
                     Notification::TYPE_PAYMENT_FAILED,
                     'Payment failed',
-                    'Your entry fee payment for ' . ($payment->tournament?->name ?? 'a tournament') . ' was marked failed.',
+                    'Your entry fee payment for '.($payment->tournament?->name ?? 'a tournament').' was marked failed.',
                     NotificationService::link('teams.show', [$payment->tournament, $payment->team]),
                     ['payment_id' => $payment->id],
                 );
             }
+
+            // Phase 20/21 — marketing funnel measurement (quiet by contract).
+            $this->recordMarketingConversion('payment_failed', $payment);
 
             return $payment;
         });
@@ -246,7 +250,7 @@ class PaymentService
                 $this->wallets->credit(
                     $wallet,
                     $minor,
-                    \App\Models\LedgerEntry::TYPE_REFUND,
+                    LedgerEntry::TYPE_REFUND,
                     'Refund for tournament entry fee',
                     $admin,
                     'refund',
@@ -258,7 +262,7 @@ class PaymentService
                     $payer,
                     Notification::TYPE_PAYMENT_REFUNDED,
                     'Entry fee refunded',
-                    'Your entry fee for ' . ($payment->tournament?->name ?? 'a tournament') . ' was refunded.',
+                    'Your entry fee for '.($payment->tournament?->name ?? 'a tournament').' was refunded.',
                     NotificationService::link('wallet.index'),
                     ['payment_id' => $payment->id, 'refund_id' => $refund->id],
                 );
@@ -329,6 +333,8 @@ class PaymentService
             } else {
                 $payment->status = Payment::STATUS_FAILED;
                 $payment->save();
+
+                $this->recordMarketingConversion('payment_failed', $payment);
             }
 
             $this->recordEvent($payment, null, PaymentEvent::EVENT_CALLBACK, $amountMinor, ['status' => $status, 'reference' => $reference]);
@@ -446,11 +452,13 @@ class PaymentService
                     $payer,
                     Notification::TYPE_PAYMENT_FAILED,
                     'Payment failed',
-                    'Your entry fee payment for ' . ($payment->tournament?->name ?? 'a tournament') . ' was declined by the provider.',
+                    'Your entry fee payment for '.($payment->tournament?->name ?? 'a tournament').' was declined by the provider.',
                     NotificationService::link('teams.show', [$payment->tournament, $payment->team]),
                     ['payment_id' => $payment->id],
                 );
             }
+
+            $this->recordMarketingConversion('payment_failed', $payment);
 
             return $payment;
         });
@@ -502,11 +510,15 @@ class PaymentService
                 $payer,
                 Notification::TYPE_PAYMENT_VERIFIED,
                 'Payment verified',
-                'Your entry fee payment for ' . ($payment->tournament?->name ?? 'a tournament') . ' was verified.',
+                'Your entry fee payment for '.($payment->tournament?->name ?? 'a tournament').' was verified.',
                 NotificationService::link('teams.show', [$payment->tournament, $payment->team]),
                 ['payment_id' => $payment->id],
             );
         }
+
+        // Phase 20/21 — mirror the revenue moment into the marketing funnel
+        // (quiet by contract, never part of the payment transaction).
+        $this->recordMarketingConversion('payment_success', $payment);
     }
 
     protected function recordEvent(Payment $payment, ?User $actor, string $event, int $amountMinor, array $metadata = []): void
@@ -520,5 +532,39 @@ class PaymentService
         $record->reference = $payment->provider_reference;
         $record->metadata = $metadata;
         $record->save();
+    }
+
+    /**
+     * Phase 20/21 — mirror the payment outcome into marketing_events so
+     * attribution rows connect ad clicks to revenue moments, and let the
+     * lifecycle automation engine react to failures (recovery nudges).
+     *
+     * Quiet by contract: a measurement failure must never fail (or roll
+     * back) a payment, hence rescue() with reporting disabled and the
+     * tracking service's own quiet-fail record().
+     */
+    protected function recordMarketingConversion(string $event, Payment $payment): void
+    {
+        rescue(function () use ($event, $payment): void {
+            $payer = $payment->payer ?? $payment->team?->captain;
+
+            app(MarketingTrackingService::class)->recordConversion($event, $payer, [
+                'payment_id' => $payment->id,
+                'tournament_id' => $payment->tournament_id,
+                'amount_minor' => $payment->amountMinor(),
+                'currency' => 'BDT',
+            ]);
+
+            // Phase 21 — lifecycle automation: a failed payment can fire a
+            // recovery sequence (cooldown-ledgered). Never touches the
+            // payment state machine — this whole closure is rescue-wrapped.
+            if ($event === 'payment_failed') {
+                app(MarketingAutomationService::class)->evaluate(
+                    MarketingAutomation::TRIGGER_PAYMENT_FAILED,
+                    $payer instanceof User ? $payer : null,
+                    ['payment_id' => $payment->id]
+                );
+            }
+        }, report: false);
     }
 }

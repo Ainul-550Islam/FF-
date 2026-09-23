@@ -30,8 +30,7 @@ class SendWebhookDelivery implements ShouldQueue
         protected string $event,
         protected array $payload,
         protected string $deliveryId,
-    ) {
-    }
+    ) {}
 
     public function handle(WebhookSignatureService $signatures): void
     {
@@ -67,7 +66,7 @@ class SendWebhookDelivery implements ShouldQueue
                 return;
             }
 
-            $this->fail($delivery, $response->status(), 'HTTP ' . $response->status());
+            $this->fail($delivery, $response->status(), 'HTTP '.$response->status());
         } catch (\Throwable $e) {
             $this->fail($delivery, null, mb_substr($e->getMessage(), 0, 255));
         }

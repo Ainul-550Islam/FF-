@@ -24,8 +24,7 @@ class LiveController extends Controller
     public function __construct(
         protected LiveEventService $live,
         protected NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     /**
      * JSON polling endpoint. `since` is the client cursor (last seen global
@@ -95,9 +94,9 @@ class LiveController extends Controller
                 $events = $this->live->since($cursor, $tournament, $viewer, 50);
 
                 foreach ($events as $event) {
-                    echo 'id: ' . $event->id . "\n";
+                    echo 'id: '.$event->id."\n";
                     echo "event: live\n";
-                    echo 'data: ' . json_encode($this->serialize($event)) . "\n\n";
+                    echo 'data: '.json_encode($this->serialize($event))."\n\n";
                     flush();
 
                     $cursor = max($cursor, $event->id);

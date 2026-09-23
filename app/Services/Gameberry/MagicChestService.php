@@ -2,7 +2,10 @@
 
 namespace App\Services\Gameberry;
 
+use App\Models\Dice;
 use App\Models\MagicChest;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class MagicChestService
@@ -19,25 +22,31 @@ class MagicChestService
     public function canGetChest(int $userId): bool
     {
         $lastChest = MagicChest::where('user_id', $userId)->orderByDesc('created_at')->first();
-        if (!$lastChest) return true;
+        if (! $lastChest) {
+            return true;
+        }
+
         return $lastChest->created_at->diffInHours(now()) >= self::COOLDOWN_HOURS;
     }
 
-    public function getNextChestTime(int $userId): ?\Carbon\Carbon
+    public function getNextChestTime(int $userId): ?Carbon
     {
         $lastChest = MagicChest::where('user_id', $userId)->orderByDesc('created_at')->first();
-        if (!$lastChest) return null;
+        if (! $lastChest) {
+            return null;
+        }
         $next = $lastChest->created_at->addHours(self::COOLDOWN_HOURS);
+
         return $next->isFuture() ? $next : null;
     }
 
     public function createChest(int $userId, string $type = 'bronze'): MagicChest
     {
-        if (!isset(self::CHEST_TYPES[$type])) {
+        if (! isset(self::CHEST_TYPES[$type])) {
             throw new \Exception('Invalid chest type');
         }
 
-        if (!$this->canGetChest($userId) && $type !== 'reward') {
+        if (! $this->canGetChest($userId) && $type !== 'reward') {
             throw new \Exception('Chest cooldown active');
         }
 
@@ -48,7 +57,7 @@ class MagicChestService
         // Chance for dice reward
         $diceRewards = [];
         if (rand(1, 100) <= 30) { // 30% chance for dice
-            $randomDice = \App\Models\Dice::inRandomOrder()->first();
+            $randomDice = Dice::inRandomOrder()->first();
             if ($randomDice) {
                 $diceRewards[] = $randomDice->id;
             }
@@ -71,7 +80,7 @@ class MagicChestService
         return DB::transaction(function () use ($userId, $chestId) {
             $chest = MagicChest::where('id', $chestId)->where('user_id', $userId)->firstOrFail();
 
-            if (!$chest->isAvailable()) {
+            if (! $chest->isAvailable()) {
                 throw new \Exception('Chest not available');
             }
 
@@ -79,10 +88,10 @@ class MagicChestService
 
             // Give rewards
             if ($rewards['gold'] > 0) {
-                app(GoldEconomyService::class)->getOrCreateWallet($userId)->addGold($rewards['gold'], 'magic_chest', 'magic_chest', (string)$chest->id, "Magic chest {$chest->type} gold");
+                app(GoldEconomyService::class)->getOrCreateWallet($userId)->addGold($rewards['gold'], 'magic_chest', 'magic_chest', (string) $chest->id, "Magic chest {$chest->type} gold");
             }
             if ($rewards['gems'] > 0) {
-                app(GemEconomyService::class)->getOrCreateWallet($userId)->addGems($rewards['gems'], 'magic_chest', 'magic_chest', (string)$chest->id, "Magic chest {$chest->type} gems");
+                app(GemEconomyService::class)->getOrCreateWallet($userId)->addGems($rewards['gems'], 'magic_chest', 'magic_chest', (string) $chest->id, "Magic chest {$chest->type} gems");
             }
             foreach ($rewards['dices'] as $diceId) {
                 app(DiceCollectionService::class)->addDiceToUser($userId, $diceId, 1);
@@ -92,12 +101,12 @@ class MagicChestService
         });
     }
 
-    public function getUserChests(int $userId): \Illuminate\Database\Eloquent\Collection
+    public function getUserChests(int $userId): Collection
     {
         return MagicChest::where('user_id', $userId)->orderByDesc('created_at')->get();
     }
 
-    public function getAvailableChests(int $userId): \Illuminate\Database\Eloquent\Collection
+    public function getAvailableChests(int $userId): Collection
     {
         return MagicChest::where('user_id', $userId)->available()->get();
     }
@@ -125,6 +134,7 @@ class MagicChestService
                     break;
                 }
             }
+
             return $this->createChest($userId, $selected);
         }
 

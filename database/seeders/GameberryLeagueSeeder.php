@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\League;
+use Illuminate\Database\Seeder;
 
 class GameberryLeagueSeeder extends Seeder
 {

@@ -2,8 +2,6 @@
 
 namespace Tests\Feature\Api;
 
-use App\Models\User;
-
 /**
  * Phase 15 — token scope enforcement and admin-scope denial.
  */
@@ -107,7 +105,7 @@ class ApiTokenScopesTest extends ApiTestCase
 
         // Revoke the client.
         $this->authForget();
-        $this->withToken($token)->deleteJson('/api/v1/me/clients/' . $clientId)->assertStatus(204);
+        $this->withToken($token)->deleteJson('/api/v1/me/clients/'.$clientId)->assertStatus(204);
 
         // The linked token stops authenticating.
         $this->authForget();

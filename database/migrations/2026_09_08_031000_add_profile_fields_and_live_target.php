@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  * signals (session revoked, payment status, verification status) can be
  * delivered to exactly one user.
  */
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {

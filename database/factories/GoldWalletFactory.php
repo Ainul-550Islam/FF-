@@ -1,14 +1,19 @@
 <?php
+
 namespace Database\Factories;
+
 use App\Models\GoldWallet;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+
 class GoldWalletFactory extends Factory
 {
     protected $model = GoldWallet::class;
+
     public function definition(): array
     {
         $balance = $this->faker->numberBetween(0, 100000);
+
         return [
             'user_id' => User::factory(),
             'gold_balance' => $balance,

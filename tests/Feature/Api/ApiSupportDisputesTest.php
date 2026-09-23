@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\GameMatch;
 use App\Models\SupportTicket;
+use App\Services\DisputeService;
 
 /**
  * Phase 15 — support (own-only + IDOR) and disputes (authorized read-only).
@@ -49,11 +51,11 @@ class ApiSupportDisputesTest extends ApiTestCase
         $ticket->status = 'open';
         $ticket->save();
 
-        $this->asUser($user, ['support:read'])->getJson('/api/v1/me/support/' . $ticket->id)
+        $this->asUser($user, ['support:read'])->getJson('/api/v1/me/support/'.$ticket->id)
             ->assertStatus(403);
 
         $this->asUser($user, ['support:write'])
-            ->postJson('/api/v1/me/support/' . $ticket->id . '/messages', ['body' => 'snooping'])
+            ->postJson('/api/v1/me/support/'.$ticket->id.'/messages', ['body' => 'snooping'])
             ->assertStatus(403);
     }
 
@@ -70,11 +72,11 @@ class ApiSupportDisputesTest extends ApiTestCase
         $ticketId = $created->json('data.id');
 
         $replied = $this->asUser($user, ['support:write'])
-            ->postJson('/api/v1/me/support/' . $ticketId . '/messages', ['body' => 'Second message']);
+            ->postJson('/api/v1/me/support/'.$ticketId.'/messages', ['body' => 'Second message']);
         $replied->assertStatus(201);
 
         $messages = $this->asUser($user, ['support:read'])
-            ->getJson('/api/v1/me/support/' . $ticketId . '/messages');
+            ->getJson('/api/v1/me/support/'.$ticketId.'/messages');
         $messages->assertStatus(200);
         $this->assertSame(2, count($messages->json('data.messages')));
     }
@@ -92,7 +94,7 @@ class ApiSupportDisputesTest extends ApiTestCase
         $teamA = $this->makeTeam($tournament, $other, 'confirmed', 'UIDDSP001');
         $teamB = $this->makeTeam($tournament, $captainB, 'confirmed', 'UIDDSP002');
 
-        $match = new \App\Models\GameMatch();
+        $match = new GameMatch();
         $match->tournament_id = $tournament->id;
         $match->team1_id = $teamA->id;
         $match->team2_id = $teamB->id;
@@ -102,7 +104,7 @@ class ApiSupportDisputesTest extends ApiTestCase
         $match->status = 'completed';
         $match->save();
 
-        $dispute = app(\App\Services\DisputeService::class)->open($match, $teamA, $other, 'wrong_score', 'I disagree with the result');
+        $dispute = app(DisputeService::class)->open($match, $teamA, $other, 'wrong_score', 'I disagree with the result');
 
         // The other user is the opener, so it appears in their list.
         $theirs = $this->asUser($other, ['disputes:read'])->getJson('/api/v1/me/disputes');
@@ -113,7 +115,7 @@ class ApiSupportDisputesTest extends ApiTestCase
         $mine = $this->asUser($stranger, ['disputes:read'])->getJson('/api/v1/me/disputes');
         $this->assertSame([], $mine->json('data'));
 
-        $this->asUser($stranger, ['disputes:read'])->getJson('/api/v1/disputes/' . $dispute->id)
+        $this->asUser($stranger, ['disputes:read'])->getJson('/api/v1/disputes/'.$dispute->id)
             ->assertStatus(403);
     }
 
@@ -125,7 +127,7 @@ class ApiSupportDisputesTest extends ApiTestCase
         $teamA = $this->makeTeam($tournament, $player, 'confirmed', 'UIDEV0011');
         $teamB = $this->makeTeam($tournament, null, 'confirmed', 'UIDEV0022');
 
-        $match = new \App\Models\GameMatch();
+        $match = new GameMatch();
         $match->tournament_id = $tournament->id;
         $match->team1_id = $teamA->id;
         $match->team2_id = $teamB->id;
@@ -135,9 +137,9 @@ class ApiSupportDisputesTest extends ApiTestCase
         $match->status = 'completed';
         $match->save();
 
-        $dispute = app(\App\Services\DisputeService::class)->open($match, $teamA, $player, 'wrong_score', 'Evidence check');
+        $dispute = app(DisputeService::class)->open($match, $teamA, $player, 'wrong_score', 'Evidence check');
 
-        $res = $this->asUser($player, ['disputes:read'])->getJson('/api/v1/disputes/' . $dispute->id);
+        $res = $this->asUser($player, ['disputes:read'])->getJson('/api/v1/disputes/'.$dispute->id);
         $res->assertStatus(200);
 
         $body = json_encode($res->json('data'));

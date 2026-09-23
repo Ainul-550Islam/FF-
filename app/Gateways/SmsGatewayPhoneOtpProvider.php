@@ -40,7 +40,7 @@ class SmsGatewayPhoneOtpProvider implements PhoneOtpProviderInterface
             ->post((string) env('SMS_GATEWAY_ENDPOINT'), [
                 'to' => $phone,
                 'from' => (string) env('SMS_GATEWAY_SENDER'),
-                'text' => 'Your FF Arena verification code is ' . $code . '. It expires in 5 minutes.',
+                'text' => 'Your FF Arena verification code is '.$code.'. It expires in 5 minutes.',
             ]);
 
         if ($response->failed()) {

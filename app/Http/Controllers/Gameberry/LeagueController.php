@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Gameberry;
 
 use App\Http\Controllers\Controller;
-use App\Services\Gameberry\LeagueService;
 use App\Models\League;
+use App\Models\LeagueHistory;
+use App\Models\Level;
+use App\Models\TitanBadge;
+use App\Services\Gameberry\LeagueService;
 use Illuminate\Http\Request;
 
 class LeagueController extends Controller
@@ -25,7 +28,7 @@ class LeagueController extends Controller
         $currentSeason = $this->leagueService->currentSeason();
 
         // Check level access
-        $userLevel = \App\Models\Level::where('user_id', $userId)->first();
+        $userLevel = Level::where('user_id', $userId)->first();
         $levelNumber = $userLevel?->level ?? 1;
 
         return view('gameberry.league.index', compact('userLeague', 'leagues', 'progression', 'currentSeason', 'levelNumber'));
@@ -35,10 +38,10 @@ class LeagueController extends Controller
     {
         $league = League::where('slug', $slug)->firstOrFail();
         $userId = $request->user()->id;
-        $userLevel = \App\Models\Level::where('user_id', $userId)->first();
+        $userLevel = Level::where('user_id', $userId)->first();
         $levelNumber = $userLevel?->level ?? 1;
 
-        if (!$this->leagueService->canAccessLeague($levelNumber, $slug)) {
+        if (! $this->leagueService->canAccessLeague($levelNumber, $slug)) {
             return redirect()->route('gameberry.league.index')->with('error', "Need Level {$this->getRequiredLevel($slug)} to access {$league->name} - currently Level {$levelNumber}. Bronze unlocks at Level 4");
         }
 
@@ -51,7 +54,7 @@ class LeagueController extends Controller
     public function leaderboard(Request $request, string $slug)
     {
         $season = $request->get('season');
-        $leaderboard = $this->leagueService->getLeaderboard($slug, $season ? (int)$season : null, 100);
+        $leaderboard = $this->leagueService->getLeaderboard($slug, $season ? (int) $season : null, 100);
         $league = League::where('slug', $slug)->firstOrFail();
 
         return view('gameberry.league.leaderboard', compact('leaderboard', 'league'));
@@ -60,12 +63,12 @@ class LeagueController extends Controller
     public function history(Request $request)
     {
         $userId = $request->user()->id;
-        $history = \App\Models\LeagueHistory::with(['league', 'promotionLeague', 'demotionLeague'])
+        $history = LeagueHistory::with(['league', 'promotionLeague', 'demotionLeague'])
             ->where('user_id', $userId)
             ->orderByDesc('season')
             ->get();
 
-        $titanBadges = \App\Models\TitanBadge::with('league')->where('user_id', $userId)->orderByDesc('created_at')->get();
+        $titanBadges = TitanBadge::with('league')->where('user_id', $userId)->orderByDesc('created_at')->get();
 
         return view('gameberry.league.history', compact('history', 'titanBadges'));
     }
@@ -73,7 +76,8 @@ class LeagueController extends Controller
     public function badges(Request $request)
     {
         $userId = $request->user()->id;
-        $badges = \App\Models\TitanBadge::with('league')->where('user_id', $userId)->orderByDesc('year')->orderByDesc('week')->get();
+        $badges = TitanBadge::with('league')->where('user_id', $userId)->orderByDesc('year')->orderByDesc('week')->get();
+
         return view('gameberry.league.badges', compact('badges'));
     }
 

@@ -51,7 +51,7 @@ class FriendNotification extends Model
         }
 
         $userStatus = UserOnlineStatus::where('user_id', $userId)->first();
-        if ($userStatus && !$userStatus->notify_friends_online) {
+        if ($userStatus && ! $userStatus->notify_friends_online) {
             return; // User disabled notifications
         }
 

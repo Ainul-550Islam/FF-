@@ -19,8 +19,7 @@ class ScoringRuleController extends Controller
 {
     public function __construct(
         protected ScoringService $scoring,
-    ) {
-    }
+    ) {}
 
     public function show(Tournament $tournament)
     {

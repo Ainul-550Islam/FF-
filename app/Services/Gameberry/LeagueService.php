@@ -3,17 +3,21 @@
 namespace App\Services\Gameberry;
 
 use App\Models\League;
-use App\Models\UserLeague;
-use App\Models\TitanBadge;
 use App\Models\LeagueHistory;
+use App\Models\TitanBadge;
+use App\Models\UserLeague;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class LeagueService
 {
     const TOP_PERCENT_PROMOTION = 20; // Gameberry top 20% promoted
+
     const TOP_40_PROMOTION = 40; // Top 40 promotion text from FAQ
+
     const BOTTOM_PERCENT_DEMOTION = 40; // Bottom 40% demoted
+
     const MIN_GAMES_FOR_PROMOTION = 5;
 
     public function getUserLeague(int $userId): ?UserLeague
@@ -27,7 +31,7 @@ class LeagueService
         }
     }
 
-    public function getLeaderboard(string $leagueSlug, int $season = null, int $limit = 100): \Illuminate\Database\Eloquent\Collection
+    public function getLeaderboard(string $leagueSlug, ?int $season = null, int $limit = 100): Collection
     {
         $season = $season ?? $this->currentSeason();
         $league = League::where('slug', $leagueSlug)->firstOrFail();
@@ -42,7 +46,8 @@ class LeagueService
             if (Schema::hasColumn('user_leagues', 'season')) {
                 $query->where('season', $season);
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return $query->get();
     }
@@ -85,12 +90,12 @@ class LeagueService
             $userLeague = UserLeague::where('user_id', $userId)->orderByDesc('created_at')->first();
         }
 
-        if (!$userLeague) {
+        if (! $userLeague) {
             $bronze = League::where('slug', 'bronze')->first();
-            if (!$bronze) {
+            if (! $bronze) {
                 $bronze = League::first();
             }
-            if (!$bronze) {
+            if (! $bronze) {
                 // Create bronze if not exists
                 $bronze = League::create([
                     'name' => 'Bronze',
@@ -123,7 +128,8 @@ class LeagueService
                 if (Schema::hasColumn('user_leagues', 'rank_in_league')) {
                     $data['rank_in_league'] = null;
                 }
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+            }
 
             $userLeague = UserLeague::create($data);
         }
@@ -141,7 +147,8 @@ class LeagueService
             if (Schema::hasColumn('user_leagues', 'season')) {
                 $query->where('season', $season);
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         $totalPlayers = $query->count();
         $higherQuery = UserLeague::where('league_id', $leagueId)->where('trophies', '>', $userLeague->trophies);
@@ -149,7 +156,8 @@ class LeagueService
             if (Schema::hasColumn('user_leagues', 'season')) {
                 $higherQuery->where('season', $season);
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
         $higherTrophies = $higherQuery->count();
 
         $rank = $higherTrophies + 1;
@@ -180,10 +188,13 @@ class LeagueService
                 if (Schema::hasColumn('user_leagues', 'season')) {
                     $query->where('season', $season);
                 }
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+            }
             $userLeagues = $query->get();
             $total = $userLeagues->count();
-            if ($total === 0) continue;
+            if ($total === 0) {
+                continue;
+            }
 
             $top20Count = (int) ceil($total * 0.2);
             $bottom40Count = (int) ceil($total * 0.4);
@@ -227,7 +238,8 @@ class LeagueService
                             'rank_at_time' => $rank,
                         ]);
                     }
-                } catch (\Exception $e) {}
+                } catch (\Exception $e) {
+                }
 
                 if ($wasPromoted || $wasDemoted) {
                     try {

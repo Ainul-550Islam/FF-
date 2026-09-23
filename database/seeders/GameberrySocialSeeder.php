@@ -1,9 +1,12 @@
 <?php
+
 namespace Database\Seeders;
-use Illuminate\Database\Seeder;
-use App\Models\User;
+
 use App\Models\GameBuddy;
+use App\Models\User;
 use App\Models\UserOnlineStatus;
+use Illuminate\Database\Seeder;
+
 class GameberrySocialSeeder extends Seeder
 {
     public function run(): void

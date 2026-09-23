@@ -1,14 +1,15 @@
 <?php
 
+use App\Models\League;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('leagues')) {
+        if (! Schema::hasTable('leagues')) {
             Schema::create('leagues', function (Blueprint $table) {
                 $table->id();
                 $table->string('name')->unique(); // Bronze, Silver, Gold, Platinum, Diamond, Titan
@@ -28,7 +29,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('user_leagues')) {
+        if (! Schema::hasTable('user_leagues')) {
             Schema::create('user_leagues', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -50,7 +51,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('titan_badges')) {
+        if (! Schema::hasTable('titan_badges')) {
             Schema::create('titan_badges', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -66,7 +67,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('league_history')) {
+        if (! Schema::hasTable('league_history')) {
             Schema::create('league_history', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -83,20 +84,20 @@ return new class extends Migration
         // Seed leagues if empty
         if (Schema::hasTable('leagues')) {
             try {
-                if (\App\Models\League::count() === 0) {
+                if (League::count() === 0) {
                     $leagues = [
-                        ['name'=>'Bronze','slug'=>'bronze','level'=>1,'min_trophies'=>0,'max_trophies'=>499,'min_level_required'=>4,'color'=>'#cd7f32','promotion_top_percent'=>20,'promotion_top_count'=>40],
-                        ['name'=>'Silver','slug'=>'silver','level'=>2,'min_trophies'=>500,'max_trophies'=>999,'min_level_required'=>4,'color'=>'#c0c0c0','promotion_top_percent'=>20,'promotion_top_count'=>40],
-                        ['name'=>'Gold','slug'=>'gold','level'=>3,'min_trophies'=>1000,'max_trophies'=>1999,'min_level_required'=>6,'color'=>'#ffd700','promotion_top_percent'=>20,'promotion_top_count'=>40],
-                        ['name'=>'Platinum','slug'=>'platinum','level'=>4,'min_trophies'=>2000,'max_trophies'=>3499,'min_level_required'=>8,'color'=>'#e5e4e2','promotion_top_percent'=>20,'promotion_top_count'=>40],
-                        ['name'=>'Diamond','slug'=>'diamond','level'=>5,'min_trophies'=>3500,'max_trophies'=>4999,'min_level_required'=>10,'color'=>'#b9f2ff','promotion_top_percent'=>20,'promotion_top_count'=>40],
-                        ['name'=>'Titan','slug'=>'titan','level'=>6,'min_trophies'=>5000,'max_trophies'=>null,'min_level_required'=>12,'color'=>'#6c5ce7','promotion_top_percent'=>20,'promotion_top_count'=>40],
+                        ['name' => 'Bronze', 'slug' => 'bronze', 'level' => 1, 'min_trophies' => 0, 'max_trophies' => 499, 'min_level_required' => 4, 'color' => '#cd7f32', 'promotion_top_percent' => 20, 'promotion_top_count' => 40],
+                        ['name' => 'Silver', 'slug' => 'silver', 'level' => 2, 'min_trophies' => 500, 'max_trophies' => 999, 'min_level_required' => 4, 'color' => '#c0c0c0', 'promotion_top_percent' => 20, 'promotion_top_count' => 40],
+                        ['name' => 'Gold', 'slug' => 'gold', 'level' => 3, 'min_trophies' => 1000, 'max_trophies' => 1999, 'min_level_required' => 6, 'color' => '#ffd700', 'promotion_top_percent' => 20, 'promotion_top_count' => 40],
+                        ['name' => 'Platinum', 'slug' => 'platinum', 'level' => 4, 'min_trophies' => 2000, 'max_trophies' => 3499, 'min_level_required' => 8, 'color' => '#e5e4e2', 'promotion_top_percent' => 20, 'promotion_top_count' => 40],
+                        ['name' => 'Diamond', 'slug' => 'diamond', 'level' => 5, 'min_trophies' => 3500, 'max_trophies' => 4999, 'min_level_required' => 10, 'color' => '#b9f2ff', 'promotion_top_percent' => 20, 'promotion_top_count' => 40],
+                        ['name' => 'Titan', 'slug' => 'titan', 'level' => 6, 'min_trophies' => 5000, 'max_trophies' => null, 'min_level_required' => 12, 'color' => '#6c5ce7', 'promotion_top_percent' => 20, 'promotion_top_count' => 40],
                     ];
                     foreach ($leagues as $l) {
-                        \App\Models\League::firstOrCreate(['slug'=>$l['slug']], $l);
+                        League::firstOrCreate(['slug' => $l['slug']], $l);
                     }
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // Ignore seeding failure in migration
             }
         }

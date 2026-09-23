@@ -26,10 +26,14 @@ pub fn with_metrics(metrics: Arc<Metrics>) -> impl Filter<Extract = (Arc<Metrics
 /// - Rate limiting
 /// - Auth (optional)
 pub fn security_middleware_chain(metrics: Arc<Metrics>) -> impl Filter<Extract = (), Error = Rejection> + Clone {
+    // Shared per-instance limiter (600 requests / minute / key) backing the
+    // rate-limit layer of this chain.
+    let limiter = Arc::new(RateLimiter::new(600, std::time::Duration::from_secs(60)));
     with_request_id()
+        .and(with_metrics(metrics))
         .and(with_hsts())
         .and(security_headers())
-        .and(with_rate_limiter(metrics))
+        .and(with_rate_limiter(limiter))
+        .map(|_request_id: String, _metrics: Arc<Metrics>, _limiter: Arc<RateLimiter>| ())
         .untuple_one()
-        .map(|| ())
 }

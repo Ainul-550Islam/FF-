@@ -11,6 +11,4 @@ use RuntimeException;
  *
  * The message is surfaced to the user as a flash message.
  */
-class RegistrationClosedException extends RuntimeException
-{
-}
+class RegistrationClosedException extends RuntimeException {}

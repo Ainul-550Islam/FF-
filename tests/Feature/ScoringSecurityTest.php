@@ -8,8 +8,11 @@ use App\Models\ScoringRule;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
+use App\Services\MatchProgressionService;
 use App\Services\ScoringService;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -356,9 +359,9 @@ class ScoringSecurityTest extends TestCase
 
         $this->scoring()->submitScore($match, $teamA, 1, 1);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         // Bypass the service and hit the DB unique constraint directly.
-        \Illuminate\Support\Facades\DB::table('scores')->insert([
+        DB::table('scores')->insert([
             'match_id' => $match->id,
             'team_id' => $teamA->id,
             'kills' => 2,
@@ -427,7 +430,7 @@ class ScoringSecurityTest extends TestCase
         $score = $this->scoring()->submitScore($match, $teamA, 3, 1);
         $this->assertSame(15, (int) $score->points);
 
-        app(\App\Services\MatchProgressionService::class)->complete($match, $teamA);
+        app(MatchProgressionService::class)->complete($match, $teamA);
 
         $this->actingAs($org)->post(route('matches.adjustment', [$tournament, $match]), [
             'team_id' => $teamA->id, 'type' => 'bonus', 'points' => 5, 'reason' => 'late bonus',

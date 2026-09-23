@@ -45,7 +45,7 @@ class Challenge extends Model
 
     public function isPending(): bool
     {
-        return $this->status === 'pending' && (!$this->expires_at || $this->expires_at->isFuture());
+        return $this->status === 'pending' && (! $this->expires_at || $this->expires_at->isFuture());
     }
 
     public function isExpired(): bool
@@ -55,7 +55,7 @@ class Challenge extends Model
 
     public function accept(): void
     {
-        if (!$this->isPending()) {
+        if (! $this->isPending()) {
             throw new \Exception('Challenge not pending');
         }
         $this->status = 'accepted';
@@ -65,7 +65,7 @@ class Challenge extends Model
 
     public function deny(): void
     {
-        if (!$this->isPending()) {
+        if (! $this->isPending()) {
             throw new \Exception('Challenge not pending');
         }
         $this->status = 'denied';

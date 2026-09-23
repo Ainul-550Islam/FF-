@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\GameMatch;
 use App\Models\User;
 
 /**
@@ -29,7 +30,7 @@ class ApiSecurityTest extends ApiTestCase
         $org = $this->user(['role' => 'organizer']);
         $this->makeTournament($org, 'open', ['name' => 'Normal Cup']);
 
-        $this->getJson("/api/v1/tournaments?sort=created_at%3B%20DROP%20TABLE%20users%3B--")
+        $this->getJson('/api/v1/tournaments?sort=created_at%3B%20DROP%20TABLE%20users%3B--')
             ->assertStatus(200);
 
         $this->getJson("/api/v1/tournaments?q='%20OR%201%3D1--")
@@ -79,7 +80,7 @@ class ApiSecurityTest extends ApiTestCase
     public function test_no_token_or_stack_trace_leaks_in_errors(): void
     {
         // Trigger an unexpected error and assert no internals leak.
-        $res = $this->getJson('/api/v1/tournaments?sort=' . urlencode("x'\""));
+        $res = $this->getJson('/api/v1/tournaments?sort='.urlencode("x'\""));
         $res->assertStatus(200);
 
         $notFound = $this->getJson('/api/v1/matches/999999');
@@ -128,8 +129,8 @@ class ApiSecurityTest extends ApiTestCase
 
         $surfaces = [
             $this->asUser($player, ['profile:read'])->getJson('/api/v1/me'),
-            $this->asUser($player, ['teams:read'])->getJson('/api/v1/teams/' . $team->id),
-            $this->asUser($player, ['tournaments:read'])->getJson('/api/v1/tournaments/' . $tournament->slug),
+            $this->asUser($player, ['teams:read'])->getJson('/api/v1/teams/'.$team->id),
+            $this->asUser($player, ['tournaments:read'])->getJson('/api/v1/tournaments/'.$tournament->slug),
         ];
 
         foreach ($surfaces as $res) {
@@ -140,9 +141,9 @@ class ApiSecurityTest extends ApiTestCase
         }
     }
 
-    protected function makeMatch($tournament, $team1, $team2, string $status): \App\Models\GameMatch
+    protected function makeMatch($tournament, $team1, $team2, string $status): GameMatch
     {
-        $match = new \App\Models\GameMatch();
+        $match = new GameMatch();
         $match->tournament_id = $tournament->id;
         $match->team1_id = $team1?->id;
         $match->team2_id = $team2?->id;

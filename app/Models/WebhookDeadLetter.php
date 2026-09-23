@@ -1,7 +1,9 @@
 <?php
+
 namespace App\Models;
-use Illuminate\Database\Eloquent\Model;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class WebhookDeadLetter extends Model
 {
@@ -33,7 +35,7 @@ class WebhookDeadLetter extends Model
     public function scopeDueForRetry($query)
     {
         return $query->whereNotNull('next_retry_at')
-                      ->where('next_retry_at', '<=', now());
+            ->where('next_retry_at', '<=', now());
     }
 
     public function scopeByProvider($query, string $provider)
@@ -45,7 +47,7 @@ class WebhookDeadLetter extends Model
     {
         $this->attempts++;
         $this->last_failed_at = now();
-        
+
         // Exponential backoff: 1,2,4,8,16,32,60 min max
         $backoffMinutes = min(60, pow(2, $this->attempts - 1));
         $this->next_retry_at = now()->addMinutes($backoffMinutes);

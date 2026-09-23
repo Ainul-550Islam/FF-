@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Gameberry\Final8;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\Gameberry\Final8\Final1165Service;
+use Illuminate\Support\Facades\Log;
 
 class Final1185Controller extends Controller
 {
@@ -12,7 +12,7 @@ class Final1185Controller extends Controller
 
     public function __construct()
     {
-        $serviceClass = 'App\\Services\\Gameberry\\Final8\\Final' . (1165 ) . 'Service';
+        $serviceClass = 'App\\Services\\Gameberry\\Final8\\Final'.(1165).'Service';
         $this->service = app($serviceClass);
     }
 
@@ -22,8 +22,8 @@ class Final1185Controller extends Controller
         $stats = $this->service->getFullStats($userId);
 
         // G1 financial totals must reconcile - STOP if mismatch
-        if (isset($stats['all_balanced']) && !$stats['all_balanced']) {
-            \Illuminate\Support\Facades\Log::critical('G1 Financial totals must reconcile - STOP - Final1185Controller', [
+        if (isset($stats['all_balanced']) && ! $stats['all_balanced']) {
+            Log::critical('G1 Financial totals must reconcile - STOP - Final1185Controller', [
                 'user_id' => $userId,
                 'stats' => $stats,
             ]);
@@ -34,7 +34,7 @@ class Final1185Controller extends Controller
             }
         }
 
-        return view('gameberry.final8.feature_' . (1115 ), compact('stats'));
+        return view('gameberry.final8.feature_'.(1115), compact('stats'));
     }
 
     public function play(Request $request)
@@ -53,13 +53,13 @@ class Final1185Controller extends Controller
             $result = $this->service->play($userId, $mode, $bet);
 
             // Reconciliation must hold STOP if mismatch G1
-            if (!$result['reconcile']['is_balanced']) {
-                return redirect()->back()->with('error', 'G1 Financial totals must reconcile - STOP - Gold wallet ' . $result['reconcile']['gold_wallet'] . ' != computed ' . $result['reconcile']['gold_computed']);
+            if (! $result['reconcile']['is_balanced']) {
+                return redirect()->back()->with('error', 'G1 Financial totals must reconcile - STOP - Gold wallet '.$result['reconcile']['gold_wallet'].' != computed '.$result['reconcile']['gold_computed']);
             }
 
-            return redirect()->back()->with('success', 'Final8 1185 result: ' . ($result['is_win'] ? 'win' : 'loss') . ' - Gold at stake ' . $bet . ', win ' . $result['win_amount'] . ', balance ' . $result['gold_balance'] . ', Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening');
+            return redirect()->back()->with('success', 'Final8 1185 result: '.($result['is_win'] ? 'win' : 'loss').' - Gold at stake '.$bet.', win '.$result['win_amount'].', balance '.$result['gold_balance'].', Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Final1185 play failed: ' . $e->getMessage() . ' - G1 Must Reconcile STOP');
+            return redirect()->back()->with('error', 'Final1185 play failed: '.$e->getMessage().' - G1 Must Reconcile STOP');
         }
     }
 
@@ -67,13 +67,15 @@ class Final1185Controller extends Controller
     {
         $userId = auth()->id() ?? $request->input('user_id', 1);
         $stats = $this->service->getFullStats($userId);
-        return view('gameberry.final8.feature_' . (1115 ), compact('stats'));
+
+        return view('gameberry.final8.feature_'.(1115), compact('stats'));
     }
 
     public function stats(Request $request)
     {
         $userId = auth()->id() ?? $request->input('user_id', 1);
         $stats = $this->service->getFullStats($userId);
+
         return response()->json([
             'success' => true,
             'data' => $stats,

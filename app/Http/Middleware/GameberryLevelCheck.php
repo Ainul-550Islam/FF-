@@ -2,10 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Level;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use App\Models\Level;
 
 class GameberryLevelCheck
 {
@@ -21,7 +21,7 @@ class GameberryLevelCheck
     public function handle(Request $request, Closure $next, ?string $leagueSlug = null): Response
     {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('login');
         }
 

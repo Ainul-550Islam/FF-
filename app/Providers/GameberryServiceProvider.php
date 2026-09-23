@@ -2,21 +2,21 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use App\Models\User;
 use App\Observers\UserObserver;
-use App\Services\Gameberry\DiceCollectionService;
-use App\Services\Gameberry\LeagueService;
-use App\Services\Gameberry\GoldEconomyService;
-use App\Services\Gameberry\GemEconomyService;
-use App\Services\Gameberry\PrivateTableService;
 use App\Services\Gameberry\ChatEmojiService;
-use App\Services\Gameberry\WeeklyEventService;
-use App\Services\Gameberry\ReferralService;
-use App\Services\Gameberry\SpinService;
+use App\Services\Gameberry\DiceCollectionService;
+use App\Services\Gameberry\GemEconomyService;
+use App\Services\Gameberry\GoldEconomyService;
+use App\Services\Gameberry\LeagueService;
 use App\Services\Gameberry\MagicChestService;
-use App\Services\Gameberry\VideoAdService;
+use App\Services\Gameberry\PrivateTableService;
+use App\Services\Gameberry\ReferralService;
 use App\Services\Gameberry\SocialService;
+use App\Services\Gameberry\SpinService;
+use App\Services\Gameberry\VideoAdService;
+use App\Services\Gameberry\WeeklyEventService;
+use Illuminate\Support\ServiceProvider;
 
 class GameberryServiceProvider extends ServiceProvider
 {

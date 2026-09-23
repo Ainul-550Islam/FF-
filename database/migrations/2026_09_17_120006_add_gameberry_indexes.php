@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
@@ -14,32 +14,35 @@ return new class extends Migration
         try {
             if (Schema::hasTable('user_dices')) {
                 Schema::table('user_dices', function (Blueprint $table) {
-                    if (!$this->indexExists('user_dices', 'user_dices_user_id_is_equipped_index')) {
+                    if (! $this->indexExists('user_dices', 'user_dices_user_id_is_equipped_index')) {
                         $table->index(['user_id', 'is_equipped']);
                     }
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('user_dices')) {
                 Schema::table('user_dices', function (Blueprint $table) {
-                    if (!$this->indexExists('user_dices', 'user_dices_user_id_is_favorite_index')) {
+                    if (! $this->indexExists('user_dices', 'user_dices_user_id_is_favorite_index')) {
                         $table->index(['user_id', 'is_favorite']);
                     }
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('user_dices')) {
                 Schema::table('user_dices', function (Blueprint $table) {
-                    if (!$this->indexExists('user_dices', 'user_dices_dice_id_index')) {
+                    if (! $this->indexExists('user_dices', 'user_dices_dice_id_index')) {
                         $table->index('dice_id');
                     }
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('user_leagues')) {
@@ -47,7 +50,8 @@ return new class extends Migration
                     $table->index(['league_id', 'season', 'trophies']);
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('user_leagues')) {
@@ -55,7 +59,8 @@ return new class extends Migration
                     $table->index(['user_id', 'season']);
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('private_tables')) {
@@ -63,7 +68,8 @@ return new class extends Migration
                     $table->index('code');
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('private_tables')) {
@@ -71,7 +77,8 @@ return new class extends Migration
                     $table->index('status');
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('private_tables')) {
@@ -79,7 +86,8 @@ return new class extends Migration
                     $table->index('host_id');
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('gold_transactions')) {
@@ -87,7 +95,8 @@ return new class extends Migration
                     $table->index(['user_id', 'created_at']);
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('gold_transactions')) {
@@ -95,7 +104,8 @@ return new class extends Migration
                     $table->index('type');
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('gem_transactions')) {
@@ -103,7 +113,8 @@ return new class extends Migration
                     $table->index(['user_id', 'created_at']);
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('game_buddies')) {
@@ -111,7 +122,8 @@ return new class extends Migration
                     $table->index(['user_id', 'status']);
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('game_buddies')) {
@@ -119,7 +131,8 @@ return new class extends Migration
                     $table->index('buddy_id');
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('user_online_statuses')) {
@@ -127,7 +140,8 @@ return new class extends Migration
                     $table->index(['is_online', 'hide_online_status']);
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('referrals')) {
@@ -135,7 +149,8 @@ return new class extends Migration
                     $table->index('code');
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('referrals')) {
@@ -143,7 +158,8 @@ return new class extends Migration
                     $table->index(['referrer_id', 'status']);
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         try {
             if (Schema::hasTable('weekly_events')) {
@@ -151,7 +167,8 @@ return new class extends Migration
                     $table->index(['is_active', 'starts_at', 'ends_at']);
                 });
             }
-        } catch (\Exception $e) {}
+        } catch (Exception $e) {
+        }
     }
 
     private function indexExists(string $table, string $indexName): bool
@@ -161,11 +178,13 @@ return new class extends Migration
             $driver = $connection->getDriverName();
             if ($driver === 'sqlite') {
                 $result = $connection->select("SELECT name FROM sqlite_master WHERE type='index' AND name=? AND tbl_name=?", [$indexName, $table]);
+
                 return count($result) > 0;
             }
+
             // For other drivers, assume not exists to try creation, catch will handle
             return false;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
     }

@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\PhoneOtpProviderInterface;
 use App\Models\LoginEvent;
 use App\Models\Notification;
+use App\Models\OtpChallenge;
+use App\Models\PaymentMethod;
 use App\Models\UserIdentity;
 use App\Services\AccountLifecycleService;
 use App\Services\AuditLogService;
@@ -11,15 +14,16 @@ use App\Services\GoogleAuthService;
 use App\Services\IdentityService;
 use App\Services\LoginEventService;
 use App\Services\NotificationService;
+use App\Services\PaymentGatewayManager;
 use App\Services\PhoneOtpService;
 use App\Services\ProfileService;
 use App\Services\SessionManagementService;
 use DomainException;
-use App\Models\PaymentMethod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 
 /**
@@ -73,7 +77,7 @@ class AccountSecurityController extends Controller
             'identities' => $identities,
             'hasPassword' => $this->profiles->hasPassword($user),
             'googleConfigured' => $this->google->isConfigured(),
-            'phoneConfigured' => app(\App\Contracts\PhoneOtpProviderInterface::class)->isConfigured(),
+            'phoneConfigured' => app(PhoneOtpProviderInterface::class)->isConfigured(),
         ]);
     }
 
@@ -178,7 +182,7 @@ class AccountSecurityController extends Controller
 
         try {
             $phone = $this->otp->normalize($data['phone']);
-            $this->otp->issue($user, $phone, \App\Models\OtpChallenge::PURPOSE_LINK);
+            $this->otp->issue($user, $phone, OtpChallenge::PURPOSE_LINK);
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage())->withInput();
         }
@@ -186,7 +190,7 @@ class AccountSecurityController extends Controller
         return redirect()
             ->route('phone.verify')
             ->with('phone', $phone)
-            ->with('purpose', \App\Models\OtpChallenge::PURPOSE_LINK)
+            ->with('purpose', OtpChallenge::PURPOSE_LINK)
             ->with('success', 'We sent a verification code to that number.');
     }
 
@@ -326,7 +330,7 @@ class AccountSecurityController extends Controller
     // Legacy (pre-Phase-14) surface kept alongside the canonical flow
     // ------------------------------------------------------------------
 
-public function updatePassword(Request $request)
+    public function updatePassword(Request $request)
     {
         $request->validate([
             'current_password' => ['required', 'string'],
@@ -335,7 +339,7 @@ public function updatePassword(Request $request)
 
         $user = $request->user();
 
-        if (!Hash::check($request->input('current_password'), $user->password)) {
+        if (! Hash::check($request->input('current_password'), $user->password)) {
             return back()->withErrors(['current_password' => 'Current password is incorrect']);
         }
 
@@ -353,7 +357,7 @@ public function updatePassword(Request $request)
                 'successful' => true,
             ]);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('login_event_failed', ['error' => $e->getMessage()]);
+            Log::warning('login_event_failed', ['error' => $e->getMessage()]);
         }
 
         $this->auditLog('security.password.changed', ['user_id' => $user->id]);
@@ -361,7 +365,7 @@ public function updatePassword(Request $request)
         return back()->with('success', 'Password updated successfully. All other sessions have been kept active, but consider revoking if suspicious.');
     }
 
-public function setup2fa(Request $request)
+    public function setup2fa(Request $request)
     {
         // Placeholder for 2FA setup - in production would generate secret and QR
         return view('settings.security', [
@@ -370,12 +374,12 @@ public function setup2fa(Request $request)
         ])->with('warning', '2FA setup requires authenticator app. Scan QR code (simulated for now).');
     }
 
-public function enable2fa(Request $request)
+    public function enable2fa(Request $request)
     {
         $request->validate(['code' => ['required', 'string', 'size:6']]);
         // In production, verify TOTP code
         // For now, simulate success if code is 123456
-        if ($request->input('code') !== '123456' && !app()->environment('testing')) {
+        if ($request->input('code') !== '123456' && ! app()->environment('testing')) {
             return back()->withErrors(['code' => 'Invalid code, try 123456 in demo']);
         }
 
@@ -387,7 +391,7 @@ public function enable2fa(Request $request)
         return redirect()->route('settings.security')->with('success', 'Two-factor authentication enabled');
     }
 
-public function disable2fa(Request $request)
+    public function disable2fa(Request $request)
     {
         $user = $request->user();
         $user->forceFill(['two_factor_enabled' => false])->save();
@@ -397,14 +401,14 @@ public function disable2fa(Request $request)
         return back()->with('success', 'Two-factor authentication disabled');
     }
 
-public function revokeSession(Request $request, $sessionId)
+    public function revokeSession(Request $request, $sessionId)
     {
         $user = $request->user();
-        
+
         try {
             DB::table('user_sessions')->where('user_id', $user->id)->where('id', $sessionId)->update(['is_revoked' => true]);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('session_revoke_failed', ['error' => $e->getMessage()]);
+            Log::warning('session_revoke_failed', ['error' => $e->getMessage()]);
         }
 
         $this->auditLog('security.session.revoked', ['user_id' => $user->id, 'session_id' => $sessionId]);
@@ -412,41 +416,41 @@ public function revokeSession(Request $request, $sessionId)
         return back()->with('success', 'Session revoked');
     }
 
-public function disconnect(Request $request, string $provider)
+    public function disconnect(Request $request, string $provider)
     {
         $user = $request->user();
-        
+
         try {
             UserIdentity::where('user_id', $user->id)->where('provider', $provider)->delete();
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('identity_disconnect_failed', ['error' => $e->getMessage()]);
+            Log::warning('identity_disconnect_failed', ['error' => $e->getMessage()]);
         }
 
         $this->auditLog('security.connected_account.disconnected', ['user_id' => $user->id, 'provider' => $provider]);
 
-        return back()->with('success', ucfirst($provider) . ' account disconnected');
+        return back()->with('success', ucfirst($provider).' account disconnected');
     }
 
-public function requestPhoneVerification(Request $request)
+    public function requestPhoneVerification(Request $request)
     {
         $user = $request->user();
-        
-        if (!$user->phone) {
+
+        if (! $user->phone) {
             return back()->withErrors(['phone' => 'Add phone number in profile first']);
         }
 
         // In production, would send OTP via SMS gateway
         // For now, simulate
 
-        $this->auditLog('security.phone.verification.requested', ['user_id' => $user->id, 'phone' => substr($user->phone, 0, 4) . '****']);
+        $this->auditLog('security.phone.verification.requested', ['user_id' => $user->id, 'phone' => substr($user->phone, 0, 4).'****']);
 
-        return back()->with('success', 'Verification code sent to ' . $user->phone . ' (demo: 123456)');
+        return back()->with('success', 'Verification code sent to '.$user->phone.' (demo: 123456)');
     }
 
-public function paymentMethods(Request $request)
+    public function paymentMethods(Request $request)
     {
         $user = $request->user();
-        
+
         try {
             $methods = PaymentMethod::where('user_id', $user->id)->orderBy('is_default', 'desc')->orderBy('created_at', 'desc')->get();
         } catch (\Throwable $e) {
@@ -454,7 +458,7 @@ public function paymentMethods(Request $request)
         }
 
         // Enabled gateway providers drive the "add payment method" form.
-        $providers = app(\App\Services\PaymentGatewayManager::class)->enabledProviders();
+        $providers = app(PaymentGatewayManager::class)->enabledProviders();
 
         return view('settings.payment-methods', [
             'user' => $user,
@@ -463,7 +467,7 @@ public function paymentMethods(Request $request)
         ]);
     }
 
-public function setDefaultPaymentMethod(Request $request, PaymentMethod $paymentMethod)
+    public function setDefaultPaymentMethod(Request $request, PaymentMethod $paymentMethod)
     {
         $this->authorize('update', $paymentMethod);
 
@@ -473,7 +477,7 @@ public function setDefaultPaymentMethod(Request $request, PaymentMethod $payment
                 $paymentMethod->forceFill(['is_default' => true])->save();
             });
         } catch (\Throwable $e) {
-            return back()->withErrors(['error' => 'Failed to set default: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Failed to set default: '.$e->getMessage()]);
         }
 
         $this->auditLog('payment_method.default.set', ['user_id' => $request->user()->id, 'method_id' => $paymentMethod->id]);
@@ -481,7 +485,7 @@ public function setDefaultPaymentMethod(Request $request, PaymentMethod $payment
         return back()->with('success', 'Default payment method updated');
     }
 
-public function destroyPaymentMethod(Request $request, PaymentMethod $paymentMethod)
+    public function destroyPaymentMethod(Request $request, PaymentMethod $paymentMethod)
     {
         $this->authorize('delete', $paymentMethod);
 
@@ -496,16 +500,31 @@ public function destroyPaymentMethod(Request $request, PaymentMethod $paymentMet
      * Best-effort human label for a session's user agent (kept for the
      * legacy password-change / 2FA login events).
      */
-private function deviceLabel(?string $userAgent): string
+    private function deviceLabel(?string $userAgent): string
     {
-        if (!$userAgent) return 'Unknown Device';
+        if (! $userAgent) {
+            return 'Unknown Device';
+        }
         $ua = strtolower($userAgent);
-        if (str_contains($ua, 'iphone')) return 'iPhone';
-        if (str_contains($ua, 'android')) return 'Android';
-        if (str_contains($ua, 'windows')) return 'Windows PC';
-        if (str_contains($ua, 'macintosh') || str_contains($ua, 'mac os')) return 'Mac';
-        if (str_contains($ua, 'linux')) return 'Linux';
-        if (str_contains($ua, 'mobile')) return 'Mobile Device';
+        if (str_contains($ua, 'iphone')) {
+            return 'iPhone';
+        }
+        if (str_contains($ua, 'android')) {
+            return 'Android';
+        }
+        if (str_contains($ua, 'windows')) {
+            return 'Windows PC';
+        }
+        if (str_contains($ua, 'macintosh') || str_contains($ua, 'mac os')) {
+            return 'Mac';
+        }
+        if (str_contains($ua, 'linux')) {
+            return 'Linux';
+        }
+        if (str_contains($ua, 'mobile')) {
+            return 'Mobile Device';
+        }
+
         return 'Desktop';
     }
 }

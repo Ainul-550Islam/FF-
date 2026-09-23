@@ -4,6 +4,7 @@ namespace App\Services\Gameberry;
 
 use App\Models\ChatMessage;
 use App\Models\PrivateTable;
+use Illuminate\Database\Eloquent\Collection;
 
 class ChatEmojiService
 {
@@ -47,7 +48,7 @@ class ChatEmojiService
 
         // Validate participant
         $isParticipant = $table->participants()->where('user_id', $userId)->exists();
-        if (!$isParticipant) {
+        if (! $isParticipant) {
             throw new \Exception('Not a participant of this table');
         }
 
@@ -68,7 +69,7 @@ class ChatEmojiService
 
     public function sendEmoji(int $userId, string $tableCode, string $emojiKey): ChatMessage
     {
-        if (!isset(self::EMOJIS[$emojiKey])) {
+        if (! isset(self::EMOJIS[$emojiKey])) {
             throw new \Exception('Invalid emoji');
         }
 
@@ -77,7 +78,7 @@ class ChatEmojiService
 
     public function sendQuickMessage(int $userId, string $tableCode, string $quickMessage): ChatMessage
     {
-        if (!in_array($quickMessage, self::QUICK_MESSAGES)) {
+        if (! in_array($quickMessage, self::QUICK_MESSAGES)) {
             throw new \Exception('Invalid quick message');
         }
 
@@ -97,9 +98,10 @@ class ChatEmojiService
         ]);
     }
 
-    public function getMessages(string $tableCode, int $limit = 50): \Illuminate\Database\Eloquent\Collection
+    public function getMessages(string $tableCode, int $limit = 50): Collection
     {
         $table = PrivateTable::where('code', strtoupper($tableCode))->firstOrFail();
+
         return ChatMessage::with('user')->where('private_table_id', $table->id)->orderByDesc('created_at')->limit($limit)->get()->reverse()->values();
     }
 

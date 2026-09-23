@@ -16,9 +16,13 @@ class Dispute extends Model
     use HasFactory;
 
     public const STATUS_OPEN = 'open';
+
     public const STATUS_UNDER_REVIEW = 'under_review';
+
     public const STATUS_RESOLVED = 'resolved';
+
     public const STATUS_REJECTED = 'rejected';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     public const STATUSES = [

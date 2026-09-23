@@ -34,9 +34,9 @@ class ApiTeamsRosterTest extends ApiTestCase
 
         // A stranger cannot view the team at all (TeamPolicy::view is
         // captain/organizer/staff only), so the phone can never leak.
-        $this->asUser($stranger, ['teams:read'])->getJson('/api/v1/teams/' . $team->id)->assertStatus(403);
+        $this->asUser($stranger, ['teams:read'])->getJson('/api/v1/teams/'.$team->id)->assertStatus(403);
 
-        $captainView = $this->asUser($captain, ['teams:read'])->getJson('/api/v1/teams/' . $team->id);
+        $captainView = $this->asUser($captain, ['teams:read'])->getJson('/api/v1/teams/'.$team->id);
         $captainView->assertStatus(200);
         $this->assertSame('01700000000', $captainView->json('data.phone'));
     }
@@ -56,9 +56,9 @@ class ApiTeamsRosterTest extends ApiTestCase
             'game_uid' => 'UIDHIJACK1',
         ];
 
-        $this->asUser($stranger, ['teams:write'])->patchJson('/api/v1/teams/' . $team->id, $payload)->assertStatus(403);
+        $this->asUser($stranger, ['teams:write'])->patchJson('/api/v1/teams/'.$team->id, $payload)->assertStatus(403);
 
-        $this->asUser($captain, ['teams:write'])->patchJson('/api/v1/teams/' . $team->id, $payload)->assertStatus(200);
+        $this->asUser($captain, ['teams:write'])->patchJson('/api/v1/teams/'.$team->id, $payload)->assertStatus(200);
         $this->assertSame('Hijacked', $team->fresh()->name);
     }
 
@@ -72,16 +72,16 @@ class ApiTeamsRosterTest extends ApiTestCase
 
         $add = ['player_name' => 'Rookie', 'game_uid' => 'UIDROOK1E'];
 
-        $this->asUser($stranger, ['roster:write'])->postJson('/api/v1/teams/' . $team->id . '/roster', $add)->assertStatus(403);
+        $this->asUser($stranger, ['roster:write'])->postJson('/api/v1/teams/'.$team->id.'/roster', $add)->assertStatus(403);
 
-        $created = $this->asUser($captain, ['roster:write'])->postJson('/api/v1/teams/' . $team->id . '/roster', $add);
+        $created = $this->asUser($captain, ['roster:write'])->postJson('/api/v1/teams/'.$team->id.'/roster', $add);
         $created->assertStatus(201);
         $memberId = $created->json('data.id');
 
         $this->assertSame(1, TeamMember::where('team_id', $team->id)->count());
 
-        $this->asUser($stranger, ['roster:write'])->deleteJson('/api/v1/teams/' . $team->id . '/roster/' . $memberId)->assertStatus(403);
-        $this->asUser($captain, ['roster:write'])->deleteJson('/api/v1/teams/' . $team->id . '/roster/' . $memberId)->assertStatus(204);
+        $this->asUser($stranger, ['roster:write'])->deleteJson('/api/v1/teams/'.$team->id.'/roster/'.$memberId)->assertStatus(403);
+        $this->asUser($captain, ['roster:write'])->deleteJson('/api/v1/teams/'.$team->id.'/roster/'.$memberId)->assertStatus(204);
 
         $this->assertSame(0, TeamMember::where('team_id', $team->id)->count());
     }
@@ -101,7 +101,7 @@ class ApiTeamsRosterTest extends ApiTestCase
         $member->save();
 
         $this->asUser($captain, ['roster:write'])
-            ->deleteJson('/api/v1/teams/' . $teamA->id . '/roster/' . $member->id)
+            ->deleteJson('/api/v1/teams/'.$teamA->id.'/roster/'.$member->id)
             ->assertStatus(404);
     }
 
@@ -113,9 +113,9 @@ class ApiTeamsRosterTest extends ApiTestCase
         $tournament = $this->makeTournament($org, 'open');
         $team = $this->makeTeam($tournament, $captain, 'pending', 'UIDWDRAW1');
 
-        $this->asUser($stranger, ['teams:write'])->postJson('/api/v1/teams/' . $team->id . '/withdraw')->assertStatus(403);
+        $this->asUser($stranger, ['teams:write'])->postJson('/api/v1/teams/'.$team->id.'/withdraw')->assertStatus(403);
 
-        $this->asUser($captain, ['teams:write'])->postJson('/api/v1/teams/' . $team->id . '/withdraw')->assertStatus(200);
+        $this->asUser($captain, ['teams:write'])->postJson('/api/v1/teams/'.$team->id.'/withdraw')->assertStatus(200);
         $this->assertSame('withdrawn', $team->fresh()->status);
     }
 }

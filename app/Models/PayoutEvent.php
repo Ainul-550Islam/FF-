@@ -17,9 +17,13 @@ class PayoutEvent extends Model
     use HasFactory;
 
     public const EVENT_APPROVED = 'payout.approved';
+
     public const EVENT_PROCESSING = 'payout.processing';
+
     public const EVENT_COMPLETED = 'payout.completed';
+
     public const EVENT_FAILED = 'payout.failed';
+
     public const EVENT_CANCELLED = 'payout.cancelled';
 
     public const UPDATED_AT = null;

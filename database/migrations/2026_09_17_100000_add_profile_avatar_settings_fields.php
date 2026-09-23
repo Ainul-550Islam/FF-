@@ -4,60 +4,60 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'username')) {
+            if (! Schema::hasColumn('users', 'username')) {
                 $table->string('username')->nullable()->unique()->after('name');
             }
-            if (!Schema::hasColumn('users', 'display_name')) {
+            if (! Schema::hasColumn('users', 'display_name')) {
                 $table->string('display_name')->nullable()->after('username');
             }
-            if (!Schema::hasColumn('users', 'avatar_path')) {
+            if (! Schema::hasColumn('users', 'avatar_path')) {
                 $table->string('avatar_path')->nullable()->after('phone');
             }
-            if (!Schema::hasColumn('users', 'bio')) {
+            if (! Schema::hasColumn('users', 'bio')) {
                 $table->text('bio')->nullable()->after('avatar_path');
             }
-            if (!Schema::hasColumn('users', 'date_of_birth')) {
+            if (! Schema::hasColumn('users', 'date_of_birth')) {
                 $table->date('date_of_birth')->nullable()->after('bio');
             }
-            if (!Schema::hasColumn('users', 'gender')) {
+            if (! Schema::hasColumn('users', 'gender')) {
                 $table->string('gender', 20)->nullable()->after('date_of_birth');
             }
-            if (!Schema::hasColumn('users', 'country')) {
+            if (! Schema::hasColumn('users', 'country')) {
                 $table->string('country', 2)->nullable()->after('gender');
             }
-            if (!Schema::hasColumn('users', 'timezone')) {
+            if (! Schema::hasColumn('users', 'timezone')) {
                 $table->string('timezone')->default('Asia/Dhaka')->after('country');
             }
-            if (!Schema::hasColumn('users', 'locale')) {
+            if (! Schema::hasColumn('users', 'locale')) {
                 $table->string('locale', 10)->default('en')->after('timezone');
             }
-            if (!Schema::hasColumn('users', 'last_seen_at')) {
+            if (! Schema::hasColumn('users', 'last_seen_at')) {
                 $table->timestamp('last_seen_at')->nullable()->after('locale');
             }
-            if (!Schema::hasColumn('users', 'username_changed_at')) {
+            if (! Schema::hasColumn('users', 'username_changed_at')) {
                 $table->timestamp('username_changed_at')->nullable()->after('last_seen_at');
             }
-            if (!Schema::hasColumn('users', 'phone_verified_at')) {
+            if (! Schema::hasColumn('users', 'phone_verified_at')) {
                 $table->timestamp('phone_verified_at')->nullable()->after('phone');
             }
-            if (!Schema::hasColumn('users', 'is_banned')) {
+            if (! Schema::hasColumn('users', 'is_banned')) {
                 $table->boolean('is_banned')->default(false)->after('is_active');
             }
-            if (!Schema::hasColumn('users', 'banned_at')) {
+            if (! Schema::hasColumn('users', 'banned_at')) {
                 $table->timestamp('banned_at')->nullable()->after('is_banned');
             }
-            if (!Schema::hasColumn('users', 'ban_reason')) {
+            if (! Schema::hasColumn('users', 'ban_reason')) {
                 $table->string('ban_reason')->nullable()->after('banned_at');
             }
         });
 
         // User identities for OAuth / connected accounts
-        if (!Schema::hasTable('user_identities')) {
+        if (! Schema::hasTable('user_identities')) {
             Schema::create('user_identities', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -74,7 +74,7 @@ return new class extends Migration
         }
 
         // Login history
-        if (!Schema::hasTable('login_events')) {
+        if (! Schema::hasTable('login_events')) {
             Schema::create('login_events', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
@@ -93,7 +93,7 @@ return new class extends Migration
         }
 
         // User sessions enhanced
-        if (!Schema::hasTable('user_sessions')) {
+        if (! Schema::hasTable('user_sessions')) {
             Schema::create('user_sessions', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -112,7 +112,7 @@ return new class extends Migration
         }
 
         // Payment methods for settings
-        if (!Schema::hasTable('payment_methods')) {
+        if (! Schema::hasTable('payment_methods')) {
             Schema::create('payment_methods', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -130,7 +130,7 @@ return new class extends Migration
         }
 
         // OTP challenges for phone verification
-        if (!Schema::hasTable('otp_challenges')) {
+        if (! Schema::hasTable('otp_challenges')) {
             Schema::create('otp_challenges', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
@@ -152,7 +152,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $columns = ['username','display_name','avatar_path','bio','date_of_birth','gender','country','timezone','locale','last_seen_at','username_changed_at','phone_verified_at','is_banned','banned_at','ban_reason'];
+            $columns = ['username', 'display_name', 'avatar_path', 'bio', 'date_of_birth', 'gender', 'country', 'timezone', 'locale', 'last_seen_at', 'username_changed_at', 'phone_verified_at', 'is_banned', 'banned_at', 'ban_reason'];
             foreach ($columns as $col) {
                 if (Schema::hasColumn('users', $col)) {
                     $table->dropColumn($col);

@@ -1,13 +1,23 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+
 class SpinWheel extends Model
 {
     use HasFactory;
-    protected $fillable = ['name','slug','cost_gold','is_active','rewards_config','daily_free_spins','max_spins_per_day'];
+
+    protected $fillable = ['name', 'slug', 'cost_gold', 'is_active', 'rewards_config', 'daily_free_spins', 'max_spins_per_day'];
+
     protected $casts = ['cost_gold' => 'integer', 'is_active' => 'boolean', 'rewards_config' => 'array', 'daily_free_spins' => 'integer', 'max_spins_per_day' => 'integer'];
-    public function scopeActive($query) { return $query->where('is_active', true); }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
     public function getRewardForSpin(): array
     {
         $config = $this->rewards_config ?? [
@@ -21,8 +31,11 @@ class SpinWheel extends Model
         $current = 0;
         foreach ($config as $r) {
             $current += $r['weight'];
-            if ($rand <= $current) return $r;
+            if ($rand <= $current) {
+                return $r;
+            }
         }
+
         return $config[0];
     }
 }

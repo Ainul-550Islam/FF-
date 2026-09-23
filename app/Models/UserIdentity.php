@@ -21,6 +21,7 @@ class UserIdentity extends Model
     use HasFactory;
 
     public const PROVIDER_GOOGLE = 'google';
+
     public const PROVIDER_PHONE = 'phone';
 
     public const PROVIDERS = [

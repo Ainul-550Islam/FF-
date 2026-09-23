@@ -134,7 +134,7 @@ class IdentityService
      * Unlink a provider identity, refusing to remove the last sign-in method.
      *
      * @throws DomainException when the identity is absent or it is the last
-     *                          remaining sign-in method.
+     *                         remaining sign-in method.
      */
     public function unlink(User $user, string $provider): void
     {
@@ -274,7 +274,7 @@ class IdentityService
 
         while (User::where('username', $candidate)->exists()) {
             $i++;
-            $candidate = substr($base, 0, 15) . $i;
+            $candidate = substr($base, 0, 15).$i;
         }
 
         return $candidate;

@@ -41,8 +41,7 @@ class RegistrationService
         protected NotificationService $notifications,
         protected LiveEventService $live,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * Register a team for a tournament.
@@ -50,9 +49,9 @@ class RegistrationService
      * @param  array<string, mixed>  $data  already-validated registration payload
      * @return array{team: Team, waitlisted: bool}
      *
-     * @throws DomainException             risk gate or roster violation
+     * @throws DomainException risk gate or roster violation
      * @throws RegistrationClosedException lifecycle refusal
-     * @throws QueryException              unique-index backstop
+     * @throws QueryException unique-index backstop
      */
     public function register(Tournament $tournament, User $user, array $data): array
     {
@@ -178,7 +177,7 @@ class RegistrationService
             $user,
             Notification::TYPE_TEAM_REGISTERED,
             'Team registered',
-            'Your team ' . $team->name . ' was registered for ' . $tournament->name . '.',
+            'Your team '.$team->name.' was registered for '.$tournament->name.'.',
             $teamLink,
             ['team_id' => $team->id, 'tournament_id' => $tournament->id],
         );
@@ -190,7 +189,7 @@ class RegistrationService
                 $organizer,
                 Notification::TYPE_TEAM_REGISTERED,
                 'New team registration',
-                'Team ' . $team->name . ' registered for ' . $tournament->name . '.',
+                'Team '.$team->name.' registered for '.$tournament->name.'.',
                 $teamLink,
                 ['team_id' => $team->id, 'tournament_id' => $tournament->id],
             );

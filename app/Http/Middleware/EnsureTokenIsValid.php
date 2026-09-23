@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Http\Middleware;
 
+use App\Support\ApiResponse;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -13,31 +15,31 @@ class EnsureTokenIsValid
     {
         $token = $request->bearerToken();
 
-        if (!$token) {
+        if (! $token) {
             return response()->json([
                 'error' => 'token_required',
-                'message' => 'Bearer token required'
+                'message' => 'Bearer token required',
             ], 401);
         }
 
         if (strlen($token) < 10) {
             return response()->json([
                 'error' => 'token_invalid',
-                'message' => 'Token too short'
+                'message' => 'Token too short',
             ], 401);
         }
 
         if (strlen($token) > 500) {
             return response()->json([
                 'error' => 'token_invalid',
-                'message' => 'Token too long'
+                'message' => 'Token too long',
             ], 401);
         }
 
         try {
             $personalAccessToken = PersonalAccessToken::findToken($token);
 
-            if (!$personalAccessToken) {
+            if (! $personalAccessToken) {
                 Log::warning('Token not found', [
                     'redacted_token' => $this->redactToken($token),
                     'request_id' => $request->header('X-Request-ID', 'unknown'),
@@ -46,7 +48,7 @@ class EnsureTokenIsValid
 
                 return response()->json([
                     'error' => 'token_invalid',
-                    'message' => 'Token not found'
+                    'message' => 'Token not found',
                 ], 401);
             }
 
@@ -59,16 +61,16 @@ class EnsureTokenIsValid
 
                 return response()->json([
                     'error' => 'token_expired',
-                    'message' => 'Token expired'
+                    'message' => 'Token expired',
                 ], 401);
             }
 
             $tokenable = $personalAccessToken->tokenable;
 
-            if (!$tokenable) {
+            if (! $tokenable) {
                 return response()->json([
                     'error' => 'token_invalid',
-                    'message' => 'Token owner not found'
+                    'message' => 'Token owner not found',
                 ], 401);
             }
 
@@ -82,11 +84,11 @@ class EnsureTokenIsValid
                     'request_id' => $request->header('X-Request-ID', 'unknown'),
                 ]);
 
-                return \App\Support\ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
+                return ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
             }
 
-            if (isset($tokenable->is_active) && !$tokenable->is_active && !method_exists($tokenable, 'inactiveReason')) {
-                return \App\Support\ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
+            if (isset($tokenable->is_active) && ! $tokenable->is_active && ! method_exists($tokenable, 'inactiveReason')) {
+                return ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
             }
 
             // Check token abilities if needed
@@ -108,7 +110,7 @@ class EnsureTokenIsValid
 
             return response()->json([
                 'error' => 'token_invalid',
-                'message' => 'Token validation failed'
+                'message' => 'Token validation failed',
             ], 401);
         }
     }
@@ -116,8 +118,9 @@ class EnsureTokenIsValid
     protected function redactToken(string $token): string
     {
         if (strlen($token) <= 8) {
-            return "***REDACTED***";
+            return '***REDACTED***';
         }
-        return substr($token, 0, 4) . "***REDACTED***" . substr($token, -4);
+
+        return substr($token, 0, 4).'***REDACTED***'.substr($token, -4);
     }
 }

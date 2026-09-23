@@ -27,8 +27,7 @@ class AdminAccountController extends Controller
         protected SessionManagementService $sessions,
         protected AccountLifecycleService $lifecycle,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request)
     {

@@ -4,13 +4,17 @@ namespace App\Services\Gameberry;
 
 use App\Models\Referral;
 use App\Models\ScratchCard;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ReferralService
 {
     const REFERRAL_BONUS_MINOR = 2500; // ₹25
+
     const REFERRAL_BONUS_GEMS = 10;
+
     const CODE_PREFIX = 'BGI'; // BGI20 style from Khiladi Adda research
 
     public function generateReferralCode(int $userId): string
@@ -20,15 +24,17 @@ class ReferralService
             return $existing->code;
         }
 
-        $user = \App\Models\User::findOrFail($userId);
+        $user = User::findOrFail($userId);
         $prefix = strtoupper(substr($user->name ?? 'FF', 0, 2));
-        if (strlen($prefix) < 2) $prefix = self::CODE_PREFIX;
+        if (strlen($prefix) < 2) {
+            $prefix = self::CODE_PREFIX;
+        }
 
-        $code = $prefix . strtoupper(Str::random(3)) . '20';
+        $code = $prefix.strtoupper(Str::random(3)).'20';
 
         // Ensure unique
         while (Referral::where('code', $code)->exists()) {
-            $code = $prefix . strtoupper(Str::random(3)) . '20';
+            $code = $prefix.strtoupper(Str::random(3)).'20';
         }
 
         // Create placeholder referral entry for code ownership
@@ -45,6 +51,7 @@ class ReferralService
     public function getReferralCode(int $userId): ?string
     {
         $ref = Referral::where('referrer_id', $userId)->whereNotNull('code')->latest()->first();
+
         return $ref?->code;
     }
 
@@ -53,7 +60,7 @@ class ReferralService
         $code = strtoupper(trim($code));
 
         $referrerEntry = Referral::where('code', $code)->first();
-        if (!$referrerEntry) {
+        if (! $referrerEntry) {
             throw new \Exception('Invalid referral code');
         }
 
@@ -70,7 +77,7 @@ class ReferralService
         return DB::transaction(function () use ($newUserId, $code, $referrerEntry) {
             // Find or create referral for this new user
             $referral = Referral::where('code', $code)->where('referrer_id', $referrerEntry->referrer_id)->where('referred_id', null)->first();
-            if (!$referral) {
+            if (! $referral) {
                 $referral = Referral::create([
                     'referrer_id' => $referrerEntry->referrer_id,
                     'code' => $code,
@@ -106,23 +113,23 @@ class ReferralService
         // Gold wallet reward - ₹25 = 2500 minor
         $goldService = app(GoldEconomyService::class);
         $wallet = $goldService->getOrCreateWallet($referrerId);
-        $wallet->addGold(2500, 'referral', 'referral', (string)$referral->id, "Referral bonus for code {$referral->code}");
+        $wallet->addGold(2500, 'referral', 'referral', (string) $referral->id, "Referral bonus for code {$referral->code}");
 
         // Gem reward
         $gemService = app(GemEconomyService::class);
         $gemWallet = $gemService->getOrCreateWallet($referrerId);
-        $gemWallet->addGems(self::REFERRAL_BONUS_GEMS, 'referral', 'referral', (string)$referral->id, "Referral gem bonus");
+        $gemWallet->addGems(self::REFERRAL_BONUS_GEMS, 'referral', 'referral', (string) $referral->id, 'Referral gem bonus');
     }
 
     private function rewardReferred(int $referredId, Referral $referral): void
     {
         $goldService = app(GoldEconomyService::class);
         $wallet = $goldService->getOrCreateWallet($referredId);
-        $wallet->addGold(2500, 'referral', 'referral', (string)$referral->id, "Welcome referral bonus");
+        $wallet->addGold(2500, 'referral', 'referral', (string) $referral->id, 'Welcome referral bonus');
 
         $gemService = app(GemEconomyService::class);
         $gemWallet = $gemService->getOrCreateWallet($referredId);
-        $gemWallet->addGems(self::REFERRAL_BONUS_GEMS, 'referral', 'referral', (string)$referral->id, "Welcome gem bonus");
+        $gemWallet->addGems(self::REFERRAL_BONUS_GEMS, 'referral', 'referral', (string) $referral->id, 'Welcome gem bonus');
     }
 
     private function createScratchCards(int $referrerId, int $referredId): void
@@ -162,11 +169,11 @@ class ReferralService
             'completed' => $completed,
             'pending' => $pending,
             'total_earned_minor' => $totalEarned,
-            'total_earned_formatted' => '₹' . number_format($totalEarned / 100, 2),
+            'total_earned_formatted' => '₹'.number_format($totalEarned / 100, 2),
         ];
     }
 
-    public function getReferralList(int $userId): \Illuminate\Database\Eloquent\Collection
+    public function getReferralList(int $userId): Collection
     {
         return Referral::with('referred')->where('referrer_id', $userId)->whereNotNull('referred_id')->orderByDesc('created_at')->get();
     }

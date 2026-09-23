@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * feed target live in the follow-up migration), so Phases 01–13 remain
  * untouched.
  */
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {

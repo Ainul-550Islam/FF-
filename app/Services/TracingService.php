@@ -1,12 +1,15 @@
 <?php
+
 namespace App\Services;
+
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class TracingService
 {
     protected string $serviceName;
+
     protected ?string $jaegerEndpoint;
+
     protected array $spans = [];
 
     public function __construct()
@@ -29,7 +32,7 @@ class TracingService
     {
         $traceId = $traceId ?: $this->generateTraceId();
         $spanId = $this->generateSpanId();
-        
+
         $span = [
             'trace_id' => $traceId,
             'span_id' => $spanId,
@@ -39,7 +42,7 @@ class TracingService
             'start_time' => microtime(true),
             'tags' => [],
         ];
-        
+
         return $span;
     }
 
@@ -47,9 +50,9 @@ class TracingService
     {
         $span['end_time'] = microtime(true);
         $span['duration_ms'] = ($span['end_time'] - $span['start_time']) * 1000;
-        
+
         $this->spans[] = $span;
-        
+
         // Export if batch size reached or in dev log
         if (count($this->spans) >= 100 || app()->environment('local', 'development')) {
             $this->export();
@@ -61,10 +64,10 @@ class TracingService
         if (empty($this->spans)) {
             return;
         }
-        
+
         $spans = $this->spans;
         $this->spans = [];
-        
+
         if ($this->jaegerEndpoint) {
             // In production, send to Jaeger via HTTP
             // $this->sendToJaeger($spans);
@@ -88,15 +91,16 @@ class TracingService
         // Ensure traceId 32 chars, spanId 16 chars
         $traceId = str_pad(substr(str_replace('-', '', $traceId), 0, 32), 32, '0');
         $spanId = str_pad(substr(str_replace('-', '', $spanId), 0, 16), 16, '0');
+
         return "00-{$traceId}-{$spanId}-{$flags}";
     }
 
     public function parseTraceParent(string $header): ?array
     {
-        if (!preg_match('/^00-([a-f0-9]{32})-([a-f0-9]{16})-([a-f0-9]{2})$/', $header, $matches)) {
+        if (! preg_match('/^00-([a-f0-9]{32})-([a-f0-9]{16})-([a-f0-9]{2})$/', $header, $matches)) {
             return null;
         }
-        
+
         return [
             'trace_id' => $matches[1],
             'span_id' => $matches[2],

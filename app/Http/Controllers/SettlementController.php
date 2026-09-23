@@ -25,8 +25,7 @@ class SettlementController extends Controller
         protected PrizeDistributionService $distributions,
         protected ReconciliationService $reconciliation,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * List tournaments that have a settlement (finished, or with an existing
@@ -155,7 +154,7 @@ class SettlementController extends Controller
             'metadata' => ['allocated_minor' => $distribution->total_allocated_minor],
         ]);
 
-        return back()->with('success', 'Prize distribution calculated (' . Money::formatMinor($distribution->total_allocated_minor) . ' allocated).');
+        return back()->with('success', 'Prize distribution calculated ('.Money::formatMinor($distribution->total_allocated_minor).' allocated).');
     }
 
     /**
@@ -200,7 +199,7 @@ class SettlementController extends Controller
             return back()->with('success', 'Prize distribution completed and settlement finalized.');
         }
 
-        return back()->with('error', 'Prize distribution failed: ' . ($distribution->failure_reason ?? 'unknown error'));
+        return back()->with('error', 'Prize distribution failed: '.($distribution->failure_reason ?? 'unknown error'));
     }
 
     /**

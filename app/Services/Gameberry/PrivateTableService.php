@@ -2,17 +2,23 @@
 
 namespace App\Services\Gameberry;
 
+use App\Models\AutoModeLog;
+use App\Models\Challenge;
 use App\Models\PrivateTable;
 use App\Models\PrivateTableParticipant;
-use App\Models\Challenge;
+use App\Models\UserOnlineStatus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class PrivateTableService
 {
     const MAX_PARTICIPANTS_CLASSIC = 4;
+
     const MAX_PARTICIPANTS_QUICK = 2;
+
     const CODE_LENGTH = 6;
+
     const EXPIRY_HOURS = 2;
 
     public function createTable(int $hostId, array $options = []): PrivateTable
@@ -28,7 +34,7 @@ class PrivateTableService
         $mode = $isTeamUp ? 'team_up' : ($maxPlayers == 2 ? '1vs1' : '4_player');
 
         $code = $this->generateUniqueCode();
-        $link = url('/private-tables/join/' . $code);
+        $link = url('/private-tables/join/'.$code);
 
         $table = PrivateTable::create([
             'creator_id' => $hostId,
@@ -65,7 +71,7 @@ class PrivateTableService
     public function joinTable(int $userId, string $code): PrivateTableParticipant
     {
         $table = PrivateTable::where('code', strtoupper($code))->where('status', 'waiting')->first();
-        if (!$table) {
+        if (! $table) {
             throw new \Exception('Table not found or not available');
         }
 
@@ -87,7 +93,7 @@ class PrivateTableService
         // Check gold - if GoldEconomyService exists
         try {
             $goldService = app(GoldEconomyService::class);
-            if (!$goldService->canAffordBet($userId, $table->bet_amount_minor)) {
+            if (! $goldService->canAffordBet($userId, $table->bet_amount_minor)) {
                 throw new \Exception('Insufficient gold to join table');
             }
         } catch (\Exception $e) {
@@ -118,7 +124,8 @@ class PrivateTableService
                     if (method_exists($svc, 'deductGold')) {
                         $svc->deductGold($userId, $table->bet_amount_minor, 'private_table_join', $table->code);
                     }
-                } catch (\Exception $e2) {}
+                } catch (\Exception $e2) {
+                }
             }
 
             return $participant;
@@ -135,7 +142,8 @@ class PrivateTableService
             if ($table->status === 'waiting') {
                 try {
                     app(GoldEconomyService::class)->refundBet($userId, $table->bet_amount_minor, $table->code, 'left table');
-                } catch (\Exception $e) {}
+                } catch (\Exception $e) {
+                }
             }
             $participant->delete();
 
@@ -153,6 +161,7 @@ class PrivateTableService
         $participant->is_ready = $ready;
         $participant->status = $ready ? 'ready' : 'joined';
         $participant->save();
+
         return $participant;
     }
 
@@ -190,14 +199,14 @@ class PrivateTableService
 
         // Log auto mode - create if table exists
         try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('auto_mode_logs')) {
-                \App\Models\AutoModeLog::create([
+            if (Schema::hasTable('auto_mode_logs')) {
+                AutoModeLog::create([
                     'user_id' => $userId,
                     'private_table_id' => $table->id,
                     'reason' => $reason,
                     'is_auto_on' => $autoOn,
                     'auto_on_at' => $autoOn ? now() : null,
-                    'auto_off_at' => !$autoOn ? now() : null,
+                    'auto_off_at' => ! $autoOn ? now() : null,
                 ]);
             }
         } catch (\Exception $e) {
@@ -206,25 +215,27 @@ class PrivateTableService
 
         // Also update user_online_status if exists
         try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('user_online_statuses')) {
-                $status = \App\Models\UserOnlineStatus::firstOrCreate(['user_id' => $userId]);
+            if (Schema::hasTable('user_online_statuses')) {
+                $status = UserOnlineStatus::firstOrCreate(['user_id' => $userId]);
                 $status->is_in_auto_mode = $autoOn;
                 $status->save();
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
     }
 
     public function challengeFriend(int $challengerId, int $challengedId, string $type = 'private_table', int $betAmount = 100): Challenge
     {
         // Check if challenged is online and not hiding status
         try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('user_online_statuses')) {
-                $status = \App\Models\UserOnlineStatus::where('user_id', $challengedId)->first();
+            if (Schema::hasTable('user_online_statuses')) {
+                $status = UserOnlineStatus::where('user_id', $challengedId)->first();
                 if ($status && $status->hide_online_status) {
                     // For test, still allow but log
                 }
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return Challenge::create([
             'challenger_id' => $challengerId,
@@ -246,6 +257,7 @@ class PrivateTableService
         // Link contains code
         $parts = explode('/', $link);
         $code = end($parts);
+
         return $this->getTableByCode($code);
     }
 
@@ -254,6 +266,7 @@ class PrivateTableService
         do {
             $code = strtoupper(Str::random(self::CODE_LENGTH));
         } while (PrivateTable::where('code', $code)->exists());
+
         return $code;
     }
 
@@ -274,6 +287,7 @@ class PrivateTableService
     {
         $teamACount = $table->participants()->where('team', 'team_a')->count();
         $teamBCount = $table->participants()->where('team', 'team_b')->count();
+
         return $teamACount <= $teamBCount ? 'team_a' : 'team_b';
     }
 

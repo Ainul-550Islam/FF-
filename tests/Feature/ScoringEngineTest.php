@@ -8,6 +8,7 @@ use App\Models\ScoringRule;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
+use App\Services\MatchProgressionService;
 use App\Services\ScoringService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -587,7 +588,7 @@ class ScoringEngineTest extends TestCase
         $this->scoring()->submitScore($match, $teamA, 2, 1);
         $this->assertCount(1, $this->scoring()->standings($tournament));
 
-        $progression = app(\App\Services\MatchProgressionService::class);
+        $progression = app(MatchProgressionService::class);
         $progression->complete($match, $teamA);
         $progression->dispute($match);
         $this->assertEmpty($this->scoring()->standings($tournament));

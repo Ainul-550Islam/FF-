@@ -6,6 +6,7 @@ use App\Models\GameMatch;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -110,7 +111,7 @@ class ScoringMigrationTest extends TestCase
             'updated_at' => now()->toDateTimeString(),
         ]);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         DB::table('scores')->insert([
             'match_id' => $match->id,
             'team_id' => $team2->id,
@@ -161,7 +162,7 @@ class ScoringMigrationTest extends TestCase
             'updated_at' => now()->toDateTimeString(),
         ]);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         DB::table('scores')->insert([
             'match_id' => $match->id,
             'team_id' => $team1->id,

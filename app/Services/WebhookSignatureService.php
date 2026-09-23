@@ -19,7 +19,7 @@ class WebhookSignatureService
      */
     public function sign(string $secret, int $timestamp, string $rawBody): string
     {
-        return hash_hmac('sha256', $timestamp . '.' . $rawBody, $secret);
+        return hash_hmac('sha256', $timestamp.'.'.$rawBody, $secret);
     }
 
     /**
@@ -77,6 +77,6 @@ class WebhookSignatureService
      */
     public function generateSecret(): string
     {
-        return 'whsec_' . bin2hex(random_bytes(32));
+        return 'whsec_'.bin2hex(random_bytes(32));
     }
 }

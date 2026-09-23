@@ -2,9 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\WebhookEndpoint;
-use App\Models\WebhookEvent;
 use App\Models\User;
+use App\Models\WebhookEndpoint;
 use DomainException;
 use Illuminate\Support\Facades\Crypt;
 
@@ -20,8 +19,7 @@ class WebhookSubscriptionService
     public function __construct(
         protected WebhookSignatureService $signatures,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * Create an endpoint and return it with the plaintext secret attached

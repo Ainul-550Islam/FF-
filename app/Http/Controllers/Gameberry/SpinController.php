@@ -34,8 +34,13 @@ class SpinController extends Controller
         try {
             $spin = $this->spinService->spin($userId, $request->boolean('use_free', false));
             $msg = "Spin result: {$spin->result}";
-            if ($spin->gold_amount > 0) $msg .= " +{$spin->gold_amount} gold";
-            if ($spin->gem_amount > 0) $msg .= " +{$spin->gem_amount} gems";
+            if ($spin->gold_amount > 0) {
+                $msg .= " +{$spin->gold_amount} gold";
+            }
+            if ($spin->gem_amount > 0) {
+                $msg .= " +{$spin->gem_amount} gems";
+            }
+
             return redirect()->back()->with('success', $msg);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -46,6 +51,7 @@ class SpinController extends Controller
     {
         $userId = $request->user()->id;
         $history = $this->spinService->getSpinHistory($userId, 50);
+
         return view('gameberry.spin.history', compact('history'));
     }
 }

@@ -75,6 +75,7 @@ class LuckyDice extends Model
     public static function canReceiveMore(int $userId): bool
     {
         $count = self::where('user_id', $userId)->where('is_rolled', false)->count();
+
         return $count < 52; // Gameberry max 52
     }
 }

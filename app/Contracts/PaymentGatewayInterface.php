@@ -51,7 +51,7 @@ interface PaymentGatewayInterface
      * @return array{status: string, provider_reference: ?string, redirect_url: ?string}
      *
      * @throws DomainException when the operation is not supported (e.g. no
-     *                          live credentials).
+     *                         live credentials).
      */
     public function createExternalPayment(Payment $payment): array;
 

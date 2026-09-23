@@ -26,8 +26,7 @@ class ScoringService
 {
     public function __construct(
         protected LiveEventService $live,
-    ) {
-    }
+    ) {}
 
     /**
      * The tournament's current (active) scoring rule set, lazily creating the
@@ -149,7 +148,7 @@ class ScoringService
         }
 
         if ($placement < 1 || $placement > ScoringRule::MAX_PLACEMENT) {
-            throw new DomainException('Placement must be between 1 and ' . ScoringRule::MAX_PLACEMENT . '.');
+            throw new DomainException('Placement must be between 1 and '.ScoringRule::MAX_PLACEMENT.'.');
         }
 
         if ($kills < 0) {
@@ -293,7 +292,7 @@ class ScoringService
         }
 
         if ($newPlacement < 1 || $newPlacement > ScoringRule::MAX_PLACEMENT) {
-            throw new DomainException('Placement must be between 1 and ' . ScoringRule::MAX_PLACEMENT . '.');
+            throw new DomainException('Placement must be between 1 and '.ScoringRule::MAX_PLACEMENT.'.');
         }
 
         return DB::transaction(function () use ($score, $match, $newKills, $newPlacement) {

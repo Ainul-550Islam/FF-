@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AccountLink;
+use App\Models\Restriction;
 use App\Models\RiskEvent;
 use App\Models\User;
 use DomainException;
@@ -20,8 +21,7 @@ class AccountLinkService
 {
     public function __construct(
         protected FraudRiskService $risk,
-    ) {
-    }
+    ) {}
 
     /**
      * Link two accounts with a confidence strength and reason categories.
@@ -116,7 +116,7 @@ class AccountLinkService
             }
 
             $restricted = app(RestrictionService::class)->isBlocked($other, [
-                \App\Models\Restriction::TYPE_ACCOUNT_SUSPENDED,
+                Restriction::TYPE_ACCOUNT_SUSPENDED,
             ]);
 
             if ($restricted) {

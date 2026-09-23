@@ -36,7 +36,7 @@ class TeamRosterTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = $overrides['name'] ?? 'Roster Tournament';
-        $t->slug = $overrides['slug'] ?? ('roster-' . Str::random(8));
+        $t->slug = $overrides['slug'] ?? ('roster-'.Str::random(8));
         $t->game_mode = $overrides['game_mode'] ?? 'squad';
         $t->map = $overrides['map'] ?? 'Bermuda';
         $t->entry_fee = $overrides['entry_fee'] ?? 100;
@@ -56,7 +56,7 @@ class TeamRosterTest extends TestCase
         $t = new Team();
         $t->tournament_id = $tournament->id;
         $t->captain_id = $captain?->id;
-        $t->name = 'Team ' . Str::random(6);
+        $t->name = 'Team '.Str::random(6);
         $t->captain_name = $captain?->name ?? 'Captain';
         $t->phone = '01700000000';
         $t->game_uid = $uid;
@@ -190,7 +190,7 @@ class TeamRosterTest extends TestCase
 
         foreach (['UIDA001', 'UIDA002', 'UIDA003'] as $i => $uid) {
             $this->actingAs($captain)->post(route('teams.members.store', [$tournament, $team]), [
-                'player_name' => 'Player ' . $i,
+                'player_name' => 'Player '.$i,
                 'game_uid' => $uid,
             ])->assertSessionHas('success');
         }

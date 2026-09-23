@@ -28,7 +28,7 @@ class MagicChestApiController extends Controller
                 'available' => $available,
                 'can_get' => $this->chestService->canGetChest($userId),
                 'next_time' => $this->chestService->getNextChestTime($userId),
-            ]
+            ],
         ]);
     }
 
@@ -36,6 +36,7 @@ class MagicChestApiController extends Controller
     {
         $userId = $request->user()->id;
         $available = $this->chestService->getAvailableChests($userId);
+
         return response()->json(['success' => true, 'data' => $available]);
     }
 
@@ -45,6 +46,7 @@ class MagicChestApiController extends Controller
         $userId = $request->user()->id;
         try {
             $chest = $this->chestService->createChest($userId, $request->type);
+
             return response()->json(['success' => true, 'data' => $chest], 201);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 400);
@@ -56,6 +58,7 @@ class MagicChestApiController extends Controller
         $userId = $request->user()->id;
         try {
             $rewards = $this->chestService->openChest($userId, $chestId);
+
             return response()->json(['success' => true, 'data' => $rewards]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 400);

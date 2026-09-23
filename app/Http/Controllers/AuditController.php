@@ -18,8 +18,7 @@ class AuditController extends Controller
 {
     public function __construct(
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * Searchable, paginated audit log with whitelisted filters.

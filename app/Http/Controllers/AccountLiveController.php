@@ -17,8 +17,7 @@ class AccountLiveController extends Controller
 {
     public function __construct(
         protected LiveEventService $live,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request)
     {

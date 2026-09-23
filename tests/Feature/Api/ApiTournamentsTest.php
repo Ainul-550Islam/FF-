@@ -40,8 +40,8 @@ class ApiTournamentsTest extends ApiTestCase
         $open = $this->makeTournament($org, 'open');
         $draft = $this->makeTournament($org, 'draft');
 
-        $this->getJson('/api/v1/tournaments/' . $open->slug)->assertStatus(200);
-        $this->getJson('/api/v1/tournaments/' . $draft->slug)->assertStatus(404);
+        $this->getJson('/api/v1/tournaments/'.$open->slug)->assertStatus(200);
+        $this->getJson('/api/v1/tournaments/'.$draft->slug)->assertStatus(404);
     }
 
     public function test_registration_derives_state_and_rejects_injected_fields(): void
@@ -53,7 +53,7 @@ class ApiTournamentsTest extends ApiTestCase
         // The client tries to inject status/slot/confirmation — all ignored;
         // the server derives pending + payment step.
         $res = $this->asUser($player, ['tournaments:register'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', [
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', [
                 'name' => 'Injected',
                 'captain_name' => 'Captain',
                 'phone' => '01700000000',
@@ -81,7 +81,7 @@ class ApiTournamentsTest extends ApiTestCase
         $this->makeTeam($tournament, null, 'pending');
 
         $res = $this->asUser($player, ['tournaments:register'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $this->registrationPayload('Overflow'));
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $this->registrationPayload('Overflow'));
 
         $res->assertStatus(201)
             ->assertJsonPath('data.waitlisted', true)
@@ -95,7 +95,7 @@ class ApiTournamentsTest extends ApiTestCase
         $tournament = $this->makeTournament($org, 'closed');
 
         $this->asUser($player, ['tournaments:register'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $this->registrationPayload())
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $this->registrationPayload())
             ->assertStatus(409);
     }
 
@@ -106,11 +106,11 @@ class ApiTournamentsTest extends ApiTestCase
         $tournament = $this->makeTournament($org, 'open');
 
         $this->asUser($player, ['tournaments:register'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $this->registrationPayload())
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $this->registrationPayload())
             ->assertStatus(201);
 
         $this->asUser($player, ['tournaments:register'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $this->registrationPayload('Second', 'UIDAPI0002'))
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $this->registrationPayload('Second', 'UIDAPI0002'))
             ->assertStatus(409);
     }
 
@@ -119,10 +119,10 @@ class ApiTournamentsTest extends ApiTestCase
         $org = $this->user(['role' => 'organizer']);
         $tournament = $this->makeTournament($org, 'open');
 
-        $this->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $this->registrationPayload())
+        $this->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $this->registrationPayload())
             ->assertStatus(401);
 
-        $this->postJson('/api/v1/tournaments/' . $tournament->slug . '/check-in', ['team_id' => 1])
+        $this->postJson('/api/v1/tournaments/'.$tournament->slug.'/check-in', ['team_id' => 1])
             ->assertStatus(401);
     }
 
@@ -139,12 +139,12 @@ class ApiTournamentsTest extends ApiTestCase
 
         // A non-captain cannot check the team in (IDOR / authorization).
         $this->asUser($other, ['tournaments:register'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/check-in', ['team_id' => $team->id])
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/check-in', ['team_id' => $team->id])
             ->assertStatus(403);
 
         // The captain can.
         $this->asUser($captain, ['tournaments:register'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/check-in', ['team_id' => $team->id])
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/check-in', ['team_id' => $team->id])
             ->assertStatus(200)
             ->assertJsonPath('data.status', 'checked_in');
 
@@ -159,18 +159,18 @@ class ApiTournamentsTest extends ApiTestCase
 
         $this->makeTeam($tournament, null, 'pending');
         $this->asUser($player, ['tournaments:register'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $this->registrationPayload())
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $this->registrationPayload())
             ->assertStatus(201);
 
         $res = $this->asUser($player, ['tournaments:read'])
-            ->getJson('/api/v1/tournaments/' . $tournament->slug . '/waitlist');
+            ->getJson('/api/v1/tournaments/'.$tournament->slug.'/waitlist');
 
         $res->assertStatus(200);
         $this->assertSame(1, $res->json('data.count'));
 
         // There is no client promotion endpoint — POST to a fake one is 404/405.
         $this->asUser($player, ['tournaments:register'])
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/waitlist', ['team_id' => 1])
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/waitlist', ['team_id' => 1])
             ->assertStatus(405);
     }
 }

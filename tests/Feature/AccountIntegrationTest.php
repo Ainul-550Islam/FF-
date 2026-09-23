@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditLog;
 use App\Models\LiveEvent;
 use App\Models\Notification;
+use App\Models\Team;
+use App\Models\Tournament;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -59,7 +63,7 @@ class AccountIntegrationTest extends TestCase
         $user->save();
 
         // Force a fresh password hash.
-        $user->password = \Illuminate\Support\Facades\Hash::make('secret123');
+        $user->password = Hash::make('secret123');
         $user->save();
 
         $this->post(route('login'), ['email' => 'alam@example.com', 'password' => 'secret123']);
@@ -111,7 +115,7 @@ class AccountIntegrationTest extends TestCase
         $this->assertSame($event->id, $response->json('revision'));
 
         // Only events newer than the cursor come back.
-        $later = $this->actingAs($user)->getJson(route('account.live') . '?since=' . $event->id);
+        $later = $this->actingAs($user)->getJson(route('account.live').'?since='.$event->id);
         $later->assertOk()->assertJsonCount(0, 'events');
     }
 
@@ -120,10 +124,10 @@ class AccountIntegrationTest extends TestCase
         $org = $this->makeUser('organizer');
         $captain = $this->makeUser();
 
-        $tournament = new \App\Models\Tournament();
+        $tournament = new Tournament();
         $tournament->organizer_id = $org->id;
         $tournament->name = 'T';
-        $tournament->slug = 't-' . \Illuminate\Support\Str::random(6);
+        $tournament->slug = 't-'.Str::random(6);
         $tournament->game_mode = 'squad';
         $tournament->map = 'Bermuda';
         $tournament->entry_fee = 100;
@@ -131,18 +135,18 @@ class AccountIntegrationTest extends TestCase
         $tournament->team_slots = 8;
         $tournament->team_size = 4;
         $tournament->starts_at = now()->addDay();
-        $tournament->format = \App\Models\Tournament::FORMAT_SINGLE_ELIM;
+        $tournament->format = Tournament::FORMAT_SINGLE_ELIM;
         $tournament->status = 'open';
         $tournament->save();
 
-        $team = new \App\Models\Team();
+        $team = new Team();
         $team->tournament_id = $tournament->id;
         $team->captain_id = $captain->id;
         $team->name = 'Team';
         $team->captain_name = $captain->name;
         $team->phone = '01700000000';
-        $team->game_uid = 'UID' . \Illuminate\Support\Str::random(6);
-        $team->status = \App\Models\Team::STATUS_PENDING;
+        $team->game_uid = 'UID'.Str::random(6);
+        $team->status = Team::STATUS_PENDING;
         $team->save();
 
         $this->actingAs($captain)->post(route('payment.initiate', [$tournament, $team]), [
@@ -168,7 +172,7 @@ class AccountIntegrationTest extends TestCase
     {
         $user = $this->makeUser();
 
-        \Illuminate\Support\Facades\DB::table('sessions')->insert([
+        DB::table('sessions')->insert([
             'id' => 'sess-x',
             'user_id' => $user->id,
             'ip_address' => '127.0.0.1',

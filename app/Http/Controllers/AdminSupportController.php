@@ -21,8 +21,7 @@ class AdminSupportController extends Controller
 {
     public function __construct(
         protected SupportTicketService $tickets,
-    ) {
-    }
+    ) {}
 
     /**
      * The staff queue, filterable and scoped for organizers.
@@ -98,7 +97,7 @@ class AdminSupportController extends Controller
         $this->authorize('changeStatus', $ticket);
 
         $data = $request->validate([
-            'status' => 'required|in:' . implode(',', SupportTicket::STATUSES),
+            'status' => 'required|in:'.implode(',', SupportTicket::STATUSES),
             'note' => 'nullable|string|max:10000',
         ]);
 

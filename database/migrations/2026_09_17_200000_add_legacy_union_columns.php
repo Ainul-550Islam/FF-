@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  * generations ever created. This migration guarantees the union schema without
  * touching either original migration: every column is added only when missing.
  */
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
@@ -32,7 +32,7 @@ return new class extends Migration
             ];
 
             foreach ($legacy as $col => $def) {
-                if (!Schema::hasColumn('tournaments', $col)) {
+                if (! Schema::hasColumn('tournaments', $col)) {
                     Schema::table('tournaments', $def);
                 }
             }
@@ -45,7 +45,7 @@ return new class extends Migration
                         $fkExists = true;
                     }
                 }
-                if (!$fkExists) {
+                if (! $fkExists) {
                     Schema::table('tournaments', function (Blueprint $table) {
                         $table->foreign('organizer_id')->references('id')->on('users')->nullOnDelete();
                     });
@@ -123,8 +123,8 @@ return new class extends Migration
                 Schema::table('payouts', function (Blueprint $table) {
                     $table->unique(['distribution_id', 'rank'], 'payouts_distribution_rank_unique');
                 });
-            } catch (\Throwable $e) {
-                if (!str_contains($e->getMessage(), 'duplicate') && !str_contains($e->getMessage(), 'already exists')) {
+            } catch (Throwable $e) {
+                if (! str_contains($e->getMessage(), 'duplicate') && ! str_contains($e->getMessage(), 'already exists')) {
                     throw $e;
                 }
             }
@@ -177,7 +177,7 @@ return new class extends Migration
             }
         }
 
-        if (Schema::hasTable('login_events') && !Schema::hasColumn('login_events', 'updated_at')) {
+        if (Schema::hasTable('login_events') && ! Schema::hasColumn('login_events', 'updated_at')) {
             Schema::table('login_events', function (Blueprint $table) {
                 $table->timestamp('updated_at')->nullable()->after('created_at');
             });
@@ -188,7 +188,7 @@ return new class extends Migration
         // $user->unreadNotifications), which expects the standard morph
         // columns. Guarantee both exist on the union table.
         if (Schema::hasTable('notifications')) {
-            if (!Schema::hasColumn('notifications', 'notifiable_id')) {
+            if (! Schema::hasColumn('notifications', 'notifiable_id')) {
                 Schema::table('notifications', function (Blueprint $table) {
                     $table->unsignedBigInteger('notifiable_id')->nullable();
                     $table->string('notifiable_type')->nullable();
@@ -210,7 +210,7 @@ return new class extends Migration
                 'trx_id' => fn (Blueprint $table) => $table->string('trx_id', 60)->nullable(),
             ];
             foreach ($pay as $col => $def) {
-                if (!Schema::hasColumn('payments', $col)) {
+                if (! Schema::hasColumn('payments', $col)) {
                     Schema::table('payments', $def);
                 }
             }
@@ -222,22 +222,22 @@ return new class extends Migration
         // the movement currency; guarantee the columns exist on the union
         // schema so both generations read/write the same rows.
         if (Schema::hasTable('ledger_entries')) {
-            if (!Schema::hasColumn('ledger_entries', 'type')) {
+            if (! Schema::hasColumn('ledger_entries', 'type')) {
                 Schema::table('ledger_entries', function (Blueprint $table) {
                     $table->string('type', 30)->nullable();
                 });
             }
-            if (!Schema::hasColumn('ledger_entries', 'description')) {
+            if (! Schema::hasColumn('ledger_entries', 'description')) {
                 Schema::table('ledger_entries', function (Blueprint $table) {
                     $table->string('description', 255)->nullable();
                 });
             }
-            if (!Schema::hasColumn('ledger_entries', 'balance_after')) {
+            if (! Schema::hasColumn('ledger_entries', 'balance_after')) {
                 Schema::table('ledger_entries', function (Blueprint $table) {
                     $table->bigInteger('balance_after')->nullable();
                 });
             }
-            if (!Schema::hasColumn('ledger_entries', 'currency')) {
+            if (! Schema::hasColumn('ledger_entries', 'currency')) {
                 Schema::table('ledger_entries', function (Blueprint $table) {
                     $table->string('currency', 8)->default('BDT');
                 });
@@ -254,7 +254,7 @@ return new class extends Migration
 
         // users: the Phase 14 account-security generation records two-factor
         // state on the user row.
-        if (Schema::hasTable('users') && !Schema::hasColumn('users', 'two_factor_enabled')) {
+        if (Schema::hasTable('users') && ! Schema::hasColumn('users', 'two_factor_enabled')) {
             Schema::table('users', function (Blueprint $table) {
                 $table->boolean('two_factor_enabled')->default(false);
             });
@@ -429,12 +429,12 @@ return new class extends Migration
      */
     protected function nullableUnionColumns(string $table): void
     {
-        if (!Schema::hasTable($table)) {
+        if (! Schema::hasTable($table)) {
             return;
         }
 
         foreach (Schema::getColumns($table) as $col) {
-            if ($col['name'] === 'id' || !empty($col['nullable']) || $col['default'] !== null) {
+            if ($col['name'] === 'id' || ! empty($col['nullable']) || $col['default'] !== null) {
                 continue;
             }
 

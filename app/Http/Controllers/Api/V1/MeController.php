@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\MeResource;
 use App\Http\Resources\Api\V1\SessionResource;
+use App\Services\IdentityService;
 use App\Services\ProfileService;
 use App\Services\SessionManagementService;
 use App\Support\ApiResponse;
-use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
@@ -21,8 +22,7 @@ class MeController extends Controller
     public function __construct(
         protected ProfileService $profiles,
         protected SessionManagementService $sessions,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/me
@@ -73,7 +73,7 @@ class MeController extends Controller
             'email' => $user->email,
             'email_verified' => $user->email_verified_at !== null,
             'has_password' => $this->profiles->hasPassword($user),
-            'sign_in_methods' => app(\App\Services\IdentityService::class)->signInMethodCount($user),
+            'sign_in_methods' => app(IdentityService::class)->signInMethodCount($user),
             'account_status' => $user->account_status,
         ]);
     }
@@ -95,7 +95,7 @@ class MeController extends Controller
     {
         // Revoke a single named session that belongs to the caller. The id is
         // opaque and ownership is checked before deletion.
-        $deleted = \Illuminate\Support\Facades\DB::table('sessions')
+        $deleted = DB::table('sessions')
             ->where('id', $session)
             ->where('user_id', $request->user()->id)
             ->delete();

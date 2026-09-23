@@ -3,6 +3,7 @@
 use App\Contracts\ErrorReporterInterface;
 use App\Exceptions\ApiExceptionHandler;
 use App\Http\Middleware\AssignAuditRequestId;
+use App\Http\Middleware\CaptureMarketingAttribution;
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureBearerToken;
 use App\Http\Middleware\EnsureFeatureEnabled;
@@ -75,6 +76,19 @@ return Application::configure(basePath: dirname(__DIR__))
         // now runs globally (see the append() above).
         $middleware->web(append: [
             EnsureActiveAccount::class,
+
+            // Phase 20 — first-party marketing attribution (UTM / click-id /
+            // referrer capture). Runs after the request so it can also set
+            // the anonymous-visitor cookie on every response.
+            CaptureMarketingAttribution::class,
+        ]);
+
+        // Phase 20 — the consent cookie is read by the layout JS to gate
+        // third-party tags, so it must stay plaintext (it carries no PII —
+        // just two booleans + the policy version). The attribution cookie
+        // stays encrypted: server-side only, httpOnly.
+        $middleware->encryptCookies(except: [
+            env('MARKETING_CONSENT_COOKIE', 'ff_consent'),
         ]);
 
         // Provider payment webhooks are authenticated by HMAC signature, not

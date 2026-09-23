@@ -1,18 +1,20 @@
 <?php
+
 namespace App\Services\Gameberry\Final3;
-use Illuminate\Support\Facades\DB;
-use App\Services\Gameberry\GoldEconomyService;
-use App\Services\Gameberry\GemEconomyService;
+
 use App\Services\Gameberry\DiceCollectionService;
+use App\Services\Gameberry\GemEconomyService;
+use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\LeagueService;
 use App\Services\Gameberry\LevelService;
-use App\Services\Gameberry\ReconciliationService;
-use App\Services\Gameberry\SocialService;
-use App\Services\Gameberry\PrivateTableService;
 use App\Services\Gameberry\MagicChestService;
-use App\Services\Gameberry\VideoAdService;
-use App\Services\Gameberry\SpinService;
+use App\Services\Gameberry\ReconciliationService;
 use App\Services\Gameberry\ReferralService;
+use App\Services\Gameberry\SocialService;
+use App\Services\Gameberry\SpinService;
+use App\Services\Gameberry\VideoAdService;
+use Illuminate\Support\Facades\DB;
+
 class Final658Service
 {
     public function getFullStats(int $userId): array
@@ -35,15 +37,18 @@ class Final658Service
             'existing_logic_preserved' => true,
         ];
     }
+
     public function play(int $userId, string $mode = 'classic', int $bet = 100): array
     {
         return DB::transaction(function () use ($userId, $mode, $bet) {
             $goldService = app(GoldEconomyService::class);
-            if (!$goldService->canAffordBet($userId, $bet)) throw new \Exception('Insufficient gold - gold at stake');
+            if (! $goldService->canAffordBet($userId, $bet)) {
+                throw new \Exception('Insufficient gold - gold at stake');
+            }
             $betTx = $goldService->placeBet($userId, $bet, 'FINAL3_658');
-            $isWin = (bool) rand(0,1);
+            $isWin = (bool) rand(0, 1);
             if ($isWin) {
-                $goldService->winGold($userId, $bet*2, 'FINAL3_658');
+                $goldService->winGold($userId, $bet * 2, 'FINAL3_658');
                 $level = app(LevelService::class)->addWin($userId);
                 $league = app(LeagueService::class)->addTrophies($userId, 20, true);
                 $chest = app(MagicChestService::class)->rewardForWin($userId, $mode);
@@ -53,7 +58,10 @@ class Final658Service
                 $chest = null;
             }
             $reconcile = app(ReconciliationService::class)->reconcileAll($userId);
-            if (!$reconcile['all_balanced']) throw new \Exception('Reconciliation failed STOP G1 - financial totals must reconcile');
+            if (! $reconcile['all_balanced']) {
+                throw new \Exception('Reconciliation failed STOP G1 - financial totals must reconcile');
+            }
+
             return ['user_id' => $userId, 'mode' => $mode, 'bet' => $bet, 'is_win' => $isWin, 'level' => $level, 'league' => $league, 'chest' => $chest, 'reconcile' => $reconcile, 'bet_tx' => $betTx, 'feature_658' => true, 'full_code' => true];
         });
     }

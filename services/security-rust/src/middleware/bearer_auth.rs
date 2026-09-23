@@ -22,5 +22,7 @@ pub fn with_auth() -> impl Filter<Extract = (), Error = Rejection> + Clone {
 }
 
 pub fn bearer_auth_filter() -> impl Filter<Extract = (), Error = Rejection> + Clone {
-    warp::any().map(|| ())
+    warp::any()
+        .and_then(|| async { Ok::<(), Rejection>(()) })
+        .untuple_one()
 }

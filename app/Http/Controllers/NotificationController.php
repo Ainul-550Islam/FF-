@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Notification;
 use App\Services\NotificationService;
 use DomainException;
-use Illuminate\Http\Request;
 
 /**
  * The authenticated user's notification inbox (Phase 11).
@@ -18,8 +17,7 @@ class NotificationController extends Controller
 {
     public function __construct(
         protected NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     public function index()
     {

@@ -3,7 +3,6 @@
 namespace App\Policies;
 
 use App\Models\Restriction;
-use App\Models\RiskEvent;
 use App\Models\RiskProfile;
 use App\Models\User;
 

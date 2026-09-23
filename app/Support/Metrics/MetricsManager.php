@@ -19,7 +19,7 @@ class MetricsManager
     public function driver(): MetricsInterface
     {
         return match ((string) config('observability.metrics.driver', 'log')) {
-            'null' => new NullMetrics,
+            'null' => new NullMetrics(),
             default => new LogMetrics((string) config('observability.metrics.channel', 'metrics')),
         };
     }

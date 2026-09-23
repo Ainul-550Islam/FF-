@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Payment;
 use App\Models\WebhookEvent;
+use App\Services\PaymentService;
 
 /**
  * Phase 15 — inbound webhook verification: signature, timestamp tolerance,
@@ -25,7 +26,7 @@ class ApiWebhookTest extends ApiTestCase
         $tournament = $this->makeTournament($org, 'open', ['entry_fee' => 500]);
         $team = $this->makeTeam($tournament, $player);
 
-        return app(\App\Services\PaymentService::class)->createForTeam(
+        return app(PaymentService::class)->createForTeam(
             $tournament, $team, $player, $provider, 'TRX0001', $provider, 'TRX0001'
         );
     }
@@ -39,7 +40,7 @@ class ApiWebhookTest extends ApiTestCase
             'Content-Type' => 'application/json',
         ], $extraHeaders);
 
-        return $this->withHeaders($headers)->postJson('/api/v1/webhooks/inbound/' . $provider, $payload);
+        return $this->withHeaders($headers)->postJson('/api/v1/webhooks/inbound/'.$provider, $payload);
     }
 
     public function test_payment_webhook_settles_payment(): void

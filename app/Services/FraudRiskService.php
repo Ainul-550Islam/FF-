@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Payout;
 use App\Models\Payment;
+use App\Models\Payout;
+use App\Models\Restriction;
 use App\Models\RiskEvent;
 use App\Models\RiskProfile;
 use App\Models\Tournament;
@@ -25,8 +26,11 @@ use Illuminate\Support\Facades\DB;
 class FraudRiskService
 {
     public const ACTION_ALLOW = 'allow';
+
     public const ACTION_FLAG = 'flag';
+
     public const ACTION_REQUIRE_REVIEW = 'require_review';
+
     public const ACTION_RESTRICT = 'restrict';
 
     /**
@@ -316,24 +320,24 @@ class FraudRiskService
     {
         return match ($context) {
             'registration', 'payment' => [
-                \App\Models\Restriction::TYPE_REGISTRATION_BLOCKED,
-                \App\Models\Restriction::TYPE_TOURNAMENT_PARTICIPATION_BLOCKED,
-                \App\Models\Restriction::TYPE_ACCOUNT_SUSPENDED,
+                Restriction::TYPE_REGISTRATION_BLOCKED,
+                Restriction::TYPE_TOURNAMENT_PARTICIPATION_BLOCKED,
+                Restriction::TYPE_ACCOUNT_SUSPENDED,
             ],
             'checkin' => [
-                \App\Models\Restriction::TYPE_CHECKIN_BLOCKED,
-                \App\Models\Restriction::TYPE_ACCOUNT_SUSPENDED,
+                Restriction::TYPE_CHECKIN_BLOCKED,
+                Restriction::TYPE_ACCOUNT_SUSPENDED,
             ],
             'score_submission' => [
-                \App\Models\Restriction::TYPE_SCORE_SUBMISSION_BLOCKED,
-                \App\Models\Restriction::TYPE_ACCOUNT_SUSPENDED,
+                Restriction::TYPE_SCORE_SUBMISSION_BLOCKED,
+                Restriction::TYPE_ACCOUNT_SUSPENDED,
             ],
             'dispute' => [
-                \App\Models\Restriction::TYPE_DISPUTE_BLOCKED,
-                \App\Models\Restriction::TYPE_ACCOUNT_SUSPENDED,
+                Restriction::TYPE_DISPUTE_BLOCKED,
+                Restriction::TYPE_ACCOUNT_SUSPENDED,
             ],
             default => [
-                \App\Models\Restriction::TYPE_ACCOUNT_SUSPENDED,
+                Restriction::TYPE_ACCOUNT_SUSPENDED,
             ],
         };
     }

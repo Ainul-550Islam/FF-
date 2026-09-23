@@ -22,8 +22,11 @@ class FinancialSettlement extends Model
     use HasFactory;
 
     public const STATUS_BALANCED = 'balanced';
+
     public const STATUS_UNDERFUNDED = 'underfunded';
+
     public const STATUS_OVERALLOCATED = 'overallocated';
+
     public const STATUS_MISMATCH = 'mismatch';
 
     public const STATUSES = [

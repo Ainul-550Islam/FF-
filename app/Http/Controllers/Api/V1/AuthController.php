@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\MeResource;
 use App\Models\LoginEvent;
 use App\Models\Notification;
-use App\Models\RiskEvent;
 use App\Models\User;
 use App\Services\ApiTokenService;
 use App\Services\AuditLogService;
@@ -45,8 +44,7 @@ class AuthController extends Controller
         protected IdentityService $identities,
         protected GoogleIdTokenVerifierInterface $googleVerifier,
         protected ApiTokenService $tokens,
-    ) {
-    }
+    ) {}
 
     /**
      * POST /api/v1/auth/register

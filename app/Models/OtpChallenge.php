@@ -17,8 +17,11 @@ class OtpChallenge extends Model
     use HasFactory;
 
     public const PURPOSE_LOGIN = 'login';
+
     public const PURPOSE_SIGNUP = 'signup';
+
     public const PURPOSE_LINK = 'link';
+
     public const PURPOSE_RECOVERY = 'recovery';
 
     public const PURPOSES = [
@@ -29,8 +32,11 @@ class OtpChallenge extends Model
     ];
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_VERIFIED = 'verified';
+
     public const STATUS_EXPIRED = 'expired';
+
     public const STATUS_CONSUMED = 'consumed';
 
     protected $fillable = [];

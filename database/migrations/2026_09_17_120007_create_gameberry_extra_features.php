@@ -1,10 +1,14 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-return new class extends Migration {
-    public function up(): void {
-        if (!Schema::hasTable('game_modes')) {
+
+return new class() extends Migration
+{
+    public function up(): void
+    {
+        if (! Schema::hasTable('game_modes')) {
             Schema::create('game_modes', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
@@ -16,7 +20,7 @@ return new class extends Migration {
                 $table->timestamps();
             });
         }
-        if (!Schema::hasTable('team_up_matches')) {
+        if (! Schema::hasTable('team_up_matches')) {
             Schema::create('team_up_matches', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('private_table_id')->constrained()->cascadeOnDelete();
@@ -31,7 +35,7 @@ return new class extends Migration {
                 $table->timestamps();
             });
         }
-        if (!Schema::hasTable('auto_mode_settings')) {
+        if (! Schema::hasTable('auto_mode_settings')) {
             Schema::create('auto_mode_settings', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
@@ -43,7 +47,7 @@ return new class extends Migration {
                 $table->timestamps();
             });
         }
-        if (!Schema::hasTable('gold_at_stake')) {
+        if (! Schema::hasTable('gold_at_stake')) {
             Schema::create('gold_at_stake', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('private_table_id')->constrained()->cascadeOnDelete();
@@ -58,7 +62,9 @@ return new class extends Migration {
             });
         }
     }
-    public function down(): void {
+
+    public function down(): void
+    {
         Schema::dropIfExists('gold_at_stake');
         Schema::dropIfExists('auto_mode_settings');
         Schema::dropIfExists('team_up_matches');

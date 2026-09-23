@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Exceptions\PayoutReviewRequiredException;
 use App\Models\Dispute;
 use App\Models\GameMatch;
 use App\Models\Notification;
 use App\Models\Payout;
+use App\Models\PayoutEvent;
 use App\Models\PrizeDistribution;
 use App\Models\PrizeSnapshotItem;
 use App\Models\PrizeTier;
@@ -38,8 +40,7 @@ class PrizeDistributionService
         protected ReconciliationService $reconciliation,
         protected PayoutGatewayManager $gateways,
         protected NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     /**
      * The configured prize tiers for a tournament, ordered by rank.
@@ -77,7 +78,7 @@ class PrizeDistributionService
     /**
      * Replace a tournament's prize tiers with a validated set.
      *
-     * @param array<int, array{position:int, type:string, value:string}> $rows
+     * @param  array<int, array{position:int, type:string, value:string}>  $rows
      */
     public function saveTiers(Tournament $tournament, array $rows, User $admin): void
     {
@@ -107,7 +108,7 @@ class PrizeDistributionService
      * amounts/percentages, duplicate positions, invalid positions, totals
      * over 100% and allocations that exceed the available prize pool.
      *
-     * @param array<int, array{position:int, type:string, value:string}> $rows
+     * @param  array<int, array{position:int, type:string, value:string}>  $rows
      * @return array<int, array{position:int, type:string, amount_minor:?int, percentage_bp:?int}>
      */
     public function normalizeTiers(array $rows, int $pool): array
@@ -128,11 +129,11 @@ class PrizeDistributionService
             }
 
             if ($position < 1 || $position > PrizeTier::MAX_POSITION) {
-                throw new DomainException('Prize positions must be between 1 and ' . PrizeTier::MAX_POSITION . '.');
+                throw new DomainException('Prize positions must be between 1 and '.PrizeTier::MAX_POSITION.'.');
             }
 
             if (isset($seen[$position])) {
-                throw new DomainException('Duplicate prize position: ' . $position . '.');
+                throw new DomainException('Duplicate prize position: '.$position.'.');
             }
 
             $seen[$position] = true;
@@ -194,7 +195,7 @@ class PrizeDistributionService
 
         if ($total > $pool) {
             throw new DomainException(
-                'The configured prize allocation exceeds the available prize pool (৳' . Money::toDecimal($pool) . ').'
+                'The configured prize allocation exceeds the available prize pool (৳'.Money::toDecimal($pool).').'
             );
         }
 
@@ -275,7 +276,7 @@ class PrizeDistributionService
                 $team = $row->team;
 
                 if (! $team instanceof Team || $team->captain_id === null) {
-                    throw new DomainException('Ranked team #' . $rank . ' has no captain to receive the prize.');
+                    throw new DomainException('Ranked team #'.$rank.' has no captain to receive the prize.');
                 }
 
                 $amountMinor = $this->resolveAmount($tier, $pool);
@@ -354,7 +355,7 @@ class PrizeDistributionService
                 $payout->approved_by = $admin->id;
                 $payout->save();
 
-                $this->payouts->recordEvent($payout, $admin, \App\Models\PayoutEvent::EVENT_APPROVED, $payout->amountMinor());
+                $this->payouts->recordEvent($payout, $admin, PayoutEvent::EVENT_APPROVED, $payout->amountMinor());
             }
 
             $distribution->status = PrizeDistribution::STATUS_APPROVED;
@@ -410,7 +411,7 @@ class PrizeDistributionService
         foreach ($remaining as $payout) {
             try {
                 $this->payouts->process($payout, $admin);
-            } catch (\App\Exceptions\PayoutReviewRequiredException $e) {
+            } catch (PayoutReviewRequiredException $e) {
                 // Phase 10 — a payout held for fraud review stops the run
                 // WITHOUT failing it. The distribution stays `processing`
                 // until an admin overrides or clears the hold.
@@ -420,7 +421,7 @@ class PrizeDistributionService
 
                 DB::transaction(function () use ($distribution, $e) {
                     $distribution->status = PrizeDistribution::STATUS_FAILED;
-                    $distribution->failure_reason = 'A payout failed: ' . $e->getMessage();
+                    $distribution->failure_reason = 'A payout failed: '.$e->getMessage();
                     $distribution->save();
                 });
 
@@ -466,7 +467,7 @@ class PrizeDistributionService
             $recipients,
             Notification::TYPE_SETTLEMENT_COMPLETED,
             'Prize settlement completed',
-            'Prize settlement for ' . $tournament->name . ' has completed.',
+            'Prize settlement for '.$tournament->name.' has completed.',
             NotificationService::link('tournaments.show', [$tournament]),
             ['tournament_id' => $tournament->id],
         );

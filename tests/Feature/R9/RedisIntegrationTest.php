@@ -1,21 +1,179 @@
 <?php
+
 namespace Tests\Feature\R9;
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+
 class RedisIntegrationTest extends TestCase
 {
     use RefreshDatabase;
-    private function skipIfNoRedis(): void{if(!$this->isRedisAvailable())$this->markTestSkipped('Redis not available - BLOCKED BY ENVIRONMENT');}
-    private function redis(){if(class_exists(\Redis::class)){$redis=new \Redis(); $redis->connect(config('database.redis.default.host','127.0.0.1'),(int)config('database.redis.default.port',6379),1.0); $password=config('database.redis.default.password'); if($password&&$password!=='CHANGE_ME_REDIS_PASSWORD_PLACEHOLDER')$redis->auth($password); return $redis;} return \Illuminate\Support\Facades\Redis::connection();}
-    public function test_redis_set_get(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $key='ffarena:test:setget:'.uniqid(); $redis->set($key,'test-value'); $value=$redis->get($key); $this->assertEquals('test-value',$value); $redis->del($key);}
-    public function test_redis_del(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $key='ffarena:test:del:'.uniqid(); $redis->set($key,'to-delete'); $redis->del($key); $value=$redis->get($key); $this->assertFalse($value);}
-    public function test_redis_setnx(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $key='ffarena:test:setnx:'.uniqid(); $result1=$redis->setnx($key,'first'); $this->assertTrue((bool)$result1); $result2=$redis->setnx($key,'second'); $this->assertFalse((bool)$result2); $this->assertEquals('first',$redis->get($key)); $redis->del($key);}
-    public function test_redis_ttl_expire(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $key='ffarena:test:ttl:'.uniqid(); $redis->setex($key,2,'temp'); $ttl=$redis->ttl($key); $this->assertGreaterThan(0,$ttl); $this->assertLessThanOrEqual(2,$ttl); sleep(3); $value=$redis->get($key); $this->assertFalse($value);}
-    public function test_redis_incr(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $key='ffarena:test:incr:'.uniqid(); $redis->del($key); $this->assertEquals(1,$redis->incr($key)); $this->assertEquals(2,$redis->incr($key)); $this->assertEquals(3,$redis->incr($key)); $redis->del($key);}
-    public function test_redis_distributed_lock(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $key='ffarena:lock:test:'.uniqid(); $lockValue=uniqid(); $acquired=$redis->set($key,$lockValue,['NX','EX'=>10]); $this->assertTrue((bool)$acquired); $second=$redis->set($key,'other',['NX','EX'=>10]); $this->assertFalse((bool)$second); $redis->del($key);}
-    public function test_redis_idempotency_store(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $key='ffarena:idempotency:test:'.uniqid(); $fingerprint=hash('sha256',json_encode(['amount'=>1000])); $data=json_encode(['status'=>'succeeded','fingerprint'=>$fingerprint]); $redis->setex($key,3600,$data); $stored=$redis->get($key); $this->assertNotFalse($stored); $decoded=json_decode($stored,true); $this->assertEquals('succeeded',$decoded['status']); $redis->del($key);}
-    public function test_redis_rate_limiter(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $key='ffarena:ratelimit:test:'.uniqid(); $redis->del($key); for($i=1;$i<=5;$i++){$count=$redis->incr($key); $this->assertEquals($i,$count);} $redis->expire($key,1); $this->assertEquals(5,(int)$redis->get($key)); sleep(2); $this->assertFalse($redis->get($key));}
-    public function test_redis_key_expiration(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $key='ffarena:test:expire:'.uniqid(); $redis->set($key,'value'); $redis->expire($key,1); $this->assertEquals('value',$redis->get($key)); sleep(2); $this->assertFalse($redis->get($key));}
-    public function test_redis_concurrent_lock_acquisition(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $key='ffarena:lock:concurrent:'.uniqid(); $worker1=$redis->set($key,'worker1',['NX','EX'=>10]); $this->assertTrue((bool)$worker1); $worker2=$redis->set($key,'worker2',['NX','EX'=>10]); $this->assertFalse((bool)$worker2); $redis->del($key); $worker2After=$redis->set($key,'worker2',['NX','EX'=>10]); $this->assertTrue((bool)$worker2After); $redis->del($key);}
-    public function test_redis_namespace_isolation(): void{$this->skipIfNoRedis(); $redis=$this->redis(); $prodKey='ffarena:prod:test:'.uniqid(); $testKey='ffarena:test:isolated:'.uniqid(); $redis->set($prodKey,'prod-value'); $redis->set($testKey,'test-value'); $this->assertEquals('prod-value',$redis->get($prodKey)); $this->assertEquals('test-value',$redis->get($testKey)); $redis->del($prodKey); $redis->del($testKey);}
+
+    private function skipIfNoRedis(): void
+    {
+        if (! $this->isRedisAvailable()) {
+            $this->markTestSkipped('Redis not available - BLOCKED BY ENVIRONMENT');
+        }
+    }
+
+    private function redis()
+    {
+        if (class_exists(\Redis::class)) {
+            $redis = new \Redis();
+            $redis->connect(config('database.redis.default.host', '127.0.0.1'), (int) config('database.redis.default.port', 6379), 1.0);
+            $password = config('database.redis.default.password');
+            if ($password && $password !== 'CHANGE_ME_REDIS_PASSWORD_PLACEHOLDER') {
+                $redis->auth($password);
+            }
+
+            return $redis;
+        }
+
+        return \Illuminate\Support\Facades\Redis::connection();
+    }
+
+    public function test_redis_set_get(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $key = 'ffarena:test:setget:'.uniqid();
+        $redis->set($key, 'test-value');
+        $value = $redis->get($key);
+        $this->assertEquals('test-value', $value);
+        $redis->del($key);
+    }
+
+    public function test_redis_del(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $key = 'ffarena:test:del:'.uniqid();
+        $redis->set($key, 'to-delete');
+        $redis->del($key);
+        $value = $redis->get($key);
+        $this->assertFalse($value);
+    }
+
+    public function test_redis_setnx(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $key = 'ffarena:test:setnx:'.uniqid();
+        $result1 = $redis->setnx($key, 'first');
+        $this->assertTrue((bool) $result1);
+        $result2 = $redis->setnx($key, 'second');
+        $this->assertFalse((bool) $result2);
+        $this->assertEquals('first', $redis->get($key));
+        $redis->del($key);
+    }
+
+    public function test_redis_ttl_expire(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $key = 'ffarena:test:ttl:'.uniqid();
+        $redis->setex($key, 2, 'temp');
+        $ttl = $redis->ttl($key);
+        $this->assertGreaterThan(0, $ttl);
+        $this->assertLessThanOrEqual(2, $ttl);
+        sleep(3);
+        $value = $redis->get($key);
+        $this->assertFalse($value);
+    }
+
+    public function test_redis_incr(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $key = 'ffarena:test:incr:'.uniqid();
+        $redis->del($key);
+        $this->assertEquals(1, $redis->incr($key));
+        $this->assertEquals(2, $redis->incr($key));
+        $this->assertEquals(3, $redis->incr($key));
+        $redis->del($key);
+    }
+
+    public function test_redis_distributed_lock(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $key = 'ffarena:lock:test:'.uniqid();
+        $lockValue = uniqid();
+        $acquired = $redis->set($key, $lockValue, ['NX', 'EX' => 10]);
+        $this->assertTrue((bool) $acquired);
+        $second = $redis->set($key, 'other', ['NX', 'EX' => 10]);
+        $this->assertFalse((bool) $second);
+        $redis->del($key);
+    }
+
+    public function test_redis_idempotency_store(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $key = 'ffarena:idempotency:test:'.uniqid();
+        $fingerprint = hash('sha256', json_encode(['amount' => 1000]));
+        $data = json_encode(['status' => 'succeeded', 'fingerprint' => $fingerprint]);
+        $redis->setex($key, 3600, $data);
+        $stored = $redis->get($key);
+        $this->assertNotFalse($stored);
+        $decoded = json_decode($stored, true);
+        $this->assertEquals('succeeded', $decoded['status']);
+        $redis->del($key);
+    }
+
+    public function test_redis_rate_limiter(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $key = 'ffarena:ratelimit:test:'.uniqid();
+        $redis->del($key);
+        for ($i = 1; $i <= 5; $i++) {
+            $count = $redis->incr($key);
+            $this->assertEquals($i, $count);
+        } $redis->expire($key, 1);
+        $this->assertEquals(5, (int) $redis->get($key));
+        sleep(2);
+        $this->assertFalse($redis->get($key));
+    }
+
+    public function test_redis_key_expiration(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $key = 'ffarena:test:expire:'.uniqid();
+        $redis->set($key, 'value');
+        $redis->expire($key, 1);
+        $this->assertEquals('value', $redis->get($key));
+        sleep(2);
+        $this->assertFalse($redis->get($key));
+    }
+
+    public function test_redis_concurrent_lock_acquisition(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $key = 'ffarena:lock:concurrent:'.uniqid();
+        $worker1 = $redis->set($key, 'worker1', ['NX', 'EX' => 10]);
+        $this->assertTrue((bool) $worker1);
+        $worker2 = $redis->set($key, 'worker2', ['NX', 'EX' => 10]);
+        $this->assertFalse((bool) $worker2);
+        $redis->del($key);
+        $worker2After = $redis->set($key, 'worker2', ['NX', 'EX' => 10]);
+        $this->assertTrue((bool) $worker2After);
+        $redis->del($key);
+    }
+
+    public function test_redis_namespace_isolation(): void
+    {
+        $this->skipIfNoRedis();
+        $redis = $this->redis();
+        $prodKey = 'ffarena:prod:test:'.uniqid();
+        $testKey = 'ffarena:test:isolated:'.uniqid();
+        $redis->set($prodKey, 'prod-value');
+        $redis->set($testKey, 'test-value');
+        $this->assertEquals('prod-value', $redis->get($prodKey));
+        $this->assertEquals('test-value', $redis->get($testKey));
+        $redis->del($prodKey);
+        $redis->del($testKey);
+    }
 }

@@ -1,12 +1,15 @@
 <?php
+
 namespace App\Services\Gameberry\Final5;
-use Illuminate\Support\Facades\DB;
-use App\Services\Gameberry\GoldEconomyService;
-use App\Services\Gameberry\GemEconomyService;
+
 use App\Services\Gameberry\DiceCollectionService;
+use App\Services\Gameberry\GemEconomyService;
+use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\LeagueService;
 use App\Services\Gameberry\LevelService;
 use App\Services\Gameberry\ReconciliationService;
+use Illuminate\Support\Facades\DB;
+
 class Final857Service
 {
     public function getFullStats(int $userId): array
@@ -27,15 +30,18 @@ class Final857Service
             'g1_must_reconcile' => true,
         ];
     }
+
     public function play(int $userId, string $mode = 'classic', int $bet = 100): array
     {
         return DB::transaction(function () use ($userId, $mode, $bet) {
             $goldService = app(GoldEconomyService::class);
-            if (!$goldService->canAffordBet($userId, $bet)) throw new \Exception('Insufficient gold - gold at stake - need enough gold');
+            if (! $goldService->canAffordBet($userId, $bet)) {
+                throw new \Exception('Insufficient gold - gold at stake - need enough gold');
+            }
             $betTx = $goldService->placeBet($userId, $bet, 'FINAL5_857');
-            $isWin = (bool) rand(0,1);
+            $isWin = (bool) rand(0, 1);
             if ($isWin) {
-                $goldService->winGold($userId, $bet*2, 'FINAL5_857');
+                $goldService->winGold($userId, $bet * 2, 'FINAL5_857');
                 $level = app(LevelService::class)->addWin($userId);
                 $league = app(LeagueService::class)->addTrophies($userId, 20, true);
             } else {
@@ -43,7 +49,10 @@ class Final857Service
                 $league = app(LeagueService::class)->addTrophies($userId, -10, false);
             }
             $reconcile = app(ReconciliationService::class)->reconcileAll($userId);
-            if (!$reconcile['all_balanced']) throw new \Exception('Reconciliation failed STOP G1 - financial totals must reconcile');
+            if (! $reconcile['all_balanced']) {
+                throw new \Exception('Reconciliation failed STOP G1 - financial totals must reconcile');
+            }
+
             return ['user_id' => $userId, 'mode' => $mode, 'bet' => $bet, 'is_win' => $isWin, 'level' => $level, 'league' => $league, 'reconcile' => $reconcile, 'bet_tx' => $betTx, 'feature_857' => true];
         });
     }

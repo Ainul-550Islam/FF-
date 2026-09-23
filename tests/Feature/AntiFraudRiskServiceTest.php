@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\FraudRiskService;
 use App\Services\RestrictionService;
 use DomainException;
+use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -333,8 +334,8 @@ class AntiFraudRiskServiceTest extends TestCase
                     'type' => Restriction::TYPE_ACCOUNT_SUSPENDED,
                     'status' => RiskProfile::STATUS_SUSPENDED,
                 ]);
-                $this->fail(get_class($model) . ' accepted mass assignment.');
-            } catch (\Illuminate\Database\Eloquent\MassAssignmentException $e) {
+                $this->fail(get_class($model).' accepted mass assignment.');
+            } catch (MassAssignmentException $e) {
                 $this->addToAssertionCount(1);
             }
         }

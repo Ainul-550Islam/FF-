@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Http\Requests;
+
 use Illuminate\Foundation\Http\FormRequest;
 
 class PaginatedRequest extends FormRequest
@@ -21,7 +23,7 @@ class PaginatedRequest extends FormRequest
     {
         $page = max(1, (int) $this->input('page', 1));
         $perPage = min(100, max(1, (int) $this->input('per_page', 50)));
-        
+
         return [
             'page' => $page,
             'per_page' => $perPage,

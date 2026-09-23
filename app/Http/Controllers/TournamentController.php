@@ -183,7 +183,7 @@ class TournamentController extends Controller
 
         // organizer_id, slug and status are server-controlled — a client can
         // never inject them. New tournaments always start as DRAFT.
-        $tournament = new Tournament;
+        $tournament = new Tournament();
         $tournament->organizer_id = $request->user()->id;
         $tournament->name = $data['name'];
         $tournament->slug = Str::slug($data['name']).'-'.Str::random(6);

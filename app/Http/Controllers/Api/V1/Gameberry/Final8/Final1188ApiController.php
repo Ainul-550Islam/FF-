@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1\Gameberry\Final8;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\Gameberry\Final8\Final1153Service;
 
 class Final1188ApiController extends Controller
 {
@@ -90,10 +89,10 @@ class Final1188ApiController extends Controller
         try {
             $result = $this->service->play($userId, $mode, $bet);
 
-            if (!$result['reconcile']['is_balanced']) {
+            if (! $result['reconcile']['is_balanced']) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'G1 Financial totals must reconcile - STOP - Gold wallet ' . $result['reconcile']['gold_wallet'] . ' != computed ' . $result['reconcile']['gold_computed'],
+                    'message' => 'G1 Financial totals must reconcile - STOP - Gold wallet '.$result['reconcile']['gold_wallet'].' != computed '.$result['reconcile']['gold_computed'],
                     'data' => $result,
                 ], 400);
             }
@@ -101,7 +100,7 @@ class Final1188ApiController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $result,
-                'message' => 'Final8 1188 result: ' . ($result['is_win'] ? 'win' : 'loss') . ' - Gold at stake, magic chest, Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening',
+                'message' => 'Final8 1188 result: '.($result['is_win'] ? 'win' : 'loss').' - Gold at stake, magic chest, Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening',
                 'feature' => 1188,
                 'production_ready' => true,
                 'no_shortening' => true,
@@ -109,7 +108,7 @@ class Final1188ApiController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Final1188 play failed: ' . $e->getMessage() . ' - G1 Must Reconcile STOP',
+                'message' => 'Final1188 play failed: '.$e->getMessage().' - G1 Must Reconcile STOP',
                 'feature' => 1188,
             ], 400);
         }
@@ -119,6 +118,7 @@ class Final1188ApiController extends Controller
     {
         $userId = auth()->id() ?? $request->input('user_id', 1);
         $stats = $this->service->getFullStats($userId);
+
         return response()->json([
             'success' => true,
             'data' => $stats,
@@ -131,6 +131,7 @@ class Final1188ApiController extends Controller
     {
         $userId = auth()->id() ?? $request->input('user_id', 1);
         $stats = $this->service->getFullStats($userId);
+
         return response()->json([
             'success' => true,
             'data' => $stats,

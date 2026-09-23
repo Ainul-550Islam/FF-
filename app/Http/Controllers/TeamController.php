@@ -29,8 +29,7 @@ class TeamController extends Controller
         protected NotificationService $notifications,
         protected LiveEventService $live,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     public function showRegistration(Tournament $tournament)
     {
@@ -207,7 +206,7 @@ class TeamController extends Controller
             $user,
             Notification::TYPE_TEAM_REGISTERED,
             'Team registered',
-            'Your team ' . $team->name . ' was registered for ' . $tournament->name . '.',
+            'Your team '.$team->name.' was registered for '.$tournament->name.'.',
             $teamLink,
             ['team_id' => $team->id, 'tournament_id' => $tournament->id],
         );
@@ -219,7 +218,7 @@ class TeamController extends Controller
                 $organizer,
                 Notification::TYPE_TEAM_REGISTERED,
                 'New team registration',
-                'Team ' . $team->name . ' registered for ' . $tournament->name . '.',
+                'Team '.$team->name.' registered for '.$tournament->name.'.',
                 $teamLink,
                 ['team_id' => $team->id, 'tournament_id' => $tournament->id],
             );
@@ -296,7 +295,7 @@ class TeamController extends Controller
                 $organizer,
                 Notification::TYPE_TEAM_WITHDRAWN,
                 'Team withdrew',
-                'Team ' . $team->name . ' withdrew from ' . $tournament->name . '.',
+                'Team '.$team->name.' withdrew from '.$tournament->name.'.',
                 NotificationService::link('tournaments.show', [$tournament]),
                 ['team_id' => $team->id, 'tournament_id' => $tournament->id],
             );

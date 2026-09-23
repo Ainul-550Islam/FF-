@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Restriction;
 use App\Models\User;
+use App\Models\UserIdentity;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -53,7 +55,7 @@ class AdminAccountTest extends TestCase
         $admin = $this->makeUser('admin');
         $user = $this->makeUser();
 
-        $identity = new \App\Models\UserIdentity();
+        $identity = new UserIdentity();
         $identity->user_id = $user->id;
         $identity->provider = 'google';
         $identity->provider_subject = 'sub-1';
@@ -128,13 +130,13 @@ class AdminAccountTest extends TestCase
         $admin = $this->makeUser('admin');
         $user = $this->makeUser();
 
-        $restriction = new \App\Models\Restriction();
+        $restriction = new Restriction();
         $restriction->user_id = $user->id;
         $restriction->type = 'payment';
         $restriction->reason = 'Under review';
         $restriction->source = 'admin';
         $restriction->actor_id = $admin->id;
-        $restriction->status = \App\Models\Restriction::STATUS_ACTIVE;
+        $restriction->status = Restriction::STATUS_ACTIVE;
         $restriction->save();
 
         $this->actingAs($admin)->post(route('admin.accounts.delete', $user))

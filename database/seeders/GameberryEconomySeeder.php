@@ -2,10 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\User;
-use App\Services\Gameberry\GoldEconomyService;
+use App\Models\WeeklyEvent;
 use App\Services\Gameberry\GemEconomyService;
+use App\Services\Gameberry\GoldEconomyService;
+use Illuminate\Database\Seeder;
 
 class GameberryEconomySeeder extends Seeder
 {
@@ -21,7 +22,7 @@ class GameberryEconomySeeder extends Seeder
         }
 
         // Seed weekly events
-        \App\Models\WeeklyEvent::firstOrCreate(
+        WeeklyEvent::firstOrCreate(
             ['slug' => 'weekly-gold-rush'],
             [
                 'name' => 'Weekly Gold Rush',
@@ -36,7 +37,7 @@ class GameberryEconomySeeder extends Seeder
             ]
         );
 
-        \App\Models\WeeklyEvent::firstOrCreate(
+        WeeklyEvent::firstOrCreate(
             ['slug' => 'dice-collector-week'],
             [
                 'name' => 'Dice Collector Week',
@@ -51,7 +52,7 @@ class GameberryEconomySeeder extends Seeder
             ]
         );
 
-        \App\Models\WeeklyEvent::firstOrCreate(
+        WeeklyEvent::firstOrCreate(
             ['slug' => 'titan-challenge'],
             [
                 'name' => 'Titan Challenge',

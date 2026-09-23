@@ -18,8 +18,7 @@ class NotificationController extends Controller
 {
     public function __construct(
         protected NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/me/notifications

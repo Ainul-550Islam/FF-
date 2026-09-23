@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Notification;
+use App\Services\NotificationService;
 
 /**
  * Phase 15 — notifications: ownership, unread counts, mark read, and IDOR
@@ -12,7 +13,7 @@ class ApiNotificationsTest extends ApiTestCase
 {
     protected function notify($user, string $type = Notification::TYPE_SYSTEM, bool $read = false): Notification
     {
-        return app(\App\Services\NotificationService::class)->send(
+        return app(NotificationService::class)->send(
             $user,
             $type,
             'Title',
@@ -45,7 +46,7 @@ class ApiNotificationsTest extends ApiTestCase
             ->assertJsonPath('data.unread_count', 1);
 
         $this->asUser($user, ['notifications:write'])
-            ->postJson('/api/v1/me/notifications/' . $notification->id . '/read')
+            ->postJson('/api/v1/me/notifications/'.$notification->id.'/read')
             ->assertStatus(200)
             ->assertJsonPath('data.read', true);
 
@@ -60,7 +61,7 @@ class ApiNotificationsTest extends ApiTestCase
         $notification = $this->notify($other);
 
         $this->asUser($user, ['notifications:write'])
-            ->postJson('/api/v1/me/notifications/' . $notification->id . '/read')
+            ->postJson('/api/v1/me/notifications/'.$notification->id.'/read')
             ->assertStatus(404);
 
         $this->assertNull($notification->fresh()->read_at);

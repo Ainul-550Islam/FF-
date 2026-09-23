@@ -22,6 +22,7 @@ class PrizeTier extends Model
     use HasFactory;
 
     public const TYPE_FIXED = 'fixed';
+
     public const TYPE_PERCENTAGE = 'percentage';
 
     public const TYPES = [

@@ -199,7 +199,7 @@ class ReconciliationService
      *                   allocation.
      *  - balanced     : otherwise.
      *
-     * @param array{allocated:int,pool:int,net:int,revenue:int,adjustments:int,completed:int} $s
+     * @param  array{allocated:int,pool:int,net:int,revenue:int,adjustments:int,completed:int}  $s
      */
     protected function status(array $s, ?PrizeDistribution $distribution): string
     {

@@ -19,8 +19,7 @@ class ApiClientService
     public function __construct(
         protected ApiTokenService $tokens,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * Create a client and issue its first token.

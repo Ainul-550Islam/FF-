@@ -95,7 +95,7 @@ for ($i = 0; $i < $count; $i++) {
         if ($result['waitlisted']) {
             $waitlisted++;
         }
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         $failed++;
         fwrite(STDERR, "registration {$i} failed: {$e->getMessage()}\n");
     }

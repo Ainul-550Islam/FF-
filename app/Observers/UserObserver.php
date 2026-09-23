@@ -2,11 +2,12 @@
 
 namespace App\Observers;
 
-use App\Models\User;
-use App\Services\Gameberry\GoldEconomyService;
-use App\Services\Gameberry\GemEconomyService;
 use App\Models\Level;
+use App\Models\User;
 use App\Models\UserOnlineStatus;
+use App\Services\Gameberry\GemEconomyService;
+use App\Services\Gameberry\GoldEconomyService;
+use Illuminate\Support\Facades\Log;
 
 class UserObserver
 {
@@ -46,7 +47,7 @@ class UserObserver
             );
         } catch (\Exception $e) {
             // Don't break user creation if Gameberry tables don't exist yet (migration not run)
-            \Illuminate\Support\Facades\Log::warning('UserObserver Gameberry wallet creation failed: '.$e->getMessage());
+            Log::warning('UserObserver Gameberry wallet creation failed: '.$e->getMessage());
         }
     }
 }

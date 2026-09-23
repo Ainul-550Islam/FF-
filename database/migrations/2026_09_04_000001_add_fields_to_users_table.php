@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
@@ -12,8 +12,8 @@ return new class extends Migration
         // standard scaffold migration or from create_all_tables; the app needs
         // the union of both schema generations, so each column is added only
         // when missing. Existing logic and defaults preserved.
-        $add = function (string $col, \Closure $def) {
-            if (!Schema::hasColumn('users', $col)) {
+        $add = function (string $col, Closure $def) {
+            if (! Schema::hasColumn('users', $col)) {
                 Schema::table('users', $def);
             }
         };

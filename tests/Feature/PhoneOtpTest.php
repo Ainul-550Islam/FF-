@@ -6,6 +6,7 @@ use App\Contracts\PhoneOtpProviderInterface;
 use App\Models\OtpChallenge;
 use App\Models\User;
 use App\Models\UserIdentity;
+use App\Services\IdentityService;
 use App\Services\PhoneOtpService;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -211,7 +212,7 @@ class PhoneOtpTest extends TestCase
         $this->addPhoneIdentity($first, '+8801712345678');
 
         $this->expectException(DomainException::class);
-        app(\App\Services\IdentityService::class)->linkPhone($second, '+8801712345678');
+        app(IdentityService::class)->linkPhone($second, '+8801712345678');
     }
 
     public function test_otp_issue_refuses_when_provider_is_not_configured(): void
@@ -233,9 +234,7 @@ class FakeSmsProvider implements PhoneOtpProviderInterface
 
     public ?string $lastCode = null;
 
-    public function __construct(protected bool $configured = true)
-    {
-    }
+    public function __construct(protected bool $configured = true) {}
 
     public function id(): string
     {

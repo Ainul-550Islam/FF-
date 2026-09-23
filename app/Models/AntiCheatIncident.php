@@ -22,10 +22,15 @@ class AntiCheatIncident extends Model
     use HasFactory;
 
     public const STATUS_FLAGGED = 'flagged';
+
     public const STATUS_UNDER_REVIEW = 'under_review';
+
     public const STATUS_CLEARED = 'cleared';
+
     public const STATUS_CONFIRMED = 'confirmed';
+
     public const STATUS_RESTRICTED = 'restricted';
+
     public const STATUS_DISMISSED = 'dismissed';
 
     public const STATUSES = [
@@ -52,7 +57,9 @@ class AntiCheatIncident extends Model
     ];
 
     public const SOURCE_SYSTEM = 'system';
+
     public const SOURCE_PARTICIPANT = 'participant';
+
     public const SOURCE_STAFF = 'staff';
 
     public const SEVERITIES = ['low', 'medium', 'high', 'critical'];

@@ -20,8 +20,7 @@ class PayoutController extends Controller
     public function __construct(
         protected PayoutService $payouts,
         protected AuditLogService $audit,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request)
     {

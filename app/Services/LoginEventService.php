@@ -20,8 +20,7 @@ class LoginEventService
     public function __construct(
         protected DeviceFingerprintService $devices,
         protected IpIntelligenceService $ipIntel,
-    ) {
-    }
+    ) {}
 
     /**
      * Record a login/security event.

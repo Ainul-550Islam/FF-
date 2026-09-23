@@ -28,10 +28,10 @@ class ErrorReporterManager
 
             $this->warnOnce();
 
-            return new LogErrorReporter;
+            return new LogErrorReporter();
         }
 
-        return new LogErrorReporter;
+        return new LogErrorReporter();
     }
 
     protected function sentryAvailable(): bool
@@ -45,7 +45,7 @@ class ErrorReporterManager
         // Sentry binds its own exception handlers once the package is
         // installed and configured; the log reporter remains the fallback
         // path for anything Sentry cannot accept.
-        return new LogErrorReporter;
+        return new LogErrorReporter();
     }
 
     protected function warnOnce(): void

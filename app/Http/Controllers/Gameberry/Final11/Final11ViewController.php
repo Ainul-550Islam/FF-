@@ -16,7 +16,9 @@ use Illuminate\Http\Request;
 class Final11ViewController extends Controller
 {
     protected string $viewPrefix = 'gameberry.final11.feature_';
+
     protected int $low = 1401;
+
     protected int $high = 1450;
 
     public static function coveredServices(): array
@@ -30,14 +32,14 @@ class Final11ViewController extends Controller
             abort(404, 'Feature 1401-1450 only - no file omitted');
         }
 
-        return view($this->viewPrefix . $feature, ['feature' => $feature]);
+        return view($this->viewPrefix.$feature, ['feature' => $feature]);
     }
 
     public function coverage(Request $request)
     {
         $services = [];
         foreach (self::coveredServices() as $number) {
-            $class = 'App\\Services\\Gameberry\\Final11\\Final11' . $number . 'Service';
+            $class = 'App\\Services\\Gameberry\\Final11\\Final11'.$number.'Service';
             $services[$number] = class_exists($class);
         }
 
@@ -46,7 +48,7 @@ class Final11ViewController extends Controller
             'part' => 'Final11 Production 1400+ Full Code No Skip Existing Logic Preserved',
             'views' => [$this->low, $this->high],
             'services' => $services,
-            'all_services_present' => !in_array(false, $services, true),
+            'all_services_present' => ! in_array(false, $services, true),
             'no_shortening' => true,
             'existing_logic_preserved' => true,
         ]);

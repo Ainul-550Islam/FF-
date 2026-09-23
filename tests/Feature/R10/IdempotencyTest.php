@@ -1,8 +1,9 @@
 <?php
+
 namespace Tests\Feature\R10;
 
-use Tests\TestCase;
 use Illuminate\Support\Str;
+use Tests\TestCase;
 
 class IdempotencyTest extends TestCase
 {

@@ -8,7 +8,6 @@ use App\Models\Device;
 use App\Models\DeviceLink;
 use App\Models\GameMatch;
 use App\Models\IdentityVerification;
-use App\Models\IpIntel;
 use App\Models\IpLink;
 use App\Models\MatchAnomaly;
 use App\Models\Restriction;
@@ -52,7 +51,7 @@ class AntiFraudTrustSafetyTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'Test Tournament';
-        $t->slug = 'test-tournament-' . Str::random(8);
+        $t->slug = 'test-tournament-'.Str::random(8);
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = 100;
@@ -72,10 +71,10 @@ class AntiFraudTrustSafetyTest extends TestCase
         $t = new Team();
         $t->tournament_id = $tournament->id;
         $t->captain_id = $captain?->id;
-        $t->name = 'Team ' . Str::random(6);
+        $t->name = 'Team '.Str::random(6);
         $t->captain_name = $captain?->name ?? 'Captain';
         $t->phone = '01700000000';
-        $t->game_uid = 'UID' . rand(100000, 999999);
+        $t->game_uid = 'UID'.rand(100000, 999999);
         $t->status = 'confirmed';
         $t->save();
 

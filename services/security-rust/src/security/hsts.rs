@@ -39,15 +39,21 @@ pub fn hsts_headers() -> HashMap<&'static str, &'static str> {
 
 /// Warp filter for HSTS and security headers
 pub fn with_hsts() -> impl Filter<Extract = (), Error = Rejection> + Clone {
-    warp::any().map(|| ())
+    warp::any()
+        .and_then(|| async { Ok::<(), Rejection>(()) })
+        .untuple_one()
 }
 
-/// Apply HSTS and security headers to a reply
-pub fn apply_hsts_headers(reply: impl Reply) -> impl Reply {
-    let headers = hsts_headers();
-    let mut reply = warp::reply::with::headers(reply, headers);
+/// Apply HSTS and security headers to a reply.
+/// warp 0.3 exposes only `reply::with_header`, so the map built by
+/// `hsts_headers()` is applied pair by pair over a boxed reply chain.
+pub fn apply_hsts_headers(reply: impl Reply + 'static) -> impl Reply {
+    let mut wrapped: Box<dyn Reply> = Box::new(reply);
+    for (name, value) in hsts_headers() {
+        wrapped = Box::new(warp::reply::with_header(wrapped, name, value));
+    }
     // Additional headers that need dynamic values would be added here
-    reply
+    wrapped
 }
 
 /// HSTS preload compliance check
@@ -134,7 +140,7 @@ pub async fn handle_https_rejection(err: Rejection) -> Result<impl Reply, Reject
         }));
         return Ok(warp::reply::with_status(
             json,
-            warp::http::StatusCode::Forbidden,
+            warp::http::StatusCode::FORBIDDEN,
         ));
     }
     Err(err)

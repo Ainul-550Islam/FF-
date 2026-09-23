@@ -7,8 +7,9 @@ use App\Models\Payment;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
-use App\Services\PaymentService;
 use App\Services\WalletService;
+use App\Support\Money;
+use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -115,7 +116,7 @@ class PaymentSecurityTest extends TestCase
     public function test_negative_amount_is_rejected_by_money_parser(): void
     {
         $this->expectException(\DomainException::class);
-        \App\Support\Money::toMinor('-5.00');
+        Money::toMinor('-5.00');
     }
 
     // ------------------------------------------------------------------
@@ -379,7 +380,7 @@ class PaymentSecurityTest extends TestCase
     {
         // Ledger entries are fully guarded (empty $fillable), so any mass
         // assignment attempt throws a MassAssignmentException.
-        $this->expectException(\Illuminate\Database\Eloquent\MassAssignmentException::class);
+        $this->expectException(MassAssignmentException::class);
 
         $entry = new LedgerEntry();
         $entry->fill([

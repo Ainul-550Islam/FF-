@@ -2,6 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Gameberry\AutoModeController;
+use App\Http\Controllers\Gameberry\DashboardController;
+use App\Http\Controllers\Gameberry\GameModeController;
+use App\Http\Controllers\Gameberry\GoldWalletController;
+use App\Http\Controllers\Gameberry\LevelController;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -74,11 +79,11 @@ class GameberryHubRoutesTest extends TestCase
     public function test_previously_unrouted_controllers_exist_and_are_routed(): void
     {
         $controllers = [
-            \App\Http\Controllers\Gameberry\DashboardController::class,
-            \App\Http\Controllers\Gameberry\LevelController::class,
-            \App\Http\Controllers\Gameberry\GameModeController::class,
-            \App\Http\Controllers\Gameberry\AutoModeController::class,
-            \App\Http\Controllers\Gameberry\GoldWalletController::class,
+            DashboardController::class,
+            LevelController::class,
+            GameModeController::class,
+            AutoModeController::class,
+            GoldWalletController::class,
         ];
 
         foreach ($controllers as $class) {

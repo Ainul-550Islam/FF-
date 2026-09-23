@@ -28,11 +28,17 @@ class PrizeDistribution extends Model
     use HasFactory;
 
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_CALCULATED = 'calculated';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_FAILED = 'failed';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     public const TRANSITIONS = [

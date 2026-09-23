@@ -1,8 +1,9 @@
 <?php
+
 namespace Tests\Feature\R10;
 
-use Tests\TestCase;
 use Illuminate\Support\Str;
+use Tests\TestCase;
 
 class PaymentCreationTest extends TestCase
 {
@@ -14,10 +15,10 @@ class PaymentCreationTest extends TestCase
             'amount_minor' => 1000,
             'currency' => 'BDT',
             'provider' => 'bkash',
-            'external_id' => 'test-' . Str::uuid(),
+            'external_id' => 'test-'.Str::uuid(),
             'idempotency_key' => (string) Str::uuid(),
         ];
-        
+
         $this->assertArrayHasKey('idempotency_key', $data);
         $this->assertNotEmpty($data['idempotency_key']);
     }
@@ -39,13 +40,13 @@ class PaymentCreationTest extends TestCase
     {
         // Provider-specific states must NOT leak directly into domain layer
         $internalStates = ['created', 'pending', 'processing', 'authorized', 'succeeded', 'failed', 'expired', 'cancelled', 'refunding', 'refunded'];
-        
+
         // bKash statuses should map to internal
         $bkashStatuses = ['Initiated', 'Completed', 'Failed', 'Expired'];
         foreach ($bkashStatuses as $status) {
             $this->assertIsString($status);
         }
-        
+
         $this->assertContains('succeeded', $internalStates);
         $this->assertNotContains('Initiated', $internalStates, 'Provider status should not leak to domain');
     }

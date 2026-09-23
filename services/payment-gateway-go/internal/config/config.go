@@ -1,18 +1,12 @@
 package config
 
 import (
-    "context"
-    "database/sql"
     "fmt"
     "os"
     "strconv"
     "strings"
-    "time"
 
     "github.com/ffarena/payment-gateway-go/internal/providers"
-
-    _ "github.com/lib/pq"
-    _ "github.com/mattn/go-sqlite3"
 )
 
 type Config struct {
@@ -224,44 +218,6 @@ func redactURL(url string) string {
         return "***REDACTED***"
     }
     return url
-}
-
-func OpenDatabase(cfg *Config) (*sql.DB, error) {
-    if cfg.DatabaseURL == "" {
-        return nil, fmt.Errorf("database URL empty")
-    }
-
-    var driver string
-    switch cfg.DBDriver {
-    case "postgres", "pgsql", "postgresql":
-        driver = "postgres"
-    case "sqlite", "sqlite3":
-        driver = "sqlite3"
-    default:
-        driver = cfg.DBDriver
-    }
-
-    db, err := sql.Open(driver, cfg.DatabaseURL)
-    if err != nil {
-        return nil, fmt.Errorf("failed to open database: %w", err)
-    }
-
-    db.SetMaxOpenConns(20)
-    db.SetMaxIdleConns(5)
-    db.SetConnMaxLifetime(5 * time.Minute)
-    db.SetConnMaxIdleTime(1 * time.Minute)
-
-    ctx, cancel := contextWithTimeoutFunc(5 * time.Second)
-    defer cancel()
-    if err := db.PingContext(ctx); err != nil {
-        return nil, fmt.Errorf("database ping failed: %w", err)
-    }
-
-    return db, nil
-}
-
-func contextWithTimeoutFunc(d time.Duration) (context.Context, context.CancelFunc) {
-    return context.WithTimeout(context.Background(), d)
 }
 
 func getEnv(key, defaultValue string) string {

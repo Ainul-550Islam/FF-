@@ -4,26 +4,26 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
         // Fix user_leagues schema to support both old and new test expectations
         if (Schema::hasTable('user_leagues')) {
             Schema::table('user_leagues', function (Blueprint $table) {
-                if (!Schema::hasColumn('user_leagues', 'season')) {
+                if (! Schema::hasColumn('user_leagues', 'season')) {
                     $table->integer('season')->nullable()->index();
                 }
-                if (!Schema::hasColumn('user_leagues', 'rank')) {
+                if (! Schema::hasColumn('user_leagues', 'rank')) {
                     $table->integer('rank')->nullable()->index();
                 }
-                if (!Schema::hasColumn('user_leagues', 'games_played')) {
+                if (! Schema::hasColumn('user_leagues', 'games_played')) {
                     $table->integer('games_played')->default(0);
                 }
-                if (!Schema::hasColumn('user_leagues', 'is_in_top_20')) {
+                if (! Schema::hasColumn('user_leagues', 'is_in_top_20')) {
                     $table->boolean('is_in_top_20')->default(false);
                 }
-                if (!Schema::hasColumn('user_leagues', 'current_streak')) {
+                if (! Schema::hasColumn('user_leagues', 'current_streak')) {
                     $table->integer('current_streak')->default(0);
                 }
             });
@@ -32,16 +32,16 @@ return new class extends Migration
         // Fix titan_badges to support test expectations
         if (Schema::hasTable('titan_badges')) {
             Schema::table('titan_badges', function (Blueprint $table) {
-                if (!Schema::hasColumn('titan_badges', 'season')) {
+                if (! Schema::hasColumn('titan_badges', 'season')) {
                     $table->integer('season')->nullable();
                 }
-                if (!Schema::hasColumn('titan_badges', 'week')) {
+                if (! Schema::hasColumn('titan_badges', 'week')) {
                     $table->integer('week')->nullable();
                 }
-                if (!Schema::hasColumn('titan_badges', 'rank')) {
+                if (! Schema::hasColumn('titan_badges', 'rank')) {
                     $table->integer('rank')->nullable();
                 }
-                if (!Schema::hasColumn('titan_badges', 'badge_type')) {
+                if (! Schema::hasColumn('titan_badges', 'badge_type')) {
                     $table->string('badge_type')->default('weekly_titan');
                 }
             });
@@ -50,16 +50,16 @@ return new class extends Migration
         // Fix private_tables
         if (Schema::hasTable('private_tables')) {
             Schema::table('private_tables', function (Blueprint $table) {
-                if (!Schema::hasColumn('private_tables', 'host_id')) {
+                if (! Schema::hasColumn('private_tables', 'host_id')) {
                     $table->unsignedBigInteger('host_id')->nullable();
                 }
-                if (!Schema::hasColumn('private_tables', 'game_mode')) {
+                if (! Schema::hasColumn('private_tables', 'game_mode')) {
                     $table->string('game_mode')->default('classic');
                 }
-                if (!Schema::hasColumn('private_tables', 'bet_amount')) {
+                if (! Schema::hasColumn('private_tables', 'bet_amount')) {
                     $table->bigInteger('bet_amount')->default(0);
                 }
-                if (!Schema::hasColumn('private_tables', 'is_private')) {
+                if (! Schema::hasColumn('private_tables', 'is_private')) {
                     $table->boolean('is_private')->default(true);
                 }
             });
@@ -68,17 +68,17 @@ return new class extends Migration
         // Fix private_table_participants
         if (Schema::hasTable('private_table_participants')) {
             Schema::table('private_table_participants', function (Blueprint $table) {
-                if (!Schema::hasColumn('private_table_participants', 'auto_mode_on_at')) {
+                if (! Schema::hasColumn('private_table_participants', 'auto_mode_on_at')) {
                     $table->timestamp('auto_mode_on_at')->nullable();
                 }
-                if (!Schema::hasColumn('private_table_participants', 'auto_mode_off_at')) {
+                if (! Schema::hasColumn('private_table_participants', 'auto_mode_off_at')) {
                     $table->timestamp('auto_mode_off_at')->nullable();
                 }
             });
         }
 
         // Ensure gold_wallets and gem_wallets exist
-        if (!Schema::hasTable('gold_wallets')) {
+        if (! Schema::hasTable('gold_wallets')) {
             Schema::create('gold_wallets', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -92,7 +92,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('gem_wallets')) {
+        if (! Schema::hasTable('gem_wallets')) {
             Schema::create('gem_wallets', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -104,7 +104,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('gold_transactions')) {
+        if (! Schema::hasTable('gold_transactions')) {
             Schema::create('gold_transactions', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -120,7 +120,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('gem_transactions')) {
+        if (! Schema::hasTable('gem_transactions')) {
             Schema::create('gem_transactions', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -135,7 +135,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('auto_mode_logs')) {
+        if (! Schema::hasTable('auto_mode_logs')) {
             Schema::create('auto_mode_logs', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -151,13 +151,13 @@ return new class extends Migration
 
         if (Schema::hasTable('user_online_statuses')) {
             Schema::table('user_online_statuses', function (Blueprint $table) {
-                if (!Schema::hasColumn('user_online_statuses', 'is_in_auto_mode')) {
+                if (! Schema::hasColumn('user_online_statuses', 'is_in_auto_mode')) {
                     $table->boolean('is_in_auto_mode')->default(false);
                 }
-                if (!Schema::hasColumn('user_online_statuses', 'hide_online_status')) {
+                if (! Schema::hasColumn('user_online_statuses', 'hide_online_status')) {
                     $table->boolean('hide_online_status')->default(false);
                 }
-                if (!Schema::hasColumn('user_online_statuses', 'notify_friends_online')) {
+                if (! Schema::hasColumn('user_online_statuses', 'notify_friends_online')) {
                     $table->boolean('notify_friends_online')->default(true);
                 }
             });
@@ -176,7 +176,5 @@ return new class extends Migration
         }
     }
 
-    public function down(): void
-    {
-    }
+    public function down(): void {}
 };

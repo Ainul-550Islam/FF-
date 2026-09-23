@@ -25,7 +25,7 @@ class PushPreferenceService
         $pref = NotificationPreference::where('user_id', $user->id)->first();
 
         if ($pref === null) {
-            $pref = new NotificationPreference;
+            $pref = new NotificationPreference();
             $pref->user_id = $user->id;
             $pref->save();
 

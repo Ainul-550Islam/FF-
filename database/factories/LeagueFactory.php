@@ -24,12 +24,12 @@ class LeagueFactory extends Factory
 
         return [
             'name' => $league['name'],
-            'slug' => $league['slug'] . '-' . $this->faker->unique()->numberBetween(1, 10000),
+            'slug' => $league['slug'].'-'.$this->faker->unique()->numberBetween(1, 10000),
             'level' => $league['level'],
             'min_trophies' => $this->faker->numberBetween(0, 5000),
             'max_trophies' => $this->faker->optional()->numberBetween(500, 10000),
             'color_code' => $league['color'],
-            'description' => $league['name'] . ' league - Top 20% promotion Top 40 demotion Titan badges Level 4 Bronze unlock',
+            'description' => $league['name'].' league - Top 20% promotion Top 40 demotion Titan badges Level 4 Bronze unlock',
             'is_active' => true,
         ];
     }

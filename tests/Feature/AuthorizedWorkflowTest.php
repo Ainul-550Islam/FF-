@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\GameMatch;
 use App\Models\Payment;
+use App\Models\Score;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
@@ -33,7 +34,7 @@ class AuthorizedWorkflowTest extends TestCase
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
         $t->name = 'Workflow Tournament';
-        $t->slug = 'workflow-' . Str::random(8);
+        $t->slug = 'workflow-'.Str::random(8);
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = $entryFee;
@@ -53,10 +54,10 @@ class AuthorizedWorkflowTest extends TestCase
         $t = new Team();
         $t->tournament_id = $tournament->id;
         $t->captain_id = $captain?->id;
-        $t->name = 'Team ' . Str::random(6);
+        $t->name = 'Team '.Str::random(6);
         $t->captain_name = $captain?->name ?? 'Captain';
         $t->phone = '01700000000';
-        $t->game_uid = 'UID' . rand(100000, 999999);
+        $t->game_uid = 'UID'.rand(100000, 999999);
         $t->status = $status;
         $t->save();
 
@@ -175,7 +176,7 @@ class AuthorizedWorkflowTest extends TestCase
         ])->assertRedirect();
 
         // 6 kills + placement 1 (12 pts) = 18 points
-        $score = \App\Models\Score::where('match_id', $match->id)->where('team_id', $teamA->id)->firstOrFail();
+        $score = Score::where('match_id', $match->id)->where('team_id', $teamA->id)->firstOrFail();
         $this->assertSame(18, (int) $score->points);
 
         $this->actingAs($player)->get(route('leaderboard.show', $tournament))

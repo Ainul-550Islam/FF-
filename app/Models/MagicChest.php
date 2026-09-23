@@ -39,7 +39,7 @@ class MagicChest extends Model
 
     public function isAvailable(): bool
     {
-        return $this->status === 'available' && (!$this->expires_at || $this->expires_at->isFuture());
+        return $this->status === 'available' && (! $this->expires_at || $this->expires_at->isFuture());
     }
 
     public function isOpened(): bool
@@ -49,7 +49,7 @@ class MagicChest extends Model
 
     public function open(): array
     {
-        if (!$this->isAvailable()) {
+        if (! $this->isAvailable()) {
             throw new \Exception('Chest not available');
         }
 

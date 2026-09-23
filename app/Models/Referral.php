@@ -75,6 +75,7 @@ class Referral extends Model
     {
         $user = User::find($userId);
         $prefix = strtoupper(substr($user->name ?? 'FF', 0, 2));
-        return $prefix . strtoupper(Str::random(4)) . '20'; // BGI20 style
+
+        return $prefix.strtoupper(Str::random(4)).'20'; // BGI20 style
     }
 }

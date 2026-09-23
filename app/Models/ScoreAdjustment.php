@@ -20,6 +20,7 @@ class ScoreAdjustment extends Model
     protected $table = 'score_adjustments';
 
     public const TYPE_BONUS = 'bonus';
+
     public const TYPE_PENALTY = 'penalty';
 
     public const TYPES = [

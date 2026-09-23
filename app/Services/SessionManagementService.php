@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\LiveEvent;
 use App\Models\LoginEvent;
 use App\Models\Notification;
 use App\Models\User;
@@ -25,8 +26,7 @@ class SessionManagementService
         protected AuditLogService $audit,
         protected LiveEventService $live,
         protected DeviceFingerprintService $devices,
-    ) {
-    }
+    ) {}
 
     /**
      * The user's active sessions with a safe device label and current flag.
@@ -138,7 +138,7 @@ class SessionManagementService
             'metadata' => ['event' => $event],
         ]);
 
-        $this->live->recordForUserQuietly($user, null, \App\Models\LiveEvent::TYPE_ACCOUNT_SESSION_REVOKED, [
+        $this->live->recordForUserQuietly($user, null, LiveEvent::TYPE_ACCOUNT_SESSION_REVOKED, [
             'event' => $event,
         ]);
     }

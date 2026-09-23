@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Payment;
+use App\Services\PaymentService;
 
 /**
  * Phase 15 — HTTP smoke matrix across actors (guest / protected / player /
@@ -28,7 +29,7 @@ class ApiSmokeMatrixTest extends ApiTestCase
         // --- Guest -----------------------------------------------------------------
         $rows[] = ['guest', 'GET /tournaments', $this->getJson('/api/v1/tournaments')->getStatusCode()];
         $rows[] = ['guest', 'GET /me', $this->getJson('/api/v1/me')->getStatusCode()];
-        $rows[] = ['guest', 'POST /registrations', $this->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $this->registrationPayload())->getStatusCode()];
+        $rows[] = ['guest', 'POST /registrations', $this->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $this->registrationPayload())->getStatusCode()];
         $rows[] = ['guest', 'GET /admin/webhooks', $this->getJson('/api/v1/admin/webhooks/endpoints')->getStatusCode()];
 
         // --- Protected (player token, all scopes) ----------------------------------
@@ -40,12 +41,12 @@ class ApiSmokeMatrixTest extends ApiTestCase
         $regToken = $this->tokenFor($playerReg, ['*']);
         $this->authForget();
         $rows[] = ['player', 'POST /registrations', $this->withToken($regToken)
-            ->postJson('/api/v1/tournaments/' . $tournament->slug . '/registrations', $this->registrationPayload('Smoke', 'UIDSMOKE1'))->getStatusCode()];
+            ->postJson('/api/v1/tournaments/'.$tournament->slug.'/registrations', $this->registrationPayload('Smoke', 'UIDSMOKE1'))->getStatusCode()];
 
         // --- Organizer -------------------------------------------------------------
         $orgToken = $this->tokenFor($org, ['*']);
         $this->authForget();
-        $rows[] = ['organizer', 'GET /teams/{team}', $this->withToken($orgToken)->getJson('/api/v1/teams/' . $playerTeam->id)->getStatusCode()];
+        $rows[] = ['organizer', 'GET /teams/{team}', $this->withToken($orgToken)->getJson('/api/v1/teams/'.$playerTeam->id)->getStatusCode()];
         $rows[] = ['organizer', 'GET /admin/webhooks', $this->withToken($orgToken)->getJson('/api/v1/admin/webhooks/endpoints')->getStatusCode()];
 
         // --- Moderator -------------------------------------------------------------
@@ -59,7 +60,7 @@ class ApiSmokeMatrixTest extends ApiTestCase
         $rows[] = ['admin', 'GET /admin/webhooks', $this->withToken($adminToken)->getJson('/api/v1/admin/webhooks/endpoints')->getStatusCode()];
 
         // --- Webhooks (valid / invalid / replay) -----------------------------------
-        $payment = app(\App\Services\PaymentService::class)->createForTeam(
+        $payment = app(PaymentService::class)->createForTeam(
             $tournament, $playerTeam, $player, 'bkash', 'TRXSMOKE', 'bkash', 'TRXSMOKE'
         );
 
@@ -94,7 +95,7 @@ class ApiSmokeMatrixTest extends ApiTestCase
             'X-Timestamp' => (string) time(),
             'Content-Type' => 'application/json',
         ])->postJson('/api/v1/webhooks/inbound/bkash', $payload);
-        $rows[] = ['webhook', 'POST inbound (replay)', $replay->getStatusCode() . ' replay=' . var_export($replay->json('data.replay'), true)];
+        $rows[] = ['webhook', 'POST inbound (replay)', $replay->getStatusCode().' replay='.var_export($replay->json('data.replay'), true)];
 
         // --- Assertions ------------------------------------------------------------
         $this->assertSame(200, $rows[0][2], 'guest list tournaments');

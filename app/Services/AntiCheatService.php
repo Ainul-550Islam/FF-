@@ -29,10 +29,15 @@ use Illuminate\Support\Facades\DB;
 class AntiCheatService
 {
     public const CATEGORY_AIMBOT = 'aimbot';
+
     public const CATEGORY_WALLHACK = 'wallhack';
+
     public const CATEGORY_SPEED_HACK = 'speed_hack';
+
     public const CATEGORY_TEAMING = 'teaming';
+
     public const CATEGORY_SCORE_MANIPULATION = 'score_manipulation';
+
     public const CATEGORY_OTHER = 'other';
 
     public const CATEGORIES = [
@@ -48,8 +53,7 @@ class AntiCheatService
         protected FraudRiskService $risk,
         protected RestrictionService $restrictions,
         protected NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     /**
      * Open an anti-cheat incident.
@@ -150,7 +154,7 @@ class AntiCheatService
                     $this->restrictions->restrict(
                         $accused,
                         Restriction::TYPE_SCORE_SUBMISSION_BLOCKED,
-                        'Confirmed anti-cheat incident #' . $incident->id . ' (' . $incident->category . ')',
+                        'Confirmed anti-cheat incident #'.$incident->id.' ('.$incident->category.')',
                         'anti_cheat',
                         $reviewer,
                         now()->addDays(30),
@@ -164,7 +168,7 @@ class AntiCheatService
                     $this->restrictions->restrict(
                         $accused,
                         Restriction::TYPE_TOURNAMENT_PARTICIPATION_BLOCKED,
-                        'Restricted for anti-cheat incident #' . $incident->id . ' (' . $incident->category . ')',
+                        'Restricted for anti-cheat incident #'.$incident->id.' ('.$incident->category.')',
                         'anti_cheat',
                         $reviewer,
                     );
@@ -185,7 +189,7 @@ class AntiCheatService
                     $accused,
                     Notification::TYPE_ANTI_CHEAT_RESOLVED,
                     'Anti-cheat incident resolved',
-                    'An anti-cheat incident about you was resolved: ' . $resolutionText,
+                    'An anti-cheat incident about you was resolved: '.$resolutionText,
                     $link,
                     ['incident_id' => $incident->id, 'resolution' => $resolution],
                 );
@@ -198,7 +202,7 @@ class AntiCheatService
                     $reporter,
                     Notification::TYPE_ANTI_CHEAT_RESOLVED,
                     'Anti-cheat incident resolved',
-                    'An anti-cheat incident you reported was resolved: ' . $resolutionText,
+                    'An anti-cheat incident you reported was resolved: '.$resolutionText,
                     $link,
                     ['incident_id' => $incident->id, 'resolution' => $resolution],
                 );

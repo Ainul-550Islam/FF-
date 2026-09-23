@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Feature\R10;
 
 use Tests\TestCase;
@@ -50,7 +51,7 @@ class RefundAndReconciliationTest extends TestCase
             'duplicate provider reference', 'missing provider transaction',
             'internal success/provider pending', 'internal pending/provider success',
             'internal success/provider failed', 'refund mismatch',
-            'duplicate callback', 'duplicate wallet credit'
+            'duplicate callback', 'duplicate wallet credit',
         ];
         $this->assertCount(11, $detects);
     }

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserIdentity;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Tests\TestCase;
 
@@ -29,7 +30,7 @@ class GoogleAuthTest extends TestCase
         return $fake;
     }
 
-    protected function addIdentity(User $user, string $subject, string $email, ?\Illuminate\Support\Carbon $verifiedAt = null): void
+    protected function addIdentity(User $user, string $subject, string $email, ?Carbon $verifiedAt = null): void
     {
         $identity = new UserIdentity();
         $identity->user_id = $user->id;
@@ -185,8 +186,7 @@ class FakeGoogleProvider implements GoogleOAuthProviderInterface
     public function __construct(
         protected array $user,
         protected bool $configured,
-    ) {
-    }
+    ) {}
 
     public function isConfigured(): bool
     {

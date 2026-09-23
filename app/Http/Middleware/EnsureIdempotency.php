@@ -19,9 +19,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EnsureIdempotency
 {
-    public function __construct(protected IdempotencyService $idempotency)
-    {
-    }
+    public function __construct(protected IdempotencyService $idempotency) {}
 
     public function handle(Request $request, Closure $next): Response
     {

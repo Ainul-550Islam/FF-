@@ -30,7 +30,7 @@ abstract class Phase17TestCase extends TestCase
      */
     protected function makeTournament(User $organizer, string $status = 'open', array $overrides = []): Tournament
     {
-        $tournament = new Tournament;
+        $tournament = new Tournament();
         $tournament->organizer_id = $organizer->id;
         $tournament->name = $overrides['name'] ?? 'Phase17 Tournament';
         $tournament->slug = $overrides['slug'] ?? 'phase17-'.Str::random(8);

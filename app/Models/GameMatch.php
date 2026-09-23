@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class GameMatch extends Model
 {
@@ -27,11 +28,17 @@ class GameMatch extends Model
      * cancelled → abandoned
      */
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_READY = 'ready';
+
     public const STATUS_LIVE = 'live';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_DISPUTED = 'disputed';
+
     public const STATUS_BYE = 'bye';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     /**
@@ -52,7 +59,9 @@ class GameMatch extends Model
      * Bracket sides.
      */
     public const BRACKET_WINNERS = 'winners';
+
     public const BRACKET_LOSERS = 'losers';
+
     public const BRACKET_GRAND_FINAL = 'grand_final';
 
     /**
@@ -118,7 +127,7 @@ class GameMatch extends Model
     /**
      * The participating teams (1 or 2), loaded from the DB.
      *
-     * @return \Illuminate\Support\Collection<int, Team>
+     * @return Collection<int, Team>
      */
     public function participantTeams()
     {
@@ -252,10 +261,10 @@ class GameMatch extends Model
         }
 
         if ($this->bracket === self::BRACKET_LOSERS) {
-            return 'Losers Round ' . $this->round;
+            return 'Losers Round '.$this->round;
         }
 
-        return 'Round ' . $this->round;
+        return 'Round '.$this->round;
     }
 
     /**

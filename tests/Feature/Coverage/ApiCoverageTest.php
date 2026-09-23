@@ -3,8 +3,6 @@
 namespace Tests\Feature\Coverage;
 
 use App\Models\Tournament;
-use App\Models\User;
-use Illuminate\Support\Str;
 use Tests\Feature\Api\ApiTestCase;
 
 /**

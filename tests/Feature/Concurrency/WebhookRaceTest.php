@@ -9,8 +9,8 @@ use App\Models\Tournament;
 use App\Models\User;
 use App\Services\PaymentService;
 use Illuminate\Contracts\Http\Kernel;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 

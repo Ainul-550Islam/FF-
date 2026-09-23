@@ -18,10 +18,15 @@ class SupportTicket extends Model
     use HasFactory;
 
     public const STATUS_OPEN = 'open';
+
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_WAITING_ON_USER = 'waiting_on_user';
+
     public const STATUS_WAITING_ON_STAFF = 'waiting_on_staff';
+
     public const STATUS_RESOLVED = 'resolved';
+
     public const STATUS_CLOSED = 'closed';
 
     public const STATUSES = [
@@ -69,8 +74,11 @@ class SupportTicket extends Model
     public const CATEGORIES = ['general', 'payment', 'payout', 'dispute', 'account', 'technical', 'other'];
 
     public const PRIORITY_LOW = 'low';
+
     public const PRIORITY_NORMAL = 'normal';
+
     public const PRIORITY_HIGH = 'high';
+
     public const PRIORITY_URGENT = 'urgent';
 
     public const PRIORITIES = [

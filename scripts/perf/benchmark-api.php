@@ -21,7 +21,6 @@ use App\Models\User;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 perf_header('API latency baseline ('.perf_driver().')');
 

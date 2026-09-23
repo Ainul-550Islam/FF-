@@ -2,27 +2,37 @@
 
 namespace App\Services\Gameberry\Final9;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use App\Services\Gameberry\GoldEconomyService;
-use App\Services\Gameberry\GemEconomyService;
 use App\Services\Gameberry\DiceCollectionService;
+use App\Services\Gameberry\GemEconomyService;
+use App\Services\Gameberry\GoldEconomyService;
 use App\Services\Gameberry\LeagueService;
 use App\Services\Gameberry\LevelService;
 use App\Services\Gameberry\ReconciliationService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class Final91257Service
 {
     public const INITIAL_GOLD = 5000;
+
     public const INITIAL_GEMS = 10;
+
     public const MIN_BET = 100;
+
     public const MAX_BET = 100000;
+
     public const MAX_DICE = 52;
+
     public const MAX_BUDDIES = 25;
+
     public const TOP_PERCENT = 20;
+
     public const TOP_40 = 40;
+
     public const LEVEL_4_BRONZE = 4;
+
     public const LEVEL_12_TITAN = 12;
+
     public const FEATURE_NUMBER = 1257;
 
     public function getFullStats(int $userId): array
@@ -32,7 +42,7 @@ class Final91257Service
         $reconcile = app(ReconciliationService::class)->reconcileAll($userId);
 
         // G1: financial totals MUST reconcile - if there is a difference STOP, do not declare complete
-        if (!$reconcile['all_balanced']) {
+        if (! $reconcile['all_balanced']) {
             Log::critical('G1 Financial totals must reconcile - STOP - Final91257Service', [
                 'user_id' => $userId,
                 'gold' => $reconcile['gold'],
@@ -72,13 +82,13 @@ class Final91257Service
     public function play(int $userId, string $mode = 'classic', int $bet = 100): array
     {
         if ($bet < self::MIN_BET || $bet > self::MAX_BET) {
-            throw new \InvalidArgumentException('Bet must be between ' . self::MIN_BET . ' and ' . self::MAX_BET . ' gold - gold at stake');
+            throw new \InvalidArgumentException('Bet must be between '.self::MIN_BET.' and '.self::MAX_BET.' gold - gold at stake');
         }
 
         return DB::transaction(function () use ($userId, $mode, $bet) {
             $goldService = app(GoldEconomyService::class);
 
-            if (!$goldService->canAffordBet($userId, $bet)) {
+            if (! $goldService->canAffordBet($userId, $bet)) {
                 throw new \Exception('Insufficient gold - gold at stake - need enough gold for bet - gold wallets gem wallets reconciliation must hold');
             }
 
@@ -99,7 +109,7 @@ class Final91257Service
             $reconcile = app(ReconciliationService::class)->reconcileAll($userId);
 
             // G1: reconciliation must hold - STOP if mismatch
-            if (!$reconcile['all_balanced']) {
+            if (! $reconcile['all_balanced']) {
                 Log::critical('Reconciliation failed STOP G1 - Final91257Service', [
                     'user_id' => $userId,
                     'gold' => $reconcile['gold'],

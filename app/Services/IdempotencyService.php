@@ -117,7 +117,7 @@ class IdempotencyService
 
         ksort($body);
 
-        return hash('sha256', $request->method() . '|' . $request->path() . '|' . json_encode($body, JSON_UNESCAPED_SLASHES));
+        return hash('sha256', $request->method().'|'.$request->path().'|'.json_encode($body, JSON_UNESCAPED_SLASHES));
     }
 
     protected function bodyToArray(Response $response): array

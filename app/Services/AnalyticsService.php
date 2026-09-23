@@ -44,11 +44,11 @@ class AnalyticsService
     protected function inRange(Builder $query, string $column, ?string $from, ?string $to): Builder
     {
         if ($from !== null && $from !== '') {
-            $query->where($column, '>=', $from . ' 00:00:00');
+            $query->where($column, '>=', $from.' 00:00:00');
         }
 
         if ($to !== null && $to !== '') {
-            $query->where($column, '<=', $to . ' 23:59:59');
+            $query->where($column, '<=', $to.' 23:59:59');
         }
 
         return $query;
@@ -399,11 +399,11 @@ class AnalyticsService
             ->latest('id');
 
         if ($from !== null && $from !== '') {
-            $query->where($startColumn, '>=', $from . ' 00:00:00');
+            $query->where($startColumn, '>=', $from.' 00:00:00');
         }
 
         if ($to !== null && $to !== '') {
-            $query->where($startColumn, '<=', $to . ' 23:59:59');
+            $query->where($startColumn, '<=', $to.' 23:59:59');
         }
 
         $rows = $query->get();

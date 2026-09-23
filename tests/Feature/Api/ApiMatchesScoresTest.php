@@ -5,6 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\GameMatch;
 use App\Models\Score;
 use App\Models\ScoringRule;
+use App\Services\ScoringService;
 
 /**
  * Phase 15 — match reads and score submission: participant auth, duplicate
@@ -30,7 +31,7 @@ class ApiMatchesScoresTest extends ApiTestCase
 
     protected function makeRuleSet($tournament): ScoringRule
     {
-        return app(\App\Services\ScoringService::class)->createVersion($tournament, [
+        return app(ScoringService::class)->createVersion($tournament, [
             'name' => 'v1',
             'kill_points' => 1,
             'placement_points' => ScoringRule::DEFAULT_PLACEMENT_POINTS,
@@ -46,7 +47,7 @@ class ApiMatchesScoresTest extends ApiTestCase
         $b = $this->makeTeam($t, null, 'confirmed', 'UIDM01B1');
         $match = $this->makeMatch($t, $a, $b, 'completed');
 
-        $res = $this->getJson('/api/v1/matches/' . $match->id);
+        $res = $this->getJson('/api/v1/matches/'.$match->id);
         $res->assertStatus(200)->assertJsonPath('data.status', 'completed');
     }
 
@@ -63,7 +64,7 @@ class ApiMatchesScoresTest extends ApiTestCase
         $match = $this->makeMatch($t, $a, $b, 'live');
 
         $this->asUser($intruder, ['scores:submit'])
-            ->postJson('/api/v1/matches/' . $match->id . '/scores', [
+            ->postJson('/api/v1/matches/'.$match->id.'/scores', [
                 'team_id' => $a->id,
                 'kills' => 5,
                 'placement' => 1,
@@ -83,7 +84,7 @@ class ApiMatchesScoresTest extends ApiTestCase
         $match = $this->makeMatch($t, $a, $b, 'live');
 
         $res = $this->asUser($captainA, ['scores:submit'])
-            ->postJson('/api/v1/matches/' . $match->id . '/scores', [
+            ->postJson('/api/v1/matches/'.$match->id.'/scores', [
                 'team_id' => $a->id,
                 'kills' => 5,
                 'placement' => 1,
@@ -97,7 +98,7 @@ class ApiMatchesScoresTest extends ApiTestCase
 
         // A client-supplied authoritative point total is not accepted (422).
         $this->asUser($captainB, ['scores:submit'])
-            ->postJson('/api/v1/matches/' . $match->id . '/scores', [
+            ->postJson('/api/v1/matches/'.$match->id.'/scores', [
                 'team_id' => $b->id,
                 'kills' => 1,
                 'placement' => 2,
@@ -118,19 +119,19 @@ class ApiMatchesScoresTest extends ApiTestCase
         $match = $this->makeMatch($t, $a, $b, 'live');
 
         $this->asUser($captainA, ['scores:submit'])
-            ->postJson('/api/v1/matches/' . $match->id . '/scores', [
+            ->postJson('/api/v1/matches/'.$match->id.'/scores', [
                 'team_id' => $a->id, 'kills' => 5, 'placement' => 1,
             ])->assertStatus(201);
 
         // Duplicate team score.
         $this->asUser($captainA, ['scores:submit'])
-            ->postJson('/api/v1/matches/' . $match->id . '/scores', [
+            ->postJson('/api/v1/matches/'.$match->id.'/scores', [
                 'team_id' => $a->id, 'kills' => 5, 'placement' => 2,
             ])->assertStatus(409);
 
         // Placement already claimed.
         $this->asUser($captainB, ['scores:submit'])
-            ->postJson('/api/v1/matches/' . $match->id . '/scores', [
+            ->postJson('/api/v1/matches/'.$match->id.'/scores', [
                 'team_id' => $b->id, 'kills' => 1, 'placement' => 1,
             ])->assertStatus(409);
     }
@@ -146,7 +147,7 @@ class ApiMatchesScoresTest extends ApiTestCase
 
         // PATCHing a match (state mutation) does not exist for clients.
         $this->asUser($player, ['scores:submit'])
-            ->patchJson('/api/v1/matches/' . $match->id, ['status' => 'completed'])
+            ->patchJson('/api/v1/matches/'.$match->id, ['status' => 'completed'])
             ->assertStatus(405);
     }
 }

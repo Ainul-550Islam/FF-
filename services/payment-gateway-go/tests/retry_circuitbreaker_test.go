@@ -1,13 +1,12 @@
 package tests
 
 import (
-    "context"
-    "errors"
-    "testing"
-    "time"
-    "github.com/ffarena/payment-gateway-go/internal/circuitbreaker"
-    "github.com/ffarena/payment-gateway-go/internal/observability"
-    "github.com/ffarena/payment-gateway-go/internal/retry"
+	"errors"
+	"testing"
+	"time"
+	"github.com/ffarena/payment-gateway-go/internal/circuitbreaker"
+	"github.com/ffarena/payment-gateway-go/internal/observability"
+	"github.com/ffarena/payment-gateway-go/internal/retry"
 )
 
 func TestRetryClassification(t *testing.T) {

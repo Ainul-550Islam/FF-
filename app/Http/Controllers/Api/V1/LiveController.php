@@ -17,8 +17,7 @@ class LiveController extends Controller
 {
     public function __construct(
         protected LiveEventService $live,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /api/v1/me/live?since=N

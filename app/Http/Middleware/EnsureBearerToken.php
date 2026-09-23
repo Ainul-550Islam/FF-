@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Http\Middleware;
 
+use App\Support\ApiResponse;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -12,11 +14,11 @@ class EnsureBearerToken
     public function handle(Request $request, Closure $next): Response
     {
         $auth = $request->header('Authorization');
-        
-        if (!$auth || !str_starts_with($auth, 'Bearer ')) {
+
+        if (! $auth || ! str_starts_with($auth, 'Bearer ')) {
             return response()->json([
                 'error' => 'unauthorized',
-                'message' => 'Bearer token required'
+                'message' => 'Bearer token required',
             ], 401);
         }
 
@@ -26,21 +28,21 @@ class EnsureBearerToken
         if (strlen($token) < 10) {
             return response()->json([
                 'error' => 'invalid_token',
-                'message' => 'Token too short, must be at least 10 characters'
+                'message' => 'Token too short, must be at least 10 characters',
             ], 401);
         }
 
         if (strlen($token) > 500) {
             return response()->json([
                 'error' => 'invalid_token',
-                'message' => 'Token too long'
+                'message' => 'Token too long',
             ], 401);
         }
 
         try {
             $personalAccessToken = PersonalAccessToken::findToken($token);
-            
-            if (!$personalAccessToken) {
+
+            if (! $personalAccessToken) {
                 // Check if it's a service token (for Go/Rust inter-service)
                 $serviceSecret = config('services_go_rust.service_auth.secret') ?: config('services.service_auth.secret');
                 if ($serviceSecret && $this->isServiceToken($token, $serviceSecret)) {
@@ -50,28 +52,29 @@ class EnsureBearerToken
                         'request_id' => $request->header('X-Request-ID', 'unknown'),
                         'redacted_token' => $this->redactToken($token),
                     ]);
+
                     return $next($request);
                 }
 
                 return response()->json([
                     'error' => 'invalid_token',
-                    'message' => 'Token not found'
+                    'message' => 'Token not found',
                 ], 401);
             }
 
             if ($personalAccessToken->expires_at && $personalAccessToken->expires_at->isPast()) {
                 return response()->json([
                     'error' => 'token_expired',
-                    'message' => 'Token expired'
+                    'message' => 'Token expired',
                 ], 401);
             }
 
             $tokenable = $personalAccessToken->tokenable;
-            
-            if (!$tokenable) {
+
+            if (! $tokenable) {
                 return response()->json([
                     'error' => 'invalid_token',
-                    'message' => 'Token owner not found'
+                    'message' => 'Token owner not found',
                 ], 401);
             }
 
@@ -85,11 +88,11 @@ class EnsureBearerToken
                     'request_id' => $request->header('X-Request-ID', 'unknown'),
                 ]);
 
-                return \App\Support\ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
+                return ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
             }
 
-            if (isset($tokenable->is_active) && !$tokenable->is_active && !method_exists($tokenable, 'inactiveReason')) {
-                return \App\Support\ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
+            if (isset($tokenable->is_active) && ! $tokenable->is_active && ! method_exists($tokenable, 'inactiveReason')) {
+                return ApiResponse::error('account_inactive', 'This account is not active.', [], 401);
             }
 
             // Resolve the user through Sanctum's guard so the authenticated
@@ -125,7 +128,7 @@ class EnsureBearerToken
 
             return response()->json([
                 'error' => 'invalid_token',
-                'message' => 'Token validation failed'
+                'message' => 'Token validation failed',
             ], 401);
         }
     }
@@ -156,8 +159,9 @@ class EnsureBearerToken
     protected function redactToken(string $token): string
     {
         if (strlen($token) <= 8) {
-            return "***REDACTED***";
+            return '***REDACTED***';
         }
-        return substr($token, 0, 4) . "***REDACTED***" . substr($token, -4);
+
+        return substr($token, 0, 4).'***REDACTED***'.substr($token, -4);
     }
 }

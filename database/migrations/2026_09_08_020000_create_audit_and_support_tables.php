@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * support_internal_notes back the support queue. No Phase 01–12 table is
  * altered here.
  */
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {

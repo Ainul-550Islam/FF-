@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class GemWallet extends Model
 {
@@ -40,7 +41,7 @@ class GemWallet extends Model
             throw new \InvalidArgumentException('Amount must be positive');
         }
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
+        return DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
             $this->lockForUpdate();
             $this->refresh();
 
@@ -70,7 +71,7 @@ class GemWallet extends Model
             throw new \InvalidArgumentException('Amount must be positive');
         }
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
+        return DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
             $this->lockForUpdate();
             $this->refresh();
 

@@ -4,11 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('notifications')) {
+        if (! Schema::hasTable('notifications')) {
             Schema::create('notifications', function (Blueprint $table) {
                 $table->uuid('id')->primary();
                 $table->string('type');
@@ -19,7 +19,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('notification_preferences')) {
+        if (! Schema::hasTable('notification_preferences')) {
             Schema::create('notification_preferences', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -32,7 +32,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('teams')) {
+        if (! Schema::hasTable('teams')) {
             Schema::create('teams', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
@@ -45,7 +45,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('team_members')) {
+        if (! Schema::hasTable('team_members')) {
             Schema::create('team_members', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('team_id')->constrained()->cascadeOnDelete();
@@ -57,7 +57,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('support_tickets')) {
+        if (! Schema::hasTable('support_tickets')) {
             Schema::create('support_tickets', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -70,7 +70,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('support_messages')) {
+        if (! Schema::hasTable('support_messages')) {
             Schema::create('support_messages', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('ticket_id')->constrained('support_tickets')->cascadeOnDelete();
@@ -81,7 +81,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('audit_logs')) {
+        if (! Schema::hasTable('audit_logs')) {
             Schema::create('audit_logs', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();

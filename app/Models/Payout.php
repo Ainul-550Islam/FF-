@@ -31,10 +31,15 @@ class Payout extends Model
     use HasFactory;
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_FAILED = 'failed';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     public const TRANSITIONS = [
@@ -51,6 +56,7 @@ class Payout extends Model
      * `manual` is a manually processed external payout (never faked).
      */
     public const METHOD_WALLET = 'wallet';
+
     public const METHOD_MANUAL = 'manual';
 
     protected $fillable = [];

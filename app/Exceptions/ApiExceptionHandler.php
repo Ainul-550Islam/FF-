@@ -77,7 +77,6 @@ class ApiExceptionHandler
         };
     }
 
-
     /**
      * True when any route (regardless of HTTP method) defines this URI.
      *

@@ -24,8 +24,7 @@ class ProfileService
         protected AuditLogService $audit,
         protected LoginEventService $loginEvents,
         protected SessionManagementService $sessions,
-    ) {
-    }
+    ) {}
 
     /**
      * Update basic profile fields (display name, bio, country, region, avatar).
