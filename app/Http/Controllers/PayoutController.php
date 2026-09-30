@@ -4,168 +4,101 @@ namespace App\Http\Controllers;
 
 use App\Models\Payout;
 use App\Models\Tournament;
-use App\Services\AuditLogService;
 use App\Services\PayoutService;
 use DomainException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
-/**
- * Admin payout management (Phase 09).
- *
- * List payouts and drive the payout state machine. All routes sit behind the
- * `admin` middleware and call the PayoutPolicy.
- */
 class PayoutController extends Controller
 {
-    public function __construct(
-        protected PayoutService $payouts,
-        protected AuditLogService $audit,
-    ) {}
-
-    public function index(Request $request)
+    public function index(Request $request): View
     {
-        $this->authorize('viewAny', Payout::class);
+        $status = $request->input('status');
+        $tournamentId = $request->input('tournament_id') ? (int) $request->input('tournament_id') : null;
+
+        $statuses = ['pending', 'processing', 'completed', 'failed', 'cancelled', 'held'];
+        $tournaments = Tournament::query()->orderBy('name')->get();
 
         $payouts = Payout::query()
-            ->with(['tournament', 'recipient', 'team', 'processedBy'])
-            ->orderByDesc('created_at');
+            ->with(['recipient', 'tournament', 'team'])
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($tournamentId, fn ($q) => $q->where('tournament_id', $tournamentId))
+            ->latest()
+            ->paginate(25);
 
-        $status = $request->query('status');
-
-        if ($status !== null && $status !== '') {
-            $payouts->where('status', $status);
-        }
-
-        $tournamentId = (int) $request->query('tournament_id');
-
-        if ($tournamentId > 0) {
-            $payouts->where('tournament_id', $tournamentId);
-        }
-
-        $payouts = $payouts->paginate(25)->withQueryString();
-
-        $tournaments = Tournament::query()->orderBy('name')->get(['id', 'name']);
-
-        $statuses = [
-            Payout::STATUS_PENDING,
-            Payout::STATUS_APPROVED,
-            Payout::STATUS_PROCESSING,
-            Payout::STATUS_COMPLETED,
-            Payout::STATUS_FAILED,
-            Payout::STATUS_CANCELLED,
-        ];
-
-        return view('admin.payouts', compact('payouts', 'tournaments', 'statuses', 'status', 'tournamentId'));
+        return view('admin.payouts', compact('payouts', 'statuses', 'tournaments', 'status', 'tournamentId'));
     }
 
-    public function approve(Payout $payout)
+    public function approve(Payout $payout, PayoutService $service): RedirectResponse
     {
-        $this->authorize('approve', $payout);
-
         try {
-            $this->payouts->approve($payout, auth()->user());
+            $service->approve($payout, auth()->user());
+
+            return back()->with('success', 'Payout approved.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        $this->audit->recordQuietly(auth()->user(), 'payout.approved', 'payout', $payout->id, [
-            'tournament_id' => $payout->tournament_id,
-        ]);
-
-        return back()->with('success', 'Payout approved.');
     }
 
-    public function process(Payout $payout)
+    public function process(Payout $payout, PayoutService $service): RedirectResponse
     {
-        $this->authorize('process', $payout);
-
         try {
-            $this->payouts->process($payout, auth()->user());
+            $service->process($payout, auth()->user());
+
+            return back()->with('success', 'Payout processed.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        $this->audit->recordQuietly(auth()->user(), 'payout.processed', 'payout', $payout->id, [
-            'tournament_id' => $payout->tournament_id,
-        ]);
-
-        return back()->with('success', 'Payout processed.');
     }
 
-    public function processOverride(Request $request, Payout $payout)
+    public function processOverride(Request $request, Payout $payout, PayoutService $service): RedirectResponse
     {
-        $this->authorize('process', $payout);
-
-        $reason = (string) $request->input('reason', '');
+        $request->validate(['reason' => 'required|string|min:3|max:500']);
 
         try {
-            $this->payouts->processWithOverride($payout, auth()->user(), $reason);
+            $service->processWithOverride($payout, auth()->user(), (string) $request->input('reason'));
+
+            return back()->with('success', 'Payout processed with override.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        $this->audit->recordQuietly(auth()->user(), 'payout.override', 'payout', $payout->id, [
-            'tournament_id' => $payout->tournament_id,
-            'metadata' => ['reason' => $reason],
-        ]);
-
-        return back()->with('success', 'Payout processed with fraud-review override.');
     }
 
-    public function complete(Request $request, Payout $payout)
+    public function complete(Request $request, Payout $payout, PayoutService $service): RedirectResponse
     {
-        $this->authorize('complete', $payout);
-
-        $reference = (string) $request->input('reference', '');
+        $reference = $request->input('reference') ? (string) $request->input('reference') : null;
 
         try {
-            $this->payouts->completeManually($payout, auth()->user(), $reference);
+            $service->completeManually($payout, auth()->user(), $reference);
+
+            return back()->with('success', 'Payout marked as completed.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        $this->audit->recordQuietly(auth()->user(), 'payout.completed', 'payout', $payout->id, [
-            'tournament_id' => $payout->tournament_id,
-            'metadata' => ['reference' => $reference],
-        ]);
-
-        return back()->with('success', 'Payout marked completed.');
     }
 
-    public function fail(Request $request, Payout $payout)
+    public function fail(Request $request, Payout $payout, PayoutService $service): RedirectResponse
     {
-        $this->authorize('fail', $payout);
-
-        $reason = (string) $request->input('reason', '');
+        $reason = (string) $request->input('reason', 'Marked failed by administrator');
 
         try {
-            $this->payouts->markFailed($payout, auth()->user(), $reason);
+            $service->markFailed($payout, auth()->user(), $reason);
+
+            return back()->with('success', 'Payout marked as failed.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        $this->audit->recordQuietly(auth()->user(), 'payout.failed', 'payout', $payout->id, [
-            'tournament_id' => $payout->tournament_id,
-            'metadata' => ['reason' => $reason],
-        ]);
-
-        return back()->with('success', 'Payout marked failed.');
     }
 
-    public function cancel(Payout $payout)
+    public function cancel(Payout $payout, PayoutService $service): RedirectResponse
     {
-        $this->authorize('cancel', $payout);
-
         try {
-            $this->payouts->cancel($payout, auth()->user());
+            $service->cancel($payout, auth()->user());
+
+            return back()->with('success', 'Payout cancelled.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        $this->audit->recordQuietly(auth()->user(), 'payout.cancelled', 'payout', $payout->id, [
-            'tournament_id' => $payout->tournament_id,
-        ]);
-
-        return back()->with('success', 'Payout cancelled.');
     }
 }

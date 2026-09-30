@@ -17,7 +17,10 @@ class Stat25Controller extends Controller
 
     public function index(Request $request)
     {
-        $userId = $request->user() ? $request->user()->id : (int) $request->input('user_id', 1);
+        $userId = auth()->id();
+        if (! $userId) {
+            abort(401);
+        }
         $stats = $this->service->getStats($userId);
 
         return view('gameberry.dashboard.stat_25', compact('stats'));
@@ -32,7 +35,10 @@ class Stat25Controller extends Controller
 
     public function calculate(Request $request)
     {
-        $userId = $request->user() ? $request->user()->id : (int) $request->input('user_id', 1);
+        $userId = auth()->id();
+        if (! $userId) {
+            abort(401);
+        }
         $value = (int) $request->input('value', 100);
 
         return response()->json(['success' => true, 'stat' => 25, 'result' => $this->service->calculate($userId, $value)]);

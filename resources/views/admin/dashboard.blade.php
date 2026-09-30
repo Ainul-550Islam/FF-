@@ -17,6 +17,13 @@
         <a href="{{ route('admin.payouts.index') }}" class="btn btn-sm">Payouts</a>
         <span class="muted">Security:</span>
         <a href="{{ route('admin.security.dashboard') }}" class="btn btn-sm">Security</a>
+        <span class="muted">Marketing:</span>
+        <a href="{{ route('admin.marketing.analytics.index') }}" class="btn btn-sm btn-cyan">Funnel &amp; Analytics</a>
+        <a href="{{ route('admin.marketing.utm.index') }}" class="btn btn-sm">UTM Dashboard</a>
+        <a href="{{ route('admin.marketing.affiliates.payouts.index') }}" class="btn btn-sm">Affiliate Payouts</a>
+        <a href="{{ route('admin.marketing.articles.index') }}" class="btn btn-sm">Blog Articles</a>
+        <a href="{{ route('admin.marketing.automations.index') }}" class="btn btn-sm">Automations</a>
+        <a href="{{ route('admin.marketing.experiments.index') }}" class="btn btn-sm">A/B Experiments</a>
     </nav>
 
     <div class="grid cols-2" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))">

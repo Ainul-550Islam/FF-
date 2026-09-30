@@ -3,37 +3,29 @@
 namespace App\Http\Controllers;
 
 use App\Services\LiveEventService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * Account-level realtime feed (Phase 14).
- *
- * JSON polling endpoint that returns the authenticated user's own targeted
- * live events (payment status, session revocation, verification status)
- * newer than a cursor. Only the target user may read them; payloads carry no
- * sensitive data.
- */
 class AccountLiveController extends Controller
 {
-    public function __construct(
-        protected LiveEventService $live,
-    ) {}
-
-    public function index(Request $request)
+    /**
+     * Account live event poll endpoint.
+     */
+    public function index(Request $request, LiveEventService $service): JsonResponse
     {
-        $since = (int) $request->query('since', 0);
         $user = $request->user();
 
-        $events = $this->live->sinceForUser($since, $user, 50);
+        if (! $user) {
+            return response()->json(['events' => [], 'cursor' => 0], 401);
+        }
+
+        $since = (int) $request->input('since', 0);
+        $events = $service->sinceForUser($since, $user);
+        $cursor = $events->isNotEmpty() ? $events->max('id') : $since;
 
         return response()->json([
-            'revision' => $this->live->latestCursor(),
-            'events' => $events->map(fn ($event) => [
-                'id' => $event->id,
-                'type' => $event->type,
-                'payload' => $event->payload,
-                'created_at' => $event->created_at?->toIso8601String(),
-            ])->values(),
+            'events' => $events->values(),
+            'cursor' => $cursor,
         ]);
     }
 }

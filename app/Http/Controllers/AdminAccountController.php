@@ -2,126 +2,117 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
+use App\Models\IdentityVerification;
 use App\Models\User;
 use App\Services\AccountLifecycleService;
-use App\Services\AuditLogService;
-use App\Services\IdentityService;
-use App\Services\IdentityVerificationService;
 use App\Services\SessionManagementService;
 use DomainException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
-/**
- * Admin account administration (Phase 14).
- *
- * Admins may inspect account status, verification state, linked providers,
- * restrictions, security events and payment methods, and may revoke sessions,
- * deactivate/reactivate and delete (anonymize) accounts. Organizers and
- * moderators get none of these global controls.
- */
 class AdminAccountController extends Controller
 {
-    public function __construct(
-        protected IdentityService $identities,
-        protected IdentityVerificationService $identityVerification,
-        protected SessionManagementService $sessions,
-        protected AccountLifecycleService $lifecycle,
-        protected AuditLogService $audit,
-    ) {}
-
-    public function index(Request $request)
+    public function index(Request $request): View
     {
-        $this->authorize('adminAccounts', User::class);
+        $q = (string) $request->input('q', '');
+        $role = (string) $request->input('role', '');
+        $status = (string) $request->input('status', '');
 
-        $users = User::query()->orderByDesc('id');
-
-        $q = trim((string) $request->query('q', ''));
+        $query = User::query();
 
         if ($q !== '') {
-            $users->where(function ($query) use ($q) {
-                $query->where('name', 'like', "%{$q}%")
+            $query->where(function ($sq) use ($q) {
+                $sq->where('name', 'like', "%{$q}%")
                     ->orWhere('username', 'like', "%{$q}%")
                     ->orWhere('email', 'like', "%{$q}%");
             });
         }
 
-        $role = (string) $request->query('role', '');
-        if ($role !== '' && in_array($role, ['admin', 'organizer', 'moderator', 'player'], true)) {
-            $users->where('role', $role);
+        if ($role !== '') {
+            $query->where('role', $role);
         }
 
-        $status = (string) $request->query('status', '');
-        if ($status !== '' && in_array($status, ['active', 'deactivated', 'deletion_pending', 'deleted'], true)) {
-            $users->where('account_status', $status);
+        if ($status !== '') {
+            $query->where('account_status', $status);
         }
 
-        $users = $users->paginate(25)->withQueryString();
+        $users = $query->latest()->paginate(25)->withQueryString();
 
         return view('admin.accounts.index', compact('users', 'q', 'role', 'status'));
     }
 
-    public function show(User $user)
+    public function show(User $user): View
     {
-        $this->authorize('adminAccount', $user);
+        $subject = $user;
+        $identities = $user->identities()->get();
+        $identity = $user->identityVerification ?? (new IdentityVerification())->forceFill(['status' => 'unverified']);
+        $riskProfile = $user->fraudRiskProfile;
+        $restrictions = $user->restrictions()->get();
+        $loginEvents = $user->loginEvents()->latest()->take(20)->get();
+        $paymentMethods = $user->paymentMethods()->get();
+        $auditHistory = AuditLog::query()
+            ->where(function ($q) use ($user) {
+                $q->where('target_user_id', $user->id)
+                    ->orWhere(function ($sq) use ($user) {
+                        $sq->where('entity_type', 'user')
+                            ->where('entity_id', $user->id);
+                    });
+            })
+            ->latest()
+            ->take(20)
+            ->get();
 
-        return view('admin.accounts.show', [
-            'subject' => $user,
-            'identities' => $this->identities->identitiesFor($user),
-            'loginEvents' => $user->loginEvents()->limit(50)->get(),
-            'sessions' => $this->sessions->sessionsFor($user),
-            'restrictions' => $user->restrictions()->with('actor', 'liftedBy')->orderByDesc('id')->get(),
-            'identity' => $this->identityVerification->effectiveStatus($user),
-            'paymentMethods' => $user->paymentMethods()->orderByDesc('id')->get(),
-            'riskProfile' => $user->riskProfile()->first(),
-            'auditHistory' => $this->audit->relatedHistory('user', $user->id, 50),
-        ]);
+        return view('admin.accounts.show', compact(
+            'subject',
+            'identities',
+            'identity',
+            'riskProfile',
+            'restrictions',
+            'loginEvents',
+            'paymentMethods',
+            'auditHistory'
+        ));
     }
 
-    public function revokeSessions(User $user)
+    public function revokeSessions(User $user, SessionManagementService $service): RedirectResponse
     {
-        $this->authorize('adminRevokeSessions', $user);
+        $service->revokeAllForUser($user, auth()->user());
 
-        $count = $this->sessions->revokeAllForUser($user, auth()->user());
-
-        return back()->with('success', "Revoked {$count} session(s) for {$user->name}.");
+        return back()->with('success', 'User sessions revoked.');
     }
 
-    public function deactivate(User $user)
+    public function deactivate(User $user, AccountLifecycleService $lifecycle): RedirectResponse
     {
-        $this->authorize('adminDeactivate', $user);
-
         try {
-            $this->lifecycle->deactivate($user, auth()->user());
+            $lifecycle->deactivate($user, auth()->user());
+
+            return back()->with('success', 'Account deactivated.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        return back()->with('success', 'Account deactivated.');
     }
 
-    public function reactivate(User $user)
+    public function reactivate(User $user, AccountLifecycleService $lifecycle): RedirectResponse
     {
-        $this->authorize('adminDeactivate', $user);
-
         try {
-            $this->lifecycle->reactivate($user, auth()->user());
+            $lifecycle->reactivate($user, auth()->user());
+
+            return back()->with('success', 'Account reactivated.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        return back()->with('success', 'Account reactivated.');
     }
 
-    public function delete(User $user)
+    public function delete(User $user, AccountLifecycleService $lifecycle): RedirectResponse
     {
-        $this->authorize('adminDelete', $user);
-
         try {
-            $this->lifecycle->executeDeletion($user, auth()->user());
+            $lifecycle->executeDeletion($user, auth()->user());
+
+            return back()->with('success', 'Account deleted.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        return redirect()->route('admin.accounts.index')->with('success', 'Account deleted (anonymized).');
     }
 }

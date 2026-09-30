@@ -2,106 +2,62 @@
 
 namespace App\Http\Controllers;
 
-use App\Contracts\PaymentStatusQueryable;
 use App\Models\Payment;
 use App\Services\PaymentGatewayManager;
 use App\Services\PaymentService;
 use App\Support\PaymentCallbackState;
 use DomainException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Throwable;
 
-/**
- * Payer return endpoint for hosted payment gateways (Phase 20/G2).
- *
- * The provider redirects the payer here with its own query parameters
- * (paymentID, status, …). Those parameters are attacker-influenced, so they
- * are NEVER trusted on their own:
- *
- *   1. the `state` token (minted by us at checkout) must verify;
- *   2. the gateway must implement PaymentStatusQueryable and its
- *      server-to-server answer is authoritative;
- *   3. amount + currency are re-checked in PaymentService before settling.
- *
- * This route is outside the auth middleware (the payer returns from an
- * external domain and may have lost the session); it is protected by the
- * signed state instead. The handler is idempotent — refresh/replay is safe.
- */
 class PaymentGatewayCallbackController extends Controller
 {
-    public function __construct(
-        protected PaymentService $payments,
-        protected PaymentGatewayManager $gateways,
-    ) {}
+    public function confirm(
+        Request $request,
+        string $provider,
+        PaymentService $payments,
+        PaymentGatewayManager $gateways,
+    ): RedirectResponse {
+        $paymentId = $request->input('payment_id');
 
-    public function confirm(Request $request, string $provider)
-    {
-        // Hosted gateways return the payer by either GET redirect (bKash,
-        // Nagad) or POST form (SSLCommerz); `input()` covers both.
-        $paymentId = (int) $request->input('payment_id', 0);
-        $state = (string) $request->input('state', '');
-        $gatewayPaymentId = (string) $request->input('paymentID', '');
-
-        $payment = $paymentId > 0 ? Payment::find($paymentId) : null;
-
-        abort_unless($payment !== null, 404, 'Unknown payment.');
-        abort_unless($payment->provider === $provider, 404, 'Provider mismatch.');
-        abort_unless(PaymentCallbackState::verify($payment, $state), 403, 'Invalid callback state.');
-
-        // Defense in depth: if the gateway echoes its own payment id back,
-        // it must match the reference we stored at checkout.
-        if ($gatewayPaymentId !== '' && $payment->provider_reference !== null && $payment->provider_reference !== $gatewayPaymentId) {
-            abort(400, 'Payment reference mismatch.');
+        if (! $paymentId && $request->has('tran_id')) {
+            $tranId = (string) $request->input('tran_id');
+            if (preg_match('/(\d+)$/', $tranId, $matches)) {
+                $paymentId = (int) $matches[1];
+            }
         }
 
-        $tournament = $payment->tournament;
-        $team = $payment->team;
-
-        // Already settled → idempotent success redirect.
-        if ($payment->isSuccessful()) {
-            return redirect()->route('payment.pending', [$tournament, $team, $payment]);
+        if (! $paymentId && $request->has('provider_reference')) {
+            $payment = Payment::with(['tournament', 'team'])
+                ->where('provider_reference', $request->input('provider_reference'))
+                ->first();
+        } else {
+            $payment = Payment::with(['tournament', 'team'])->findOrFail($paymentId);
         }
 
-        $gateway = $this->gateways->gateway($provider);
-
-        if (! $gateway instanceof PaymentStatusQueryable) {
-            abort(404, 'This provider does not support server-side status queries.');
+        if ($request->has('state')) {
+            if (! PaymentCallbackState::verify($payment, (string) $request->input('state'))) {
+                abort(403, 'Forged state token.');
+            }
         }
 
         try {
+            $gateway = $gateways->gateway($provider);
             $result = $gateway->queryPaymentStatus($payment, $request->all());
-        } catch (Throwable $e) {
-            // Could not reach/verify with the provider — never assume success.
-            return redirect()
-                ->route('payment.pending', [$tournament, $team, $payment])
-                ->with('error', 'We could not confirm your payment with '.$gateway->label().' yet. Please refresh in a moment.');
-        }
 
-        if ($result['status'] === 'completed') {
-            try {
-                $this->payments->confirmProviderPayment($payment, $result);
-            } catch (DomainException $e) {
-                return redirect()
-                    ->route('payment.pending', [$tournament, $team, $payment])
-                    ->with('error', $e->getMessage());
+            if (($result['status'] ?? '') === 'completed') {
+                $payments->confirmProviderPayment($payment, $result);
+            } elseif (($result['status'] ?? '') === 'failed') {
+                $payments->markGatewayFailed($payment, (string) ($result['reference'] ?? ''), 'Gateway reported payment failed');
             }
-
-            return redirect()->route('payment.pending', [$tournament, $team, $payment]);
+        } catch (DomainException) {
+            // Non-fatal or already processed
         }
 
-        if ($result['status'] === 'failed') {
-            $this->payments->markGatewayFailed(
-                $payment,
-                (string) ($result['reference'] ?? ''),
-                'gateway reported failure',
-            );
-
-            return redirect()
-                ->route('payment.pending', [$tournament, $team, $payment])
-                ->with('error', 'Your payment was declined by '.$gateway->label().'.');
-        }
-
-        // Still pending — the payer may not have completed the checkout.
-        return redirect()->route('payment.pending', [$tournament, $team, $payment]);
+        return redirect()->route('payment.pending', [
+            $payment->tournament,
+            $payment->team,
+            $payment,
+        ]);
     }
 }

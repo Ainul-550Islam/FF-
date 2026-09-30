@@ -7,79 +7,62 @@ use App\Services\MarketingAttributionService;
 use App\Services\MarketingTrackingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Throwable;
 
-/**
- * Phase 20 — public marketing tracking + consent endpoints.
- *
- * POST /marketing/event    → consented first-party conversion events (§40
- *                            taxonomy, strictly validated).
- * POST /marketing/consent  → the consent decision (grant/change/withdraw),
- *                            persisted as an append-only ledger row and
- *                            echoed back as the consent cookie.
- */
 class MarketingTrackingController extends Controller
 {
-    public function __construct(
-        protected MarketingTrackingService $tracking,
-        protected MarketingAttributionService $attribution,
-    ) {}
-
-    public function event(Request $request): JsonResponse
+    public function event(Request $request, MarketingTrackingService $tracking): JsonResponse
     {
-        $result = $this->tracking->recordFromRequest($request);
+        $result = $tracking->recordFromRequest($request);
 
-        if (! $result['ok']) {
-            return response()->json(['ok' => false, 'error' => $result['error']], 422);
-        }
-
-        return response()->json(['ok' => true]);
+        return response()->json($result, $result['ok'] ? 200 : 422);
     }
 
-    public function consent(Request $request): JsonResponse
-    {
+    public function consent(
+        Request $request,
+        MarketingAttributionService $attribution,
+    ): JsonResponse {
         $data = $request->validate([
             'analytics' => 'required|boolean',
             'marketing' => 'required|boolean',
             'withdraw' => 'nullable|boolean',
+            'policy_version' => 'nullable|string|max:32',
         ]);
 
-        $anonymousId = $this->attribution->anonymousId($request);
-        $withdraw = (bool) ($data['withdraw'] ?? false);
+        $anonymousId = $attribution->anonymousId($request);
+        $withdrawn = (bool) ($data['withdraw'] ?? false);
 
-        try {
-            MarketingConsent::create([
-                'anonymous_id' => $anonymousId,
-                'user_id' => $request->user()?->id,
-                'analytics_consent' => $withdraw ? false : (bool) $data['analytics'],
-                'marketing_consent' => $withdraw ? false : (bool) $data['marketing'],
-                'policy_version' => (string) config('marketing.consent.policy_version'),
-                'granted_at' => $withdraw ? null : now(),
-                'withdrawn_at' => $withdraw ? now() : null,
-                'created_at' => now(),
-            ]);
-        } catch (Throwable $e) {
-            report($e);
+        $consent = MarketingConsent::create([
+            'anonymous_id' => $anonymousId,
+            'user_id' => $request->user()?->id,
+            'analytics_consent' => (bool) $data['analytics'],
+            'marketing_consent' => (bool) $data['marketing'],
+            'policy_version' => $data['policy_version'] ?? 'v1',
+            'granted_at' => $withdrawn ? null : now(),
+            'withdrawn_at' => $withdrawn ? now() : null,
+            'created_at' => now(),
+        ]);
 
-            return response()->json(['ok' => false, 'error' => 'Could not store consent.'], 500);
-        }
+        $payload = [
+            'analytics' => $consent->analytics_consent,
+            'marketing' => $consent->marketing_consent,
+            'withdrawn' => $withdrawn,
+            'version' => $consent->policy_version,
+            'timestamp' => now()->toISOString(),
+        ];
 
-        $minutes = (int) config('marketing.consent.cookie_minutes', 259200);
+        $cookie = cookie(
+            'ff_consent',
+            json_encode($payload),
+            60 * 24 * 365,
+            '/',
+            null,
+            false,
+            false,
+        );
 
-        $payload = $withdraw
-            ? ['analytics' => false, 'marketing' => false, 'v' => (string) config('marketing.consent.policy_version'), 'withdrawn' => true]
-            : ['analytics' => (bool) $data['analytics'], 'marketing' => (bool) $data['marketing'], 'v' => (string) config('marketing.consent.policy_version')];
-
-        return response()
-            ->json(['ok' => true, 'consent' => $payload])
-            ->cookie(
-                (string) config('marketing.consent.cookie', 'ff_consent'),
-                (string) json_encode($payload, JSON_UNESCAPED_SLASHES),
-                $minutes,
-                '/',
-                null,
-                $request->isSecure(),
-                false // the layout JS must read the consent state to gate trackers.
-            );
+        return response()->json([
+            'ok' => true,
+            'consent' => $payload,
+        ])->withCookie($cookie);
     }
 }

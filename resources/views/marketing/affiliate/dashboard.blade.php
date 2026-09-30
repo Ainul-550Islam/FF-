@@ -52,6 +52,37 @@
             </div>
         </div>
 
+        @if (isset($earnings))
+            <div class="card" style="margin-top: 16px">
+                <h3 style="margin-top: 0">Commission Balance & Payouts</h3>
+                <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px">
+                    <div><strong>৳{{ number_format($earnings['total_earned_minor'] / 100, 2) }}</strong><br><span class="muted">Lifetime earned</span></div>
+                    <div><strong>৳{{ number_format($earnings['paid_minor'] / 100, 2) }}</strong><br><span class="muted">Settled to wallet</span></div>
+                    <div><strong>৳{{ number_format($earnings['pending_minor'] / 100, 2) }}</strong><br><span class="muted">Pending review</span></div>
+                    <div><strong style="color: #10b981">৳{{ number_format($earnings['available_minor'] / 100, 2) }}</strong><br><span class="muted">Available to withdraw</span></div>
+                </div>
+
+                @if ($earnings['available_minor'] >= (int) config('marketing.affiliate.min_payout_minor', 1000))
+                    <form method="POST" action="{{ route('marketing.affiliates.payouts.store') }}" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08)">
+                        @csrf
+                        <div class="field" style="margin: 0">
+                            <label for="payout_bdt">Request Payout (BDT)</label>
+                            <input type="number" id="payout_bdt" name="amount_bdt" step="0.01" min="10" max="{{ $earnings['available_minor'] / 100 }}" value="{{ $earnings['available_minor'] / 100 }}" style="width: 140px">
+                        </div>
+                        <div class="field" style="margin: 0">
+                            <label for="payout_notes">Notes (optional)</label>
+                            <input type="text" id="payout_notes" name="notes" placeholder="e.g. Monthly payout" maxlength="255">
+                        </div>
+                        <button type="submit" class="btn btn-cyan btn-sm" style="height: 38px">Submit Payout Request</button>
+                    </form>
+                @else
+                    <p class="muted" style="font-size: 0.85rem; margin: 0">
+                        Minimum withdrawal amount is ৳{{ number_format(((int) config('marketing.affiliate.min_payout_minor', 1000)) / 100, 2) }}. Keep sharing your referral link to reach the threshold.
+                    </p>
+                @endif
+            </div>
+        @endif
+
         <div class="card" style="margin-top: 16px">
             <h3 style="margin-top: 0">Recent referrals</h3>
             @if ($stats['latest']->isEmpty())

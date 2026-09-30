@@ -204,6 +204,7 @@ class MarketingAffiliateService
 
         $clicks = $affiliate->referrals()->count();
         $signups = $affiliate->referrals()->whereNotNull('referred_user_id')->count();
+        $payoutService = app(MarketingAffiliatePayoutService::class);
 
         return [
             'affiliate' => $affiliate,
@@ -213,6 +214,8 @@ class MarketingAffiliateService
                 'conversion_rate' => $clicks > 0 ? (int) round(($signups / $clicks) * 100) : 0,
                 'latest' => $affiliate->referrals()->latest('clicked_at')->latest('id')->take(10)->get(),
             ],
+            'earnings' => $payoutService->calculateEarnings($affiliate),
+            'payouts' => $payoutService->payoutsForAffiliate($affiliate, 5),
         ];
     }
 }

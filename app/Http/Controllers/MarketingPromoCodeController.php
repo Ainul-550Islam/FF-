@@ -6,30 +6,20 @@ use App\Http\Requests\ApplyMarketingPromoCodeRequest;
 use App\Services\MarketingPromoCodeService;
 use Illuminate\Http\JsonResponse;
 
-/**
- * Phase 21 — promo code application endpoint.
- *
- * Auth-only, rate-limited. The client sends a code and an optional
- * tournament context — every amount in the response is computed
- * server-side from the tournament's own entry fee.
- */
 class MarketingPromoCodeController extends Controller
 {
-    public function __construct(
-        protected MarketingPromoCodeService $promos,
-    ) {}
+    public function apply(
+        ApplyMarketingPromoCodeRequest $request,
+        MarketingPromoCodeService $service,
+    ): JsonResponse {
+        $user = $request->user();
 
-    public function apply(ApplyMarketingPromoCodeRequest $request): JsonResponse
-    {
-        $result = $this->promos->apply($request->promoContext(), $request->user());
-
-        if (! ($result['ok'] ?? false)) {
-            return response()->json([
-                'ok' => false,
-                'error' => (string) ($result['error'] ?? 'This promo code cannot be applied.'),
-            ], 422);
+        if (! $user) {
+            return response()->json(['ok' => false, 'error' => 'Unauthenticated.'], 401);
         }
 
-        return response()->json($result);
+        $result = $service->apply($request->promoContext(), $user);
+
+        return response()->json($result, $result['ok'] ? 200 : 422);
     }
 }

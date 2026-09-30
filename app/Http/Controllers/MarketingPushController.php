@@ -8,53 +8,35 @@ use App\Services\MarketingPushService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * Phase 21 — push re-engagement subscription endpoints.
- *
- * Identity is decided server-side: the authenticated user when signed in,
- * otherwise the anonymous visitor cookie. Secret keys are stored encrypted
- * and never echoed back in any response.
- */
 class MarketingPushController extends Controller
 {
-    public function __construct(
-        protected MarketingPushService $push,
-        protected MarketingAttributionService $attribution,
-    ) {}
-
-    /**
-     * Subscribe the current visitor/user (idempotent per endpoint).
-     */
-    public function subscribe(StoreMarketingPushSubscriptionRequest $request): JsonResponse
-    {
-        $data = $request->subscriptionData();
-
-        $subscription = $this->push->register(
+    public function subscribe(
+        StoreMarketingPushSubscriptionRequest $request,
+        MarketingPushService $service,
+        MarketingAttributionService $attribution,
+    ): JsonResponse {
+        $anonymousId = $attribution->anonymousId($request);
+        $subscription = $service->register(
             $request->user(),
-            $this->attribution->anonymousId($request),
-            $data,
-            (string) $request->userAgent(),
+            $anonymousId,
+            $request->subscriptionData(),
+            $request->userAgent(),
         );
 
         return response()->json([
             'ok' => true,
             'id' => $subscription->id,
             'provider' => $subscription->provider,
-            'topics' => $subscription->topics,
+            'topics' => $subscription->topics ?? [],
             'active' => $subscription->isActive(),
         ]);
     }
 
-    /**
-     * Unsubscribe by endpoint (idempotent).
-     */
-    public function unsubscribe(Request $request): JsonResponse
+    public function unsubscribe(Request $request, MarketingPushService $service): JsonResponse
     {
-        $data = $request->validate([
-            'endpoint' => 'required|string|min:16|max:500',
-        ]);
+        $request->validate(['endpoint' => 'required|string']);
 
-        $this->push->unsubscribe((string) $data['endpoint']);
+        $service->unsubscribe((string) $request->input('endpoint'));
 
         return response()->json(['ok' => true]);
     }

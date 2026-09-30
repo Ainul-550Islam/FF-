@@ -3,93 +3,83 @@
 namespace App\Http\Controllers;
 
 use App\Services\BackupService;
+use App\Services\HealthService;
 use App\Services\OperationsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-/**
- * Phase 16 — admin-only infrastructure operations.
- *
- * Every route here is behind the `admin` middleware. All mutating actions are
- * audited (Phase 13) and return safe, redacted output; queue and backup
- * internals are never exposed to non-admin roles.
- */
 class OpsController extends Controller
 {
-    public function __construct(
-        protected OperationsService $ops,
-        protected BackupService $backups,
-    ) {}
-
-    public function dashboard(): View
+    public function dashboard(OperationsService $ops, BackupService $backups): View
     {
+        $stats = $ops->dashboard();
+        $backupList = $backups->list();
+
         return view('admin.ops.dashboard', [
-            'stats' => $this->ops->dashboard(),
-            'failedJobs' => $this->ops->failedJobs(10),
+            'stats' => $stats,
+            'backups' => $backupList,
         ]);
     }
 
-    public function health(): JsonResponse
+    public function failedJobs(OperationsService $ops): View
     {
-        return response()->json($this->ops->dashboard()['health']['checks']);
+        $failedJobs = $ops->failedJobs();
+
+        return view('admin.ops.failed-jobs', compact('failedJobs'));
     }
 
-    public function failedJobs(): View
+    public function retryFailedJob(string $id, OperationsService $ops): RedirectResponse
     {
-        return view('admin.ops.failed-jobs', [
-            'failedJobs' => $this->ops->failedJobs(25),
-        ]);
+        $ops->retryFailedJob($id);
+
+        return back()->with('status', "Failed job #{$id} queued for retry.");
     }
 
-    public function retryFailedJob(Request $request, string $id): RedirectResponse
+    public function retryAllFailed(OperationsService $ops): RedirectResponse
     {
-        $this->ops->retryFailedJob($id);
-
-        return back()->with('status', 'Failed job '.$id.' queued for retry.');
-    }
-
-    public function retryAllFailed(): RedirectResponse
-    {
-        $this->ops->retryAllFailed();
+        $ops->retryAllFailed();
 
         return back()->with('status', 'All failed jobs queued for retry.');
     }
 
-    public function deleteFailedJob(string $id): RedirectResponse
+    public function deleteFailedJob(string $id, OperationsService $ops): RedirectResponse
     {
-        $this->ops->deleteFailedJob($id);
+        $ops->deleteFailedJob($id);
 
-        return back()->with('status', 'Failed job '.$id.' removed from the failed table.');
+        return back()->with('status', "Failed job #{$id} deleted.");
     }
 
-    public function flushCache(Request $request): RedirectResponse
+    public function flushCache(Request $request, OperationsService $ops): RedirectResponse
     {
-        $namespace = (string) $request->input('namespace', 'providers');
+        $namespace = (string) $request->input('namespace', 'all');
+        $ops->flushCache($namespace);
 
-        $ok = $this->ops->flushCache($namespace);
-
-        return back()->with($ok ? 'status' : 'error', $ok
-            ? 'Cache namespace ['.$namespace.'] flushed.'
-            : 'Unknown cache namespace ['.$namespace.'].');
+        return back()->with('status', "Cache flushed for namespace '{$namespace}'.");
     }
 
-    public function backup(): RedirectResponse
+    public function backup(BackupService $backups): RedirectResponse
     {
-        $result = $this->backups->create();
+        $result = $backups->create();
 
-        return back()->with($result['ok'] ? 'status' : 'error', $result['ok']
-            ? 'Backup created: '.$result['name']
-            : 'Backup FAILED: '.($result['error'] ?? 'unknown error'));
+        return back()->with('status', 'Backup archive created: '.($result['filename'] ?? 'success'));
     }
 
-    public function verifyBackup(): RedirectResponse
+    public function verifyBackup(Request $request, BackupService $backups): RedirectResponse
     {
-        $result = $this->backups->verify();
+        $name = $request->input('name') ? (string) $request->input('name') : null;
+        $result = $backups->verify($name);
 
-        return back()->with($result['ok'] ? 'status' : 'error', $result['ok']
-            ? 'Backup verified: '.$result['name']
-            : 'Backup verification FAILED: '.($result['error'] ?? 'unknown error'));
+        if (! empty($result['ok'])) {
+            return back()->with('status', 'Backup verified successfully.');
+        }
+
+        return back()->with('error', 'Backup verification failed: '.($result['error'] ?? 'Corrupted'));
+    }
+
+    public function health(HealthService $health): JsonResponse
+    {
+        return response()->json($health->ready());
     }
 }

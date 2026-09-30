@@ -27,7 +27,10 @@ class Final121572Controller extends Controller
 
     public function index(Request $request)
     {
-        $userId = auth()->id() ?? $request->input('user_id', 1);
+        $userId = auth()->id();
+        if (! $userId) {
+            abort(401);
+        }
         $stats = $this->service->getFullStats($userId);
 
         // G1 financial totals must reconcile - STOP if mismatch
@@ -46,10 +49,12 @@ class Final121572Controller extends Controller
         $request->validate([
             'game_mode' => 'required|in:classic,master,quick,team_up',
             'bet_amount' => 'required|integer|min:100|max:100000',
-            'user_id' => 'nullable|integer|exists:users,id',
         ]);
 
-        $userId = auth()->id() ?? $request->input('user_id', 1);
+        $userId = auth()->id();
+        if (! $userId) {
+            abort(401);
+        }
         $mode = $request->input('game_mode', 'classic');
         $bet = (int) $request->input('bet_amount', 100);
 
@@ -69,7 +74,10 @@ class Final121572Controller extends Controller
 
     public function show(Request $request, int $id)
     {
-        $userId = auth()->id() ?? $request->input('user_id', 1);
+        $userId = auth()->id();
+        if (! $userId) {
+            abort(401);
+        }
         $stats = $this->service->getFullStats($userId);
 
         return view($this->view, compact('stats', 'id'));
@@ -77,7 +85,10 @@ class Final121572Controller extends Controller
 
     public function stats(Request $request)
     {
-        $userId = auth()->id() ?? $request->input('user_id', 1);
+        $userId = auth()->id();
+        if (! $userId) {
+            abort(401);
+        }
         $stats = $this->service->getFullStats($userId);
 
         return response()->json([

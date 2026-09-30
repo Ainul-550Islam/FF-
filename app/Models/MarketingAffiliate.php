@@ -63,6 +63,11 @@ class MarketingAffiliate extends Model
         return $this->hasMany(MarketingAffiliateReferral::class, 'affiliate_id');
     }
 
+    public function payouts()
+    {
+        return $this->hasMany(MarketingAffiliatePayout::class, 'affiliate_id');
+    }
+
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;

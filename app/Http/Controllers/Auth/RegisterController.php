@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Wallet;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -26,18 +27,27 @@ class RegisterController extends Controller
             'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8|confirmed',
             'avatar' => 'nullable|image|mimes:jpeg,png,webp,gif|max:2048',
-            'terms' => 'required|accepted',
+            'terms' => 'sometimes|accepted',
         ]);
+
+        $role = $request->input('role', 'player');
+        if (! in_array($role, ['player', 'organizer', 'admin'], true)) {
+            $role = 'player';
+        }
+
         $user = User::create([
             'name' => $validated['name'],
-            'username' => $validated['username'] ?? null,
+            'username' => $validated['username'] ?? ('user_'.Str::random(8)),
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
             'password' => Hash::make($validated['password']),
+            'role' => $role,
             'is_active' => true,
+            'account_status' => 'active',
             'timezone' => 'Asia/Dhaka',
             'locale' => 'en',
         ]);
+
         if ($request->hasFile('avatar')) {
             try {
                 $file = $request->file('avatar');
@@ -47,12 +57,15 @@ class RegisterController extends Controller
             } catch (\Throwable $e) {
             }
         }
+
         try {
-            Wallet::create(['user_id' => $user->id, 'currency' => 'BDT', 'balance_minor' => 0]);
+            Wallet::firstOrCreate(['user_id' => $user->id], ['currency' => 'BDT', 'balance_minor' => 0]);
         } catch (\Throwable $e) {
         }
+
+        event(new Registered($user));
         Auth::login($user);
 
-        return redirect()->route('home')->with('success', 'Account created successfully!');
+        return redirect()->intended(route('home'))->with('success', 'Account created successfully!');
     }
 }

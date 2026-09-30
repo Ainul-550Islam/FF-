@@ -175,4 +175,21 @@ class MarketingUtmGovernanceService
             ->orderByDesc('id')
             ->get();
     }
+
+    /**
+     * Paginated and filtered UTM snapshots for admin reporting.
+     */
+    public function snapshotsPaginated(array $filters = [], int $perPage = 15): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        return MarketingUtmSnapshot::query()
+            ->when(! empty($filters['source']), fn ($q) => $q->where('source', $filters['source']))
+            ->when(! empty($filters['medium']), fn ($q) => $q->where('medium', $filters['medium']))
+            ->when(! empty($filters['campaign']), fn ($q) => $q->where('campaign', $filters['campaign']))
+            ->when(! empty($filters['period_start']), fn ($q) => $q->where('period_start', '>=', $filters['period_start']))
+            ->when(! empty($filters['period_end']), fn ($q) => $q->where('period_end', '<=', $filters['period_end']))
+            ->orderByDesc('period_start')
+            ->orderByDesc('touches')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+    }
 }

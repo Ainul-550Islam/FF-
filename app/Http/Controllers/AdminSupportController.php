@@ -5,226 +5,216 @@ namespace App\Http\Controllers;
 use App\Models\SupportTicket;
 use App\Models\User;
 use App\Services\SupportTicketService;
-use App\Support\CsvExport;
 use DomainException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/**
- * Staff support queue (Phase 13).
- *
- * Admins and moderators work the global queue; organizers are scoped to the
- * tickets of their own tournaments. Assignment, status changes and internal
- * notes are platform-staff only. Internal notes are never shown to the
- * ticket requester.
- */
 class AdminSupportController extends Controller
 {
-    public function __construct(
-        protected SupportTicketService $tickets,
-    ) {}
-
-    /**
-     * The staff queue, filterable and scoped for organizers.
-     */
-    public function index(Request $request)
+    public function index(Request $request, SupportTicketService $service): View
     {
-        $this->authorize('viewAny', SupportTicket::class);
-
-        $user = $request->user();
-
-        // Organizers (who are not platform staff) are scoped to their own
-        // tournaments' tickets.
-        $scopedOrganizer = ($user->isOrganizer() && ! $user->isStaff()) ? $user : null;
-
-        $filters = $this->filters($request);
-
-        $tickets = $this->tickets->queue($filters, $scopedOrganizer, 20);
-
-        $staff = User::whereIn('role', ['admin', 'moderator'])
-            ->orderBy('name')
-            ->get(['id', 'name', 'role']);
+        $filters = $request->all();
+        $tickets = $service->queue($filters);
+        $staff = User::whereIn('role', ['admin', 'moderator'])->orderBy('name')->get();
 
         return view('admin.support', compact('tickets', 'filters', 'staff'));
     }
 
-    /**
-     * Ticket detail with the full conversation and internal notes.
-     */
-    public function show(SupportTicket $ticket)
+    public function userIndex(Request $request, SupportTicketService $service): View
     {
-        $this->authorize('view', $ticket);
+        $tickets = $service->forUser($request->user());
 
-        $messages = $ticket->messages()->with('author:id,name,role')->get();
-        $internalNotes = $ticket->internalNotes()->with('author:id,name')->get();
-        $latestId = $this->tickets->latestMessageId($ticket);
-
-        $staff = User::whereIn('role', ['admin', 'moderator'])
-            ->orderBy('name')
-            ->get(['id', 'name', 'role']);
-
-        return view('admin.support_ticket', compact('ticket', 'messages', 'internalNotes', 'latestId', 'staff'));
+        return view('support.index', compact('tickets'));
     }
 
-    /**
-     * Assign (or unassign) the ticket to a staff member.
-     */
-    public function assign(Request $request, SupportTicket $ticket)
+    public function create(): View
     {
-        $this->authorize('assign', $ticket);
+        $categories = SupportTicket::CATEGORIES;
+        $priorities = SupportTicket::PRIORITIES;
 
-        $data = $request->validate([
-            'assignee_id' => 'nullable|integer|exists:users,id',
-        ]);
-
-        $assignee = ! empty($data['assignee_id'])
-            ? User::findOrFail((int) $data['assignee_id'])
-            : null;
-
-        try {
-            $this->tickets->assign($request->user(), $ticket, $assignee);
-        } catch (DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        return back()->with('success', 'Ticket assignment updated.');
+        return view('support.create', compact('categories', 'priorities'));
     }
 
-    /**
-     * Change status through the validated transition map.
-     */
-    public function status(Request $request, SupportTicket $ticket)
+    public function store(Request $request, SupportTicketService $service): RedirectResponse
     {
-        $this->authorize('changeStatus', $ticket);
-
-        $data = $request->validate([
-            'status' => 'required|in:'.implode(',', SupportTicket::STATUSES),
-            'note' => 'nullable|string|max:10000',
+        $validated = $request->validate([
+            'subject' => 'required|string|max:255',
+            'category' => 'required|string',
+            'priority' => 'nullable|string',
+            'message' => 'required|string|max:5000',
         ]);
 
-        try {
-            $this->tickets->changeStatus($request->user(), $ticket, $data['status'], $data['note'] ?? null);
-        } catch (DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+        $ticket = $service->create($request->user(), $validated);
 
-        return back()->with('success', 'Ticket status updated.');
+        return redirect()->route('support.tickets.show', $ticket)->with('success', 'Ticket created.');
     }
 
-    /**
-     * Add a staff-only internal note.
-     */
-    public function internalNote(Request $request, SupportTicket $ticket)
+    public function show(SupportTicket $ticket): View
     {
-        $this->authorize('addInternalNote', $ticket);
+        $ticket->load(['user', 'assignee']);
+        $messages = $ticket->messages()->with('author')->orderBy('id')->get();
+        $internalNotes = $ticket->internalNotes()->with('author')->orderBy('id')->get();
+        $staff = User::whereIn('role', ['admin', 'moderator'])->orderBy('name')->get();
 
-        $data = $request->validate([
-            'body' => 'required|string|max:10000',
+        return view('admin.support_ticket', compact('ticket', 'messages', 'internalNotes', 'staff'));
+    }
+
+    public function userShow(Request $request, SupportTicket $ticket, SupportTicketService $service): View
+    {
+        $this->authorizeTicketAccess($request, $ticket);
+
+        $ticket->load(['tournament', 'assignee']);
+        $messages = $ticket->messages()->with('author')->orderBy('id')->get();
+        $latestId = $service->latestMessageId($ticket);
+
+        return view('support.show', compact('ticket', 'messages', 'latestId'));
+    }
+
+    public function messages(Request $request, SupportTicket $ticket, SupportTicketService $service): JsonResponse
+    {
+        $this->authorizeTicketAccess($request, $ticket);
+
+        $afterId = (int) ($request->query('after_id') ?? $request->query('after') ?? 0);
+        $messages = $service->messagesAfter($ticket, $afterId);
+
+        return response()->json([
+            'messages' => $messages,
+            'status' => $ticket->status,
         ]);
+    }
 
-        try {
-            $this->tickets->addInternalNote($request->user(), $ticket, $data['body']);
-        } catch (DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+    public function reply(Request $request, SupportTicket $ticket, SupportTicketService $service): RedirectResponse
+    {
+        $request->validate(['body' => 'required|string|max:5000']);
+
+        $service->reply($request->user(), $ticket, (string) $request->input('body'));
+
+        return back()->with('success', 'Reply posted.');
+    }
+
+    public function userReply(Request $request, SupportTicket $ticket, SupportTicketService $service): RedirectResponse
+    {
+        $this->authorizeTicketAccess($request, $ticket);
+
+        $request->validate(['body' => 'required|string|max:5000']);
+
+        $service->reply($request->user(), $ticket, (string) $request->input('body'));
+
+        return back()->with('success', 'Reply posted.');
+    }
+
+    public function close(Request $request, SupportTicket $ticket, SupportTicketService $service): RedirectResponse
+    {
+        $this->authorizeTicketAccess($request, $ticket);
+
+        $service->closeByUser($request->user(), $ticket);
+
+        return back()->with('success', 'Ticket closed.');
+    }
+
+    public function reopen(Request $request, SupportTicket $ticket, SupportTicketService $service): RedirectResponse
+    {
+        $this->authorizeTicketAccess($request, $ticket);
+
+        $service->reopen($request->user(), $ticket);
+
+        return back()->with('success', 'Ticket reopened.');
+    }
+
+    public function internalNote(Request $request, SupportTicket $ticket, SupportTicketService $service): RedirectResponse
+    {
+        $request->validate(['body' => 'required|string|max:5000']);
+
+        $service->addInternalNote($request->user(), $ticket, (string) $request->input('body'));
 
         return back()->with('success', 'Internal note added.');
     }
 
-    /**
-     * Reply as staff.
-     */
-    public function reply(Request $request, SupportTicket $ticket)
+    public function assign(Request $request, SupportTicket $ticket, SupportTicketService $service): RedirectResponse
     {
-        $this->authorize('reply', $ticket);
-
-        $data = $request->validate([
-            'body' => 'required|string|max:10000',
-        ]);
+        $assigneeId = $request->input('assignee_id');
+        $assignee = $assigneeId ? User::findOrFail($assigneeId) : null;
 
         try {
-            $this->tickets->reply($request->user(), $ticket, $data['body']);
+            $service->assign($request->user(), $ticket, $assignee);
+
+            return back()->with('success', 'Ticket assigned.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        return back()->with('success', 'Reply sent.');
     }
 
-    /**
-     * CSV export of the (scoped) support queue.
-     */
-    public function export(Request $request)
+    public function status(Request $request, SupportTicket $ticket, SupportTicketService $service): RedirectResponse
     {
-        $this->authorize('export', SupportTicket::class);
+        $request->validate([
+            'status' => 'required|string|in:'.implode(',', SupportTicket::STATUSES),
+            'note' => 'nullable|string|max:1000',
+        ]);
 
-        $user = $request->user();
+        try {
+            $service->changeStatus(
+                $request->user(),
+                $ticket,
+                (string) $request->input('status'),
+                $request->input('note'),
+            );
 
-        $scopedOrganizer = ($user->isOrganizer() && ! $user->isStaff()) ? $user : null;
+            return back()->with('success', 'Ticket status updated.');
+        } catch (DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
 
-        $filters = $this->filters($request);
+    public function export(Request $request): StreamedResponse
+    {
+        $tickets = SupportTicket::query()->with(['user', 'assignee'])->orderBy('id')->get();
 
         $headers = [
-            'id', 'status', 'category', 'priority', 'subject',
-            'requester', 'assignee', 'tournament', 'created_at', 'resolved_at',
-            'closed_at', 'reopened_count',
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="support-tickets-export.csv"',
         ];
 
-        return CsvExport::download('support-tickets', $headers, function () use ($filters, $scopedOrganizer) {
-            $query = SupportTicket::query()
-                ->with(['user:id,name,username', 'assignee:id,name', 'tournament:id,name'])
-                ->orderByDesc('id');
+        return response()->stream(function () use ($tickets) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['ID', 'Subject', 'Status', 'Priority', 'User', 'Assignee', 'Created At']);
 
-            if ($scopedOrganizer !== null) {
-                $query->whereHas('tournament', fn ($q) => $q->where('organizer_id', $scopedOrganizer->id));
+            foreach ($tickets as $t) {
+                fputcsv($handle, [
+                    $t->id,
+                    $t->subject,
+                    $t->status,
+                    $t->priority,
+                    $t->user?->name ?? 'Unknown',
+                    $t->assignee?->name ?? 'Unassigned',
+                    $t->created_at?->toISOString(),
+                ]);
             }
 
-            if (! empty($filters['status'])) {
-                $query->where('status', $filters['status']);
-            }
-
-            if (! empty($filters['priority'])) {
-                $query->where('priority', $filters['priority']);
-            }
-
-            if (! empty($filters['category'])) {
-                $query->where('category', $filters['category']);
-            }
-
-            if (! empty($filters['assigned_to'])) {
-                $query->where('assigned_to', (int) $filters['assigned_to']);
-            }
-
-            foreach ($query->cursor() as $ticket) {
-                yield [
-                    $ticket->id,
-                    $ticket->status,
-                    $ticket->category,
-                    $ticket->priority,
-                    $ticket->subject,
-                    $ticket->user?->name,
-                    $ticket->assignee?->name,
-                    $ticket->tournament?->name,
-                    optional($ticket->created_at)->toIso8601String(),
-                    optional($ticket->resolved_at)->toIso8601String(),
-                    optional($ticket->closed_at)->toIso8601String(),
-                    $ticket->reopened_count,
-                ];
-            }
-        });
+            fclose($handle);
+        }, 200, $headers);
     }
 
-    /**
-     * Whitelisted queue filters.
-     *
-     * @return array<string, mixed>
-     */
-    protected function filters(Request $request): array
+    protected function authorizeTicketAccess(Request $request, SupportTicket $ticket): void
     {
-        return [
-            'status' => $request->query('status'),
-            'priority' => $request->query('priority'),
-            'category' => $request->query('category'),
-            'assigned_to' => $request->query('assigned_to'),
-        ];
+        $user = $request->user();
+        if (! $user) {
+            abort(401);
+        }
+
+        if ($user->isStaff() || $ticket->user_id === $user->id) {
+            return;
+        }
+
+        if ($ticket->tournament_id) {
+            $ticket->loadMissing('tournament');
+            if ($ticket->tournament && $ticket->tournament->organizer_id === $user->id) {
+                return;
+            }
+        }
+
+        abort(403);
     }
 }

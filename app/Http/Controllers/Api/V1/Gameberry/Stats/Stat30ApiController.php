@@ -17,7 +17,10 @@ class Stat30ApiController extends Controller
 
     public function index(Request $request)
     {
-        $userId = $request->user() ? $request->user()->id : (int) $request->input('user_id', 1);
+        $userId = auth()->id();
+        if (! $userId) {
+            return response()->json(["success" => false, "error" => "Unauthenticated"], 401);
+        }
 
         return response()->json(['success' => true, 'data' => $this->service->getStats($userId), 'stat' => 30]);
     }
@@ -29,7 +32,10 @@ class Stat30ApiController extends Controller
 
     public function stats(Request $request)
     {
-        $userId = $request->user() ? $request->user()->id : (int) $request->input('user_id', 1);
+        $userId = auth()->id();
+        if (! $userId) {
+            return response()->json(["success" => false, "error" => "Unauthenticated"], 401);
+        }
 
         return response()->json(['success' => true, 'data' => $this->service->getAllStats($userId), 'stat' => 30]);
     }

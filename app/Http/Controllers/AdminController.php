@@ -2,283 +2,200 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\LedgerEntry;
+use App\Models\AuditLog;
 use App\Models\Payment;
+use App\Models\Payout;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
-use App\Models\Wallet;
-use App\Services\AuditLogService;
-use App\Services\FraudRiskService;
 use App\Services\PaymentService;
 use App\Services\WalletService;
-use App\Support\Money;
 use DomainException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class AdminController extends Controller
 {
-    public function __construct(
-        protected PaymentService $payments,
-        protected WalletService $wallets,
-        protected FraudRiskService $risk,
-        protected AuditLogService $audit,
-    ) {}
-
-    public function dashboard()
+    public function dashboard(): View
     {
+        $revenue = (float) (Payment::where('status', 'completed')->sum('amount_minor') / 100);
+        $commission = $revenue * 0.08;
+
         $stats = [
             'tournaments' => Tournament::count(),
             'teams' => Team::count(),
-            'verified_payments' => Payment::whereIn('status', Payment::SUCCESS_STATUSES)->count(),
-            'revenue' => Payment::whereIn('status', Payment::SUCCESS_STATUSES)->sum('amount'),
-            'commission' => Payment::whereIn('status', Payment::SUCCESS_STATUSES)->sum('amount') * 0.08,
+            'verified_payments' => Payment::where('status', 'completed')->count(),
+            'revenue' => $revenue,
+            'commission' => $commission,
+            'users' => User::count(),
+            'payouts' => Payout::where('status', 'completed')->count(),
         ];
 
-        $pendingPayments = Payment::with(['team', 'tournament'])->where('status', 'pending')->latest()->limit(20)->get();
         $moderators = User::where('role', 'moderator')->orderBy('name')->get();
+        $pendingPayments = Payment::with(['tournament', 'team'])->where('status', 'pending')->latest()->take(10)->get();
 
-        return view('admin.dashboard', compact('stats', 'pendingPayments', 'moderators'));
+        return view('admin.dashboard', compact('stats', 'moderators', 'pendingPayments'));
     }
 
-    // ------------------------------------------------------------------
-    // Payments
-    // ------------------------------------------------------------------
-
-    /**
-     * Payment list with status/tournament filters.
-     */
-    public function payments(Request $request)
+    public function payments(Request $request): View
     {
+        $status = $request->input('status');
+        $tournamentId = $request->input('tournament_id') ? (int) $request->input('tournament_id') : null;
+
+        $statuses = ['pending', 'processing', 'completed', 'failed', 'refunded'];
+        $tournaments = Tournament::query()->orderBy('name')->get();
+
         $payments = Payment::query()
-            ->with(['team', 'tournament', 'payer', 'refund'])
-            ->orderByDesc('created_at');
+            ->with(['tournament', 'team', 'payer'])
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($tournamentId, fn ($q) => $q->where('tournament_id', $tournamentId))
+            ->latest()
+            ->paginate(25);
 
-        $status = $request->query('status');
-        if ($status !== null && $status !== '') {
-            $payments->where('status', $status);
-        }
-
-        $tournamentId = (int) $request->query('tournament_id');
-        if ($tournamentId > 0) {
-            $payments->where('tournament_id', $tournamentId);
-        }
-
-        $payments = $payments->paginate(25)->withQueryString();
-
-        $tournaments = Tournament::query()->orderBy('name')->get(['id', 'name']);
-        $statuses = [
-            Payment::STATUS_PENDING,
-            Payment::STATUS_PROCESSING,
-            Payment::STATUS_PAID,
-            Payment::STATUS_VERIFIED,
-            Payment::STATUS_FAILED,
-            Payment::STATUS_CANCELLED,
-            Payment::STATUS_REFUNDED,
-        ];
-
-        return view('admin.payments', compact('payments', 'tournaments', 'statuses', 'status', 'tournamentId'));
+        return view('admin.payments', compact('payments', 'statuses', 'tournaments', 'status', 'tournamentId'));
     }
 
-    /**
-     * Verify a pending payment (manual bKash verification) and confirm the
-     * team — the legacy admin flow, now routed through the PaymentService.
-     */
-    public function verifyPayment(Payment $payment)
+    public function payouts(): RedirectResponse
+    {
+        return redirect()->route('admin.payouts.index');
+    }
+
+    public function verifyPayment(Payment $payment, PaymentService $service): RedirectResponse
     {
         try {
-            $this->payments->verifyManually($payment, auth()->user());
+            $service->verifyManually($payment, auth()->user());
+
+            return back()->with('success', 'Payment verified successfully.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        $this->audit->recordQuietly(auth()->user(), 'payment.verified', 'payment', $payment->id, [
-            'tournament_id' => $payment->tournament_id,
-        ]);
-
-        return back()->with('success', 'Payment verified. Team confirmed.');
     }
 
-    /**
-     * Fail a pending payment.
-     */
-    public function failPayment(Request $request, Payment $payment)
+    public function failPayment(Payment $payment, PaymentService $service): RedirectResponse
     {
-        $reason = (string) $request->input('reason', '');
-
         try {
-            $this->payments->markFailed($payment, auth()->user(), $reason);
+            $service->markFailed($payment, auth()->user(), 'Marked failed by admin');
+
+            return back()->with('success', 'Payment marked as failed.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        // Phase 10 — record a failed-payment signal for the payer (additive;
-        // never mutates the Phase 08 payment/wallet state).
-        $this->risk->recordPaymentFailure($payment);
-
-        $this->audit->recordQuietly(auth()->user(), 'payment.failed', 'payment', $payment->id, [
-            'tournament_id' => $payment->tournament_id,
-            'metadata' => ['reason' => $reason],
-        ]);
-
-        return back()->with('success', 'Payment marked as failed.');
     }
 
-    /**
-     * Refund a settled payment (full amount), crediting the payer's wallet.
-     */
-    public function refundPayment(Request $request, Payment $payment)
+    public function refundPayment(Request $request, Payment $payment, PaymentService $service): RedirectResponse
     {
-        $data = $request->validate([
-            'reason' => 'required|string|max:255',
-        ]);
+        $request->validate(['reason' => 'required|string|max:255']);
 
         try {
-            $refund = $this->payments->refund($payment, auth()->user(), $data['reason']);
+            $service->refund($payment, auth()->user(), (string) $request->input('reason'));
+
+            return back()->with('success', 'Payment refunded successfully.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        $this->audit->recordQuietly(auth()->user(), 'payment.refunded', 'payment', $payment->id, [
-            'tournament_id' => $payment->tournament_id,
-            'metadata' => ['amount_minor' => $refund->amount_minor],
-        ]);
-
-        return back()->with('success', 'Payment refunded (৳'.Money::toDecimal($refund->amount_minor).' credited to the payer).');
     }
 
-    // ------------------------------------------------------------------
-    // Wallets + ledger
-    // ------------------------------------------------------------------
-
-    /**
-     * A user's wallet with its ledger history.
-     */
-    public function wallet(User $user)
+    public function wallet(?User $user = null, ?WalletService $wallets = null): View
     {
-        $wallet = $this->wallets->walletFor($user);
-        $ledger = $wallet->ledgerEntries()->with('actor')->limit(200)->get();
-        $delta = $this->wallets->reconciliationDelta($wallet);
+        $user = $user ?? auth()->user();
+        $wallets = $wallets ?? app(WalletService::class);
 
-        return view('admin.wallet', compact('user', 'wallet', 'ledger', 'delta'));
+        $wallet = $wallets->walletFor($user);
+        $delta = $wallets->reconciliationDelta($wallet);
+        $ledger = $wallets->listLedger($wallet->id);
+
+        return view('admin.wallet', compact('user', 'wallet', 'delta', 'ledger'));
     }
 
-    /**
-     * Credit a user's wallet (admin manual credit/deposit).
-     */
-    public function creditWallet(Request $request, User $user)
+    public function creditWallet(Request $request, User $user, WalletService $wallets): RedirectResponse
     {
-        $data = $request->validate([
-            'amount' => 'required|string|regex:/^\d+(\.\d{1,2})?$/',
-            'description' => 'required|string|max:255',
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'reason' => 'nullable|string|max:255',
         ]);
 
-        $minor = Money::toMinor($data['amount']);
+        $amountMinor = (int) round(((float) $request->input('amount')) * 100);
+        $wallet = $wallets->walletFor($user);
 
-        try {
-            $wallet = $this->wallets->walletFor($user);
-            $this->wallets->credit($wallet, $minor, LedgerEntry::TYPE_ADJUSTMENT, $data['description'], auth()->user());
-        } catch (DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        $this->audit->recordQuietly(auth()->user(), 'wallet.credited', 'wallet', $wallet->id, [
-            'target_user_id' => $user->id,
-            'metadata' => ['amount_minor' => $minor],
-        ]);
+        $wallets->credit(
+            $wallet->id,
+            $amountMinor,
+            'admin_adjustment',
+            'user',
+            $user->id,
+            (string) ($request->input('reason') ?: 'Admin credit adjustment'),
+            auth()->id(),
+        );
 
         return back()->with('success', 'Wallet credited.');
     }
 
-    /**
-     * Debit a user's wallet (admin manual adjustment).
-     */
-    public function debitWallet(Request $request, User $user)
+    public function debitWallet(Request $request, User $user, WalletService $wallets): RedirectResponse
     {
-        $data = $request->validate([
-            'amount' => 'required|string|regex:/^\d+(\.\d{1,2})?$/',
-            'description' => 'required|string|max:255',
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'reason' => 'nullable|string|max:255',
         ]);
 
-        $minor = Money::toMinor($data['amount']);
+        $amountMinor = (int) round(((float) $request->input('amount')) * 100);
+        $wallet = $wallets->walletFor($user);
 
         try {
-            $wallet = $this->wallets->walletFor($user);
-            $this->wallets->debit($wallet, $minor, LedgerEntry::TYPE_ADJUSTMENT, $data['description'], auth()->user());
+            $wallets->debit(
+                $wallet->id,
+                $amountMinor,
+                'admin_adjustment',
+                'user',
+                $user->id,
+                (string) ($request->input('reason') ?: 'Admin debit adjustment'),
+                auth()->id(),
+            );
+
+            return back()->with('success', 'Wallet debited.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        $this->audit->recordQuietly(auth()->user(), 'wallet.debited', 'wallet', $wallet->id, [
-            'target_user_id' => $user->id,
-            'metadata' => ['amount_minor' => $minor],
-        ]);
-
-        return back()->with('success', 'Wallet debited.');
     }
 
-    // ------------------------------------------------------------------
-    // Moderation roles (Phase 07)
-    // ------------------------------------------------------------------
-
-    /**
-     * Promote a user to moderator (admin only — the route sits behind the
-     * `admin` middleware, and `role` is never mass-assignable).
-     */
-    public function makeModerator(Request $request)
+    public function makeModerator(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'email' => 'required|email|exists:users,email',
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
         ]);
 
-        $user = User::where('email', $data['email'])->firstOrFail();
-
-        if ($user->isAdmin()) {
-            return back()->with('error', 'Admins are already staff.');
-        }
-
-        if ($user->isModerator()) {
-            return back()->with('error', $user->name.' is already a moderator.');
-        }
-
-        $previousRole = $user->role;
-
+        $user = User::findOrFail($request->input('user_id'));
+        $before = $user->role;
         $user->role = 'moderator';
         $user->save();
 
-        $this->audit->recordQuietly(auth()->user(), 'role.change', 'user', $user->id, [
-            'target_user_id' => $user->id,
-            'before' => ['role' => $previousRole],
+        AuditLog::create([
+            'actor_id' => auth()->id(),
+            'action' => 'admin.role_changed',
+            'entity_type' => 'user',
+            'entity_id' => $user->id,
+            'before' => ['role' => $before],
             'after' => ['role' => 'moderator'],
         ]);
 
-        return back()->with('success', $user->name.' is now a moderator.');
+        return back()->with('success', "{$user->name} promoted to moderator.");
     }
 
-    /**
-     * Demote a moderator back to a regular player (admin only).
-     */
-    public function removeModerator(User $user)
+    public function removeModerator(User $user): RedirectResponse
     {
-        if ($user->isAdmin()) {
-            return back()->with('error', 'Cannot demote an admin.');
-        }
-
-        if (! $user->isModerator()) {
-            return back()->with('error', 'This user is not a moderator.');
-        }
-
-        $previousRole = $user->role;
-
+        $before = $user->role;
         $user->role = 'player';
         $user->save();
 
-        $this->audit->recordQuietly(auth()->user(), 'role.change', 'user', $user->id, [
-            'target_user_id' => $user->id,
-            'before' => ['role' => $previousRole],
+        AuditLog::create([
+            'actor_id' => auth()->id(),
+            'action' => 'admin.role_changed',
+            'entity_type' => 'user',
+            'entity_id' => $user->id,
+            'before' => ['role' => $before],
             'after' => ['role' => 'player'],
         ]);
 
-        return back()->with('success', $user->name.' is no longer a moderator.');
+        return back()->with('success', "{$user->name} demoted to player.");
     }
 }

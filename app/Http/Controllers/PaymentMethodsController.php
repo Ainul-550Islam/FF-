@@ -3,77 +3,62 @@
 namespace App\Http\Controllers;
 
 use App\Models\PaymentMethod;
-use App\Services\PaymentGatewayManager;
 use App\Services\PaymentMethodService;
 use DomainException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
-/**
- * Saved payment-method management (Phase 14). A method belongs to exactly
- * one user; every read/write is ownership-checked via the policy and again
- * in the service.
- */
 class PaymentMethodsController extends Controller
 {
-    public function __construct(
-        protected PaymentMethodService $methods,
-        protected PaymentGatewayManager $gateways,
-    ) {}
-
-    public function index()
+    public function store(Request $request, PaymentMethodService $service): RedirectResponse
     {
-        $this->authorize('viewAny', PaymentMethod::class);
-
-        $user = auth()->user();
-
-        return view('settings.payment-methods', [
-            'methods' => $this->methods->listFor($user),
-            'providers' => $this->gateways->enabledProviders(),
-        ]);
-    }
-
-    public function store(Request $request)
-    {
-        $this->authorize('create', PaymentMethod::class);
-
-        $data = $request->validate([
+        $request->validate([
             'provider' => 'required|in:'.implode(',', PaymentMethod::PROVIDERS),
             'label' => 'required|string|max:60',
-            'identifier' => 'required|string|max:20',
+            'identifier' => 'required|string|min:6|max:20',
         ]);
 
         try {
-            $this->methods->add(auth()->user(), $data['provider'], $data['label'], $data['identifier']);
+            $service->add(
+                $request->user(),
+                (string) $request->input('provider'),
+                (string) $request->input('label'),
+                (string) $request->input('identifier'),
+            );
+
+            return back()->with('success', 'Payment method added successfully.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        return back()->with('success', 'Payment method saved.');
     }
 
-    public function destroy(PaymentMethod $method)
+    public function setDefault(PaymentMethod $method, PaymentMethodService $service): RedirectResponse
     {
-        $this->authorize('delete', $method);
+        if ($method->user_id !== auth()->id()) {
+            abort(403);
+        }
 
         try {
-            $this->methods->remove(auth()->user(), $method);
+            $service->setDefault(auth()->user(), $method);
+
+            return back()->with('success', 'Default payment method updated.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        return back()->with('success', 'Payment method removed.');
     }
 
-    public function setDefault(PaymentMethod $method)
+    public function destroy(PaymentMethod $method, PaymentMethodService $service): RedirectResponse
     {
-        $this->authorize('setDefault', $method);
+        if ($method->user_id !== auth()->id()) {
+            abort(403);
+        }
 
         try {
-            $this->methods->setDefault(auth()->user(), $method);
+            $service->remove(auth()->user(), $method);
+
+            return back()->with('success', 'Payment method removed.');
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        return back()->with('success', 'Default payment method updated.');
     }
 }

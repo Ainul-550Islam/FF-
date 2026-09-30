@@ -7,18 +7,26 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminSupportController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\Api\V1\DisputeController;
+use App\Http\Controllers\Api\V1\LeaderboardController;
+use App\Http\Controllers\Api\V1\LiveController;
+use App\Http\Controllers\Api\V1\MatchController;
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\TournamentController;
+use App\Http\Controllers\Api\V1\WalletController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PhoneAuthController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\DisputeController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\LeaderboardController;
-use App\Http\Controllers\LiveController;
 use App\Http\Controllers\MarketingAffiliateController;
-use App\Http\Controllers\MarketingArticleController;
+use App\Http\Controllers\MarketingAffiliatePayoutController;
+use App\Http\Controllers\MarketingAnalyticsDashboardController;
+use App\Http\Controllers\MarketingAnalyticsExportController;
+use App\Http\Controllers\MarketingArticleAdminController;
 use App\Http\Controllers\MarketingAutomationController;
 use App\Http\Controllers\MarketingCampaignController;
 use App\Http\Controllers\MarketingExperimentController;
@@ -27,11 +35,9 @@ use App\Http\Controllers\MarketingPageController;
 use App\Http\Controllers\MarketingPromoCodeController;
 use App\Http\Controllers\MarketingPushController;
 use App\Http\Controllers\MarketingTrackingController;
-use App\Http\Controllers\MatchController;
+use App\Http\Controllers\MarketingUtmDashboardController;
 use App\Http\Controllers\ModerationController;
-use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OpsController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentGatewayCallbackController;
 use App\Http\Controllers\PaymentMethodsController;
 use App\Http\Controllers\PayoutController;
@@ -40,10 +46,6 @@ use App\Http\Controllers\ScoringRuleController;
 use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\SettlementController;
 use App\Http\Controllers\SitemapController;
-use App\Http\Controllers\SupportController;
-use App\Http\Controllers\TeamController;
-use App\Http\Controllers\TournamentController;
-use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WebhookController;
 use App\Models\Dispute;
 use App\Models\GameMatch;
@@ -124,18 +126,92 @@ Route::get('/campaign/{slug}', [MarketingCampaignController::class, 'show'])
 Route::get('/r/{code}', [MarketingAffiliateController::class, 'click'])
     ->middleware('throttle:60,1')->name('marketing.referral.click');
 Route::get('/affiliates/dashboard', [MarketingAffiliateController::class, 'dashboard'])
-    ->middleware('auth')->name('marketing.affiliate.dashboard');
+    ->middleware('auth')->name('marketing.affiliates.dashboard');
 Route::post('/affiliates', [MarketingAffiliateController::class, 'store'])
     ->middleware(['auth', 'throttle:5,1'])->name('marketing.affiliate.store');
+Route::get('/affiliates/payouts', [MarketingAffiliatePayoutController::class, 'affiliateIndex'])
+    ->middleware('auth')->name('marketing.affiliates.payouts.index');
+Route::post('/affiliates/payouts', [MarketingAffiliatePayoutController::class, 'requestPayout'])
+    ->middleware(['auth', 'throttle:10,1'])->name('marketing.affiliates.payouts.store');
 
 // --- Phase 21: promo codes (server-computed discounts only) ---
 Route::post('/marketing/promo/apply', [MarketingPromoCodeController::class, 'apply'])
     ->middleware(['auth', 'throttle:10,1'])->name('marketing.promo.apply');
 
 // --- Phase 21: blog / SEO content engine ---
-Route::get('/blog', [MarketingArticleController::class, 'index'])->name('marketing.articles.index');
-Route::get('/blog/{slug}', [MarketingArticleController::class, 'show'])
-    ->middleware('throttle:60,1')->name('marketing.articles.show');
+Route::get('/blog', function (\Illuminate\Http\Request $request, \App\Services\MarketingContentService $service) {
+    $categoryId = $request->filled('category') ? (int) $request->query('category') : null;
+    $articles = $service->publishedPaginated($categoryId);
+    $categories = $service->categories();
+    $activeCategory = $categoryId;
+
+    app(\App\Support\Seo::class)
+        ->title('Blog & Guides — FF Arena')
+        ->description('Free Fire tournament guides, strategy and FF Arena news for the Bangladesh community.')
+        ->canonical(route('marketing.articles.index'))
+        ->indexable(true);
+
+    return view('marketing.blog.index', compact('articles', 'categories', 'activeCategory'));
+})->name('marketing.articles.index');
+
+Route::get('/blog/{slug}', function (string $slug, \Illuminate\Http\Request $request, \App\Services\MarketingContentService $service) {
+    $user = $request->user();
+    $isAdmin = $user && (method_exists($user, 'isAdmin') ? $user->isAdmin() : ($user->role === 'admin'));
+
+    if ($isAdmin) {
+        $article = $service->findBySlug($slug);
+        if (! $article) {
+            abort(404);
+        }
+        $published = $service->findPublishedBySlug($slug);
+        $preview = $published === null;
+
+        if (! $preview) {
+            app(\App\Support\Seo::class)
+                ->title($article->seo_title ?: $article->title)
+                ->description($article->seo_description ?: ($article->excerpt ?: $article->title))
+                ->canonical(route('marketing.articles.show', ['slug' => $article->slug]))
+                ->indexable(true)
+                ->ogType('article')
+                ->jsonLd([
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Article',
+                    'headline' => $article->title,
+                    'description' => $article->seo_description ?: $article->excerpt,
+                    'datePublished' => $article->published_at?->toIso8601String(),
+                    'mainEntityOfPage' => route('marketing.articles.show', ['slug' => $article->slug]),
+                ]);
+        } else {
+            app(\App\Support\Seo::class)->indexable(false);
+        }
+
+        return response()->view('marketing.blog.show', ['article' => $article, 'preview' => $preview], 200, $preview ? [
+            'X-Robots-Tag' => 'noindex, nofollow',
+        ] : []);
+    }
+
+    $article = $service->findPublishedBySlug($slug);
+    if (! $article) {
+        abort(404);
+    }
+
+    app(\App\Support\Seo::class)
+        ->title($article->seo_title ?: $article->title)
+        ->description($article->seo_description ?: ($article->excerpt ?: $article->title))
+        ->canonical(route('marketing.articles.show', ['slug' => $article->slug]))
+        ->indexable(true)
+        ->ogType('article')
+        ->jsonLd([
+            '@context' => 'https://schema.org',
+            '@type' => 'Article',
+            'headline' => $article->title,
+            'description' => $article->seo_description ?: $article->excerpt,
+            'datePublished' => $article->published_at?->toIso8601String(),
+            'mainEntityOfPage' => route('marketing.articles.show', ['slug' => $article->slug]),
+        ]);
+
+    return view('marketing.blog.show', ['article' => $article, 'preview' => false]);
+})->middleware('throttle:60,1')->name('marketing.articles.show');
 
 // --- Phase 21: A/B experiments (deterministic assignment for the current visitor) ---
 Route::get('/marketing/experiments/{key}/assign', [MarketingExperimentController::class, 'assign'])
@@ -149,12 +225,38 @@ Route::post('/marketing/push/subscribe', [MarketingPushController::class, 'subsc
 Route::post('/marketing/push/unsubscribe', [MarketingPushController::class, 'unsubscribe'])
     ->middleware('throttle:20,1')->name('marketing.push.unsubscribe');
 
-// --- Phase 21: admin marketing management (experiments + lifecycle automations) ---
+// --- Phase 21 & Phase 22: admin marketing management ---
 Route::middleware(['auth', 'active', 'admin'])->prefix('admin/marketing')->name('admin.marketing.')->group(function () {
     Route::get('/experiments', [MarketingExperimentController::class, 'adminIndex'])->name('experiments.index');
     Route::post('/experiments', [MarketingExperimentController::class, 'adminStore'])->name('experiments.store');
     Route::get('/automations', [MarketingAutomationController::class, 'index'])->name('automations.index');
     Route::post('/automations/{automation}/toggle', [MarketingAutomationController::class, 'toggle'])->name('automations.toggle');
+
+    // Affiliate Payouts Approval Workflow
+    Route::get('/affiliates/payouts', [MarketingAffiliatePayoutController::class, 'adminIndex'])->name('affiliates.payouts.index');
+    Route::get('/affiliates/payouts/{payout}', [MarketingAffiliatePayoutController::class, 'adminShow'])->name('affiliates.payouts.show');
+    Route::post('/affiliates/payouts/{payout}/approve', [MarketingAffiliatePayoutController::class, 'approve'])->name('affiliates.payouts.approve');
+    Route::post('/affiliates/payouts/{payout}/reject', [MarketingAffiliatePayoutController::class, 'reject'])->name('affiliates.payouts.reject');
+
+    // Blog Articles Admin CRUD
+    Route::get('/articles', [MarketingArticleAdminController::class, 'index'])->name('articles.index');
+    Route::get('/articles/create', [MarketingArticleAdminController::class, 'create'])->name('articles.create');
+    Route::post('/articles', [MarketingArticleAdminController::class, 'store'])->name('articles.store');
+    Route::get('/articles/{article}/edit', [MarketingArticleAdminController::class, 'edit'])->name('articles.edit');
+    Route::put('/articles/{article}', [MarketingArticleAdminController::class, 'update'])->name('articles.update');
+    Route::post('/articles/{article}/publish', [MarketingArticleAdminController::class, 'publish'])->name('articles.publish');
+    Route::post('/articles/{article}/unpublish', [MarketingArticleAdminController::class, 'unpublish'])->name('articles.unpublish');
+    Route::post('/articles/{article}/archive', [MarketingArticleAdminController::class, 'archive'])->name('articles.archive');
+    Route::post('/articles/categories', [MarketingArticleAdminController::class, 'storeCategory'])->name('articles.categories.store');
+
+    // UTM Governance Dashboard
+    Route::get('/utm', [MarketingUtmDashboardController::class, 'index'])->name('utm.index');
+    Route::get('/utm/snapshots', [MarketingUtmDashboardController::class, 'snapshots'])->name('utm.snapshots');
+    Route::post('/utm/snapshots/build', [MarketingUtmDashboardController::class, 'buildSnapshot'])->name('utm.snapshots.build');
+
+    // Marketing Analytics Dashboard & Export
+    Route::get('/analytics', [MarketingAnalyticsDashboardController::class, 'index'])->name('analytics.index');
+    Route::get('/analytics/export', [MarketingAnalyticsExportController::class, 'export'])->middleware('throttle:30,1')->name('analytics.export');
 });
 // Matches are tournament-scoped: the canonical path carries the tournament
 // so every match is validated against its own event.
@@ -176,14 +278,14 @@ Route::middleware('guest')->group(function () {
     // Auth\LoginController keeps the view endpoints. Nothing is lost: the
     // legacy flash messages and login-event columns are part of the union
     // these controllers write.
-    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:login');
     Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
-    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
+    Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:register');
 
     Route::get('/forgot-password', [LoginController::class, 'showForgotForm'])->name('password.request');
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email')->middleware('throttle:password-reset');
-    Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
-    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
+    Route::post('/forgot-password', [LoginController::class, 'sendResetLink'])->name('password.email')->middleware('throttle:password-reset');
+    Route::get('/reset-password/{token}', [LoginController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/reset-password', [LoginController::class, 'resetPassword'])->name('password.update');
 
     // Google OAuth is served by the canonical AuthController implementation
     // (state + link-intent handling); Auth\GoogleAuthController keeps the
@@ -210,7 +312,7 @@ Route::get('/tournaments/{tournament}/live', [LiveController::class, 'tournament
 Route::get('/tournaments/{tournament}/stream', [LiveController::class, 'stream'])->name('tournaments.stream');
 
 Route::middleware(['auth', 'active'])->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
     // Avatar - Private serving
     Route::get('/avatar/{user}', [AvatarController::class, 'show'])->name('avatar.show');
@@ -241,7 +343,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         // the canonical screens POST to it.
         Route::match(['post', 'delete'], '/sessions', [AccountSecurityController::class, 'revokeAllSessions'])->name('sessions.revokeAll');
         Route::post('/sessions/others', [AccountSecurityController::class, 'revokeOtherSessions'])->name('sessions.revokeOthers');
-        Route::post('/google/link', [AccountSecurityController::class, 'linkGoogleRedirect'])->name('google.link');
+        Route::match(['get', 'post'], '/google/link', [AccountSecurityController::class, 'linkGoogleRedirect'])->name('google.link');
         Route::post('/google/unlink', [AccountSecurityController::class, 'unlinkGoogle'])->name('google.unlink');
         Route::post('/phone/link', [AccountSecurityController::class, 'linkPhone'])->name('phone.link')->middleware('throttle:otp-request');
         Route::post('/phone/link/verify', [AccountSecurityController::class, 'verifyPhoneLink'])->name('phone.link.verify')->middleware('throttle:otp-verify');
@@ -356,10 +458,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
 
     // Support & Disputes
-    Route::get('/support', [SupportController::class, 'index'])->name('support.index');
-    Route::get('/support/create', [SupportController::class, 'create'])->name('support.create');
-    Route::post('/support', [SupportController::class, 'store'])->name('support.store')->middleware('throttle:support');
-    Route::get('/support/{ticket}', [SupportController::class, 'show'])->name('support.show');
+    Route::get('/support', [AdminSupportController::class, 'userIndex'])->name('support.index');
+    Route::get('/support/create', [AdminSupportController::class, 'create'])->name('support.create');
+    Route::post('/support', [AdminSupportController::class, 'store'])->name('support.store')->middleware('throttle:support');
+    Route::get('/support/{ticket}', [AdminSupportController::class, 'userShow'])->name('support.show');
 
     // Legacy dispute URLs stay alive as resolvers onto the canonical,
     // match-scoped routes (a dispute can only exist against a match).
@@ -458,14 +560,18 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
 // --- Guest: OAuth (Google), phone-login OTP, and the signed verify link ---
 Route::middleware('guest')->group(function () {
 
-    Route::get('/login/phone', [AuthController::class, 'showPhoneLogin'])->name('phone.login');
-    Route::get('/phone/verify', [AuthController::class, 'showPhoneVerify'])->name('phone.verify');
-    Route::post('/phone/request', [AuthController::class, 'requestPhoneOtp'])->name('phone.request')->middleware('throttle:otp-request');
-    Route::post('/phone/verify', [AuthController::class, 'verifyPhoneLogin'])->name('phone.login.verify')->middleware('throttle:otp-verify');
+    Route::get('/login/phone', [PhoneAuthController::class, 'showPhoneLogin'])->name('phone.login');
+    Route::get('/phone/verify', [PhoneAuthController::class, 'showPhoneVerify'])->name('phone.verify');
+    Route::post('/phone/request', [PhoneAuthController::class, 'requestPhoneOtp'])->name('phone.request')->middleware('throttle:otp-request');
+    Route::post('/phone/verify', [PhoneAuthController::class, 'verifyPhoneLogin'])->name('phone.login.verify')->middleware('throttle:otp-verify');
 });
 
 // Signed email-verification link (works for guest and authenticated).
-Route::get('/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
+Route::get('/verify-email/{id}/{hash}', function (\Illuminate\Foundation\Auth\EmailVerificationRequest $request) {
+    $request->fulfill();
+
+    return redirect()->route('home')->with('success', 'Email verified.');
+})->middleware(['auth', 'signed'])->name('verification.verify');
 
 // Payment-provider webhooks (signature verified inside the handler).
 Route::post('/webhooks/payments/{provider}', [WebhookController::class, 'handle'])->name('webhooks.payments');
@@ -476,14 +582,20 @@ Route::match(['get', 'post'], '/payments/callback/{provider}', [PaymentGatewayCa
 // --- Authenticated: account, security, moderation, live, tournament actions ---
 Route::middleware(['auth', 'active'])->group(function () {
     // Email verification (notice + resend)
-    Route::get('/verify-email', [AuthController::class, 'showVerifyEmail'])->name('verification.notice');
+    Route::get('/verify-email', function () {
+        return view('auth.verify-email');
+    })->name('verification.notice');
     // The resend endpoint carries two names (both used by existing callers):
     // `verification.resend` is the POST that actually resends the link, and
     // `verification.send` is the same URL for the verify-email form. Two
     // routes may never share one method + URI (the later one would replace
     // the earlier), so the send name is registered on the same URI as a GET
     // that simply returns to the notice page.
-    Route::post('/verify-email/resend', [AuthController::class, 'resendVerification'])->name('verification.resend');
+    Route::post('/verify-email/resend', function (\Illuminate\Http\Request $request) {
+        $request->user()->sendEmailVerificationNotification();
+
+        return back()->with('success', 'Verification link sent.');
+    })->name('verification.resend');
     Route::get('/verify-email/resend', function () {
         return redirect()->route('verification.notice');
     })->name('verification.send');
@@ -513,7 +625,6 @@ Route::middleware(['auth', 'active'])->group(function () {
     // (Phase 14 canonical names, same controller the settings screens use).
     Route::post('/settings/sessions/others', [AccountSecurityController::class, 'revokeOtherSessions'])->name('settings.sessions.revokeOthers');
     Route::match(['post', 'delete'], '/settings/sessions', [AccountSecurityController::class, 'revokeAllSessions'])->name('settings.sessions.revokeAll');
-    Route::get('/settings/google/link', [AccountSecurityController::class, 'linkGoogleRedirect'])->name('settings.google.link');
     Route::post('/settings/google/unlink', [AccountSecurityController::class, 'unlinkGoogle'])->name('settings.google.unlink');
     Route::post('/settings/phone/link', [AccountSecurityController::class, 'linkPhone'])->name('settings.phone.link')->middleware('throttle:otp-request');
     Route::post('/settings/phone/link/verify', [AccountSecurityController::class, 'verifyPhoneLink'])->name('settings.phone.link.verify')->middleware('throttle:otp-verify');
@@ -523,14 +634,13 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/settings/account/delete-request', [AccountSecurityController::class, 'requestDeletion'])->name('settings.deletion.request');
     Route::post('/settings/account/delete-cancel', [AccountSecurityController::class, 'cancelDeletion'])->name('settings.deletion.cancel');
     Route::post('/settings/payment-methods', [PaymentMethodsController::class, 'store'])->name('settings.payment-methods.store');
-    Route::match(['post', 'put'], '/settings/payment-methods/{method}/default', [PaymentMethodsController::class, 'setDefault'])->name('settings.payment-methods.default');
 
     // Support tickets (owner-scoped; internal notes never exposed)
-    Route::get('/support/tickets/{ticket}', [SupportController::class, 'show'])->name('support.tickets.show');
-    Route::get('/support/tickets/{ticket}/messages', [SupportController::class, 'messages'])->name('support.tickets.messages');
-    Route::post('/support/{ticket}/reply', [SupportController::class, 'reply'])->name('support.tickets.reply');
-    Route::post('/support/{ticket}/close', [SupportController::class, 'close'])->name('support.tickets.close');
-    Route::post('/support/{ticket}/reopen', [SupportController::class, 'reopen'])->name('support.tickets.reopen');
+    Route::get('/support/tickets/{ticket}', [AdminSupportController::class, 'userShow'])->name('support.tickets.show');
+    Route::get('/support/tickets/{ticket}/messages', [AdminSupportController::class, 'messages'])->name('support.tickets.messages');
+    Route::post('/support/{ticket}/reply', [AdminSupportController::class, 'userReply'])->name('support.tickets.reply');
+    Route::post('/support/{ticket}/close', [AdminSupportController::class, 'close'])->name('support.tickets.close');
+    Route::post('/support/{ticket}/reopen', [AdminSupportController::class, 'reopen'])->name('support.tickets.reopen');
 
     // Tournament organizer actions + live/analytics/scoring
     Route::get('/organizer/tournaments/create', [TournamentController::class, 'create'])->name('tournaments.create');
@@ -625,10 +735,10 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
 
 // --- Google OAuth entry points (guest sign-in *and* signed-in linking) ---
 Route::middleware('web')->group(function () {
-    Route::get('/auth/google', [AuthController::class, 'redirectToGoogle'])->name('auth.google.redirect');
-    Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
-    Route::get('/oauth/google', [AuthController::class, 'redirectToGoogle'])->name('google.redirect');
-    Route::get('/oauth/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('google.callback');
+    Route::get('/auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google.redirect');
+    Route::get('/auth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+    Route::get('/oauth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirectToGoogle'])->name('google.redirect');
+    Route::get('/oauth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'handleGoogleCallback'])->name('google.callback');
 });
 
 // Fallback - 404
