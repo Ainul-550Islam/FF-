@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Action {
@@ -26,7 +26,11 @@ pub struct AuditLogger {
 }
 
 impl AuditLogger {
-    pub fn new() -> Self { Self{ logs: std::sync::Mutex::new(Vec::new()) } }
+    pub fn new() -> Self {
+        Self {
+            logs: std::sync::Mutex::new(Vec::new()),
+        }
+    }
     pub fn log(&self, entry: AuditLog) {
         self.logs.lock().unwrap().push(entry);
     }
@@ -34,12 +38,25 @@ impl AuditLogger {
         self.logs.lock().unwrap().clone()
     }
     pub fn entries_by_user(&self, user_id: i64) -> Vec<AuditLog> {
-        self.logs.lock().unwrap().iter().filter(|l| l.user_id == user_id).cloned().collect()
+        self.logs
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|l| l.user_id == user_id)
+            .cloned()
+            .collect()
     }
 }
 
-pub fn log(logger: &AuditLogger, action: Action, user_id: i64, actor: &str, details: serde_json::Value, request_id: &str) {
-    let entry = AuditLog{
+pub fn log(
+    logger: &AuditLogger,
+    action: Action,
+    user_id: i64,
+    actor: &str,
+    details: serde_json::Value,
+    request_id: &str,
+) {
+    let entry = AuditLog {
         id: uuid::Uuid::new_v4().to_string(),
         action,
         user_id,

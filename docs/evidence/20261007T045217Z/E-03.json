@@ -1,0 +1,25 @@
+{
+  "artifacts": {
+    "app/Http/Middleware/EnsureNumberedSimulationSafe.php": "cc520b67734aea22a38bf722f9a35a8a30b081fd0bb3501059485a8b6ea59cda",
+    "bootstrap/app.php": "e10eb21b0a2002903a4d1771c6d5acb1f49689c7ee015acef2a867669f11a130",
+    "routes/api_gameberry_numbered.php": "3101fe28ae4d001dd0c8cf2e9449dd7779441dc75f4a0ad66b2626f727e9a943",
+    "tests/Feature/Gameberry/NumberedSimulationProductionGuardTest.php": "c81765582a7daba8ff66445429b268a909b24ed89fce157c7678c035f52d3dac"
+  },
+  "artifacts_missing": [],
+  "claim": "In production the numbered simulation routes do not exist, and the write is refused with no wallet movement.",
+  "command": "php vendor/bin/phpunit -c phpunit.pgsql.xml --filter NumberedSimulationProductionGuardTest",
+  "duration_s": 5.28,
+  "environment": "2026-10-07T04:52:19+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "OK (4 tests, 49 assertions)"
+  ],
+  "id": "E-03",
+  "log": "docs/evidence/20261007T045217Z/E-03.log",
+  "log_lines": 10,
+  "log_sha256": "af8f40675a3d8b79da7ee51ec87fb9f05956fc3a5aa48ed2c45eccf110ab5b3c",
+  "missing_markers": [],
+  "note": "The route-table half runs in a subprocess with APP_ENV=production and the feature flag forced ON, so it proves the environment gate rather than a flag default.",
+  "started_at": "2026-10-07T04:57:33+00:00",
+  "verdict": "PROVEN"
+}

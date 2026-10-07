@@ -31,26 +31,40 @@ impl Config {
             jwt_secret: env::var("JWT_SECRET").unwrap_or_else(|_| "".to_string()),
             hmac_secret: env::var("SERVICE_HMAC_SECRET").unwrap_or_else(|_| "".to_string()),
             webhook_secret: env::var("WEBHOOK_SECRET").unwrap_or_else(|_| "".to_string()),
-            token_encryption_key: env::var("TOKEN_ENCRYPTION_KEY").unwrap_or_else(|_| "".to_string()),
+            token_encryption_key: env::var("TOKEN_ENCRYPTION_KEY")
+                .unwrap_or_else(|_| "".to_string()),
             rate_limit_per_min: env::var("RATE_LIMIT_PER_MIN")
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(60),
-            redis_url: env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379/0".to_string()),
-            database_url: env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://ffarena:ffarena@localhost:5432/ffarena?sslmode=disable".to_string()),
+            redis_url: env::var("REDIS_URL")
+                .unwrap_or_else(|_| "redis://localhost:6379/0".to_string()),
+            database_url: env::var("DATABASE_URL").unwrap_or_else(|_| {
+                "postgres://ffarena:ffarena@localhost:5432/ffarena?sslmode=disable".to_string()
+            }),
             log_level: env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string()),
-            cors_allowed_origins: env::var("CORS_ALLOWED_ORIGINS").unwrap_or_else(|_| "https://ffarena.com,https://www.ffarena.com,https://api.ffarena.com".to_string()),
+            cors_allowed_origins: env::var("CORS_ALLOWED_ORIGINS").unwrap_or_else(|_| {
+                "https://ffarena.com,https://www.ffarena.com,https://api.ffarena.com".to_string()
+            }),
             jaeger_endpoint: env::var("JAEGER_ENDPOINT").unwrap_or_else(|_| "".to_string()),
         };
 
         // Validate payment env and general env
         cfg.validate_env()?;
-        
+
         Ok(cfg)
     }
 
     pub fn validate_env(&self) -> Result<(), String> {
-        let valid_envs = vec!["development", "testing", "sandbox", "staging", "production", "local", "test"];
+        let valid_envs = vec![
+            "development",
+            "testing",
+            "sandbox",
+            "staging",
+            "production",
+            "local",
+            "test",
+        ];
         if !valid_envs.contains(&self.env.as_str()) {
             return Err(format!(
                 "Invalid APP_ENV {}, must be one of {:?}",
@@ -64,12 +78,12 @@ impl Config {
         // JWT secret must be at least 32 characters
         self.validate_single_secret(&self.jwt_secret, "JWT_SECRET")?;
         self.validate_single_secret(&self.hmac_secret, "SERVICE_HMAC_SECRET")?;
-        
+
         // Webhook secret should also be strong if set
         if !self.webhook_secret.is_empty() {
             self.validate_single_secret(&self.webhook_secret, "WEBHOOK_SECRET")?;
         }
-        
+
         // Token encryption key must be 32 bytes for AES-256
         if !self.token_encryption_key.is_empty() {
             if self.token_encryption_key.len() != 32 {
@@ -167,7 +181,7 @@ impl Config {
         let chars: Vec<char> = s.chars().collect();
         let mut sequential_count = 1;
         for i in 1..chars.len() {
-            if (chars[i] as u8) == (chars[i-1] as u8) + 1 {
+            if (chars[i] as u8) == (chars[i - 1] as u8) + 1 {
                 sequential_count += 1;
                 if sequential_count >= 6 {
                     return true;

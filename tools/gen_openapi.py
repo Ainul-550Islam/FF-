@@ -144,6 +144,81 @@ PATHS = [
     # --- Inbound provider webhooks ----------------------------------------
     ("post", "/api/v1/webhooks/inbound/{provider}", "Inbound provider webhook", NONE, None,
      {"inbound_webhook": True, "rate": "api_webhook (60/min/IP)"}),
+    # --- Companion services (optional Go payment gateway / Rust security) --
+    # These routes front the two optional companion services. When the relevant
+    # `services_go_rust.*.enabled` flag is off the controller answers locally
+    # with a fallback payload instead of proxying, so each operation documents
+    # that behaviour and its payloads are NOT wrapped in the business envelope.
+    ("get", "/api/v1/go/payments/methods", "Payment providers known to the Go gateway",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Go payment gateway",
+      "rate": "api (authenticated)",
+      "proxy_note": "Returns the provider list the Go gateway accepts (bkash, nagad, rocket, manual)."}),
+    ("post", "/api/v1/go/payments", "Initiate a payment through the Go gateway",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Go payment gateway",
+      "rate": "api (authenticated)",
+      "proxy_note": "With the gateway disabled the request is NOT proxied: the endpoint replies "
+                    "`{message: \"Go payment disabled, use /api/v1/payments\", fallback: true}` with HTTP 200 "
+                    "and the caller keeps using `/api/v1/payments`.",
+      "example": {"team_id": 1, "provider": "bkash", "amount_minor": 50000, "currency": "BDT"}}),
+    ("get", "/api/v1/go/payments/{payment}", "Payment status through the Go gateway",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Go payment gateway",
+      "rate": "api (authenticated)",
+      "proxy_note": "The Go gateway is the source of truth for payments it created; payments created "
+                    "by `/api/v1/payments` should be read from that resource instead."}),
+    ("get", "/api/v1/go/payments/health", "Go gateway health and enabled flag",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Go payment gateway",
+      "rate": "api (authenticated)",
+      "proxy_note": "Always answers from the application: `{status, service, enabled}`. It does not "
+                    "call the gateway, so it never fails when the gateway is down."}),
+    ("post", "/api/v1/rust/security/evaluate", "Evaluate a user's fraud risk (Rust engine)",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Rust security service",
+      "rate": "api (authenticated)",
+      "proxy_note": "Aggregated decision from every fraud provider: overall score, risk level and an "
+                    "allow/review/block recommendation.",
+      "example": {"user_id": 1, "ip": "203.0.113.10", "user_agent": "FFArena/1.0 (android)",
+                  "device_id": "e7f1c0d2", "email": "player@example.com", "phone": "01712345678"}}),
+    ("post", "/api/v1/rust/security/device", "Device-reputation check (Rust engine)",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Rust security service",
+      "rate": "api (authenticated)",
+      "proxy_note": "Single-provider check: device fingerprint only.",
+      "example": {"user_id": 1, "device_id": "e7f1c0d2"}}),
+    ("post", "/api/v1/rust/security/ip", "IP-reputation check (Rust engine)",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Rust security service",
+      "rate": "api (authenticated)",
+      "proxy_note": "Single-provider check: IP only.",
+      "example": {"user_id": 1, "ip": "203.0.113.10"}}),
+    ("post", "/api/v1/rust/security/identity", "Identity-consistency check (Rust engine)",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Rust security service",
+      "rate": "api (authenticated)",
+      "proxy_note": "Single-provider check: e-mail / phone / identity signals only.",
+      "example": {"user_id": 1, "email": "player@example.com", "phone": "01712345678"}}),
+    ("post", "/api/v1/rust/security/risk-score", "Risk score only, without a recommendation",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Rust security service",
+      "rate": "api (authenticated)",
+      "proxy_note": "Same signals as `/evaluate` but the response carries only `score`, `level` and "
+                    "`recommendation`.",
+      "example": {"user_id": 1, "ip": "203.0.113.10", "device_id": "e7f1c0d2"}}),
+    ("get", "/api/v1/rust/security/providers", "Fraud providers the Rust engine can run",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Rust security service",
+      "rate": "api (authenticated)",
+      "proxy_note": "Static list served by the application: `{providers: [device, ip, external, identity]}`."}),
+    ("get", "/api/v1/rust/security/health", "Rust security health and enabled flag",
+     BEARER, None,
+     {"service_proxy": True, "service_name": "Rust security service",
+      "rate": "api (authenticated)",
+      "proxy_note": "Always answers from the application: `{status, service, enabled}`. It does not "
+                    "call the engine, so it never fails when the engine is down."}),
+
 ]
 
 
@@ -180,6 +255,17 @@ def build_paths():
             )
         if hints.get("rate"):
             desc_bits.append(f"**Rate limit:** `{hints['rate']}`.")
+        if hints.get("service_proxy"):
+            desc_bits.append(
+                "**Companion-service proxy** for the optional "
+                f"{hints['service_name']}. "
+                + hints.get("proxy_note", "")
+                + " When the service is disabled "
+                "(`config/services_go_rust.php`) the endpoint answers locally "
+                "instead of proxying. The response is the service's own JSON "
+                "object and is **not** wrapped in the standard `{data, meta}` "
+                "envelope."
+            )
         if hints.get("inbound_webhook"):
             desc_bits.append(
                 "Authenticated by HMAC-SHA256 over the raw body "
@@ -213,6 +299,8 @@ def tag_for(path):
         return "Admin Webhooks"
     if "/webhooks/inbound" in path:
         return "Inbound Webhooks"
+    if path.startswith("/api/v1/go/") or path.startswith("/api/v1/rust/"):
+        return "Companion Services"
     if path.startswith("/api/v1/me"):
         return "Me"
     return "General"
@@ -255,6 +343,17 @@ def responses_for(method, hints):
         ok = "201"
     elif method == "delete":
         ok = "204"
+    if hints.get("service_proxy"):
+        # Companion-service proxies speak the service's own JSON (or a local
+        # fallback object); they are not wrapped in the business envelope, they
+        # validate no input (so 422 never occurs) and they resolve no model (so
+        # neither does 404).
+        return {
+            ok: {"description": "Success (companion-service JSON or local fallback; not enveloped)",
+                 "content": {"application/json": {"schema": {"type": "object"}}}},
+            "401": {"$ref": "#/components/responses/Unauthorized"},
+            "429": {"$ref": "#/components/responses/RateLimited"},
+        }
     envelope = {"$ref": "#/components/schemas/Envelope"}
     responses = {
         ok: {"description": "Success", "content": {"application/json": {"schema": envelope}}},
@@ -275,6 +374,14 @@ def body_for(method, path, hints):
         return None
     schema = {"type": "object"}
     example = None
+    if hints.get("service_proxy"):
+        # The proxy forwards the caller's JSON object verbatim when its service
+        # is enabled and ignores it when answering from the local fallback, so
+        # the body is documented as optional with the signals it carries.
+        example = hints.get("example")
+        return {"required": False, "content": {
+            "application/json": {"schema": schema, "example": example} if example
+            else {"schema": schema}}}
     if "auth/register" in path:
         example = {"name": "Alice", "username": "alice", "email": "alice@example.com",
                    "phone": "01712345678", "role": "player",
@@ -582,6 +689,7 @@ def main():
             {"name": "Players & Leaderboards"}, {"name": "Notifications & Realtime"},
             {"name": "Payments & Wallet"}, {"name": "Support & Disputes"},
             {"name": "Me"}, {"name": "Admin Webhooks"}, {"name": "Inbound Webhooks"},
+            {"name": "Companion Services"},
         ],
         "paths": build_paths(),
         "components": components(),

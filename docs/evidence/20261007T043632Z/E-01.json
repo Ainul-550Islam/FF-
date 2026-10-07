@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "phpunit.pgsql.xml": "f1ee09a42fe7f38ecb42a91b2f073d9a7dae5bc0120f190db4f1d8c5e7a340a1",
+    "tests/TestCase.php": "14f18eb49b9b8d39decfdf5e7c7e1d162b07274c88617083f0507e5303babd3f"
+  },
+  "artifacts_missing": [],
+  "claim": "The PostgreSQL profile passes end to end on the production database dialect.",
+  "command": "php vendor/bin/phpunit -c phpunit.pgsql.xml",
+  "duration_s": 166.96,
+  "environment": "2026-10-07T04:36:33+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "Tests: ",
+    "OK"
+  ],
+  "id": "E-01",
+  "log": "docs/evidence/20261007T043632Z/E-01.log",
+  "log_lines": 52,
+  "log_sha256": "adfba67dc97e48b86bc0ff12c549c59cfe1862340f2b23c400f71acd0ecb97c1",
+  "missing_markers": [],
+  "note": "The suite count in the output is the number this report's summary carries. A skip beyond the recorded budget fails the required-test gate (E-02), not this proof.",
+  "started_at": "2026-10-07T04:39:21+00:00",
+  "verdict": "PROVEN"
+}

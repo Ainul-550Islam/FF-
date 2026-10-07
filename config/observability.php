@@ -28,11 +28,23 @@ return [
     ],
 
     'metrics' => [
-        // 'log' (default) or 'null'.
+        // 'log' (default), 'null', or 'prometheus' — the last one aggregates
+        // counters/gauges/timings in the shared cache so the /metrics scrape
+        // endpoint (GAP-10 C) can render them in the Prometheus exposition
+        // format. 'log' keeps working; it simply exposes no scrapable series.
         'driver' => env('METRICS_DRIVER', 'log'),
 
         // The dedicated log channel (see config/logging.php).
         'channel' => env('METRICS_LOG_CHANNEL', 'metrics'),
+
+        // GAP-10 C — scrape endpoint. Both must be satisfied: the feature flag
+        // AND a token. Without a token the route answers 404, so a monitoring
+        // endpoint can never be exposed unauthenticated by omission.
+        'enabled' => env('FEATURE_PROMETHEUS', false),
+        'scrape_token' => env('METRICS_SCRAPE_TOKEN'),
+
+        // How long a series stays visible without new samples (seconds).
+        'ttl_seconds' => (int) env('METRICS_TTL_SECONDS', 7200),
     ],
 
     'error_reporting' => [
@@ -63,7 +75,38 @@ return [
 
         // CSP is opt-in: enabling it blindly can break an existing app.
         'csp_enable' => env('SECURITY_CSP_ENABLE', false),
-        'csp_policy' => env('SECURITY_CSP_POLICY', "default-src 'self'"),
+
+        // GAP-10 A6: first rollout should be report-only. When true (the
+        // default whenever CSP is enabled) the policy is announced through
+        // Content-Security-Policy-Report-Only, so violations are reported but
+        // nothing is blocked. Set SECURITY_CSP_REPORT_ONLY=false only after
+        // the reports are clean, to start enforcing.
+        'csp_report_only' => env('SECURITY_CSP_REPORT_ONLY', true),
+
+        // Optional collector for violation reports. When set, report-uri (and
+        // report-to) are appended to the policy so browsers send their reports
+        // somewhere; leave empty to only surface violations in the console.
+        'csp_report_uri' => env('SECURITY_CSP_REPORT_URI'),
+
+        // GAP-10 A6: policy matched to this app's real usage — Laravel Blade
+        // views that inline JSON-LD <script> blocks, a small amount of inline
+        // style, Vite-bundled (or locally published) CSS/JS, no third-party
+        // CDNs and no external fonts. 'unsafe-inline' is limited to script and
+        // style sources; everything else stays locked to 'self'.
+        'csp_policy' => env('SECURITY_CSP_POLICY', implode('; ', [
+            "default-src 'self'",
+            "base-uri 'self'",
+            "object-src 'none'",
+            "frame-ancestors 'self'",
+            "form-action 'self'",
+            "script-src 'self' 'unsafe-inline'",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: blob:",
+            "font-src 'self' data:",
+            "media-src 'self' data: blob:",
+            "connect-src 'self'",
+            "manifest-src 'self'",
+        ])),
     ],
 
     /*

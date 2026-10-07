@@ -5,10 +5,14 @@
          bootstrap="vendor/autoload.php"
          colors="true"
 >
+    <!-- GAP-10 (F-17) — this profile used to declare a `G4` suite pointing at
+         `tests/Feature/G4`, a directory that does not exist in this repository
+         (the G4 deliverable is a Redis deployment concern, not a test tree).
+         PHPUnit refuses to start when a configured directory is missing, so the
+         whole profile — and any job that used it — died before the first test.
+         The Redis integration coverage that does exist lives in tests/Feature/R9
+         and is declared below. -->
     <testsuites>
-        <testsuite name="G4">
-            <directory>tests/Feature/G4</directory>
-        </testsuite>
         <testsuite name="R9_Redis">
             <directory>tests/Feature/R9</directory>
         </testsuite>
@@ -23,8 +27,21 @@
         <env name="APP_KEY" value="base64:bgN0yS08tC5r/rDRWdX8EeqxrkOIJezGxtmpEqXSGhI="/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="redis"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!-- The dialect this profile proves. `force="true"` on <env> is not
+             enough: PHPUnit writes $_ENV and putenv(), and Laravel's env()
+             reads $_SERVER first, which PHP fills from the process environment
+             at startup. The <server> entry is what actually pins it, so a
+             leaked DB_CONNECTION cannot turn this profile into a different
+             database reporting a green run. FFARENA_TEST_PROFILE lets the
+             suite assert, from inside, that the pin held
+             (tests/Feature/ProfilePinningTest.php). -->
+        <server name="DB_DATABASE" value=":memory:"/>
+        <server name="DB_URL" value=""/>
+        <server name="DB_CONNECTION" value="sqlite"/>
+        <server name="FFARENA_TEST_PROFILE" value="redis"/>
+        <env name="FFARENA_TEST_PROFILE" value="redis" force="true"/>
+        <env name="DB_CONNECTION" value="sqlite" force="true"/>
+        <env name="DB_DATABASE" value=":memory:" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="REDIS_HOST" value="127.0.0.1"/>

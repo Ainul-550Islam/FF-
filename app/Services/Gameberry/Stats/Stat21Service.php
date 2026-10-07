@@ -18,9 +18,6 @@ class Stat21Service
             'value' => 21 * 100,
             'growth' => 21 * 5,
             'percent' => 21 * 2,
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
         ];
     }
 

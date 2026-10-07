@@ -1,4 +1,4 @@
-use crate::domain::{RiskSignal, RiskLevel};
+use crate::domain::RiskLevel;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,16 +31,23 @@ pub trait FraudProvider: Send + Sync {
 
 pub fn device_label_from_ua(ua: &str) -> String {
     let lower = ua.to_lowercase();
-    if lower.contains("iphone") { "iPhone".to_string() }
-    else if lower.contains("android") { "Android".to_string() }
-    else if lower.contains("windows") { "Windows".to_string() }
-    else if lower.contains("mac") { "Mac".to_string() }
-    else if lower.contains("bot") || lower.contains("crawler") || lower.contains("spider") { "Bot".to_string() }
-    else { "Unknown".to_string() }
+    if lower.contains("iphone") {
+        "iPhone".to_string()
+    } else if lower.contains("android") {
+        "Android".to_string()
+    } else if lower.contains("windows") {
+        "Windows".to_string()
+    } else if lower.contains("mac") {
+        "Mac".to_string()
+    } else if lower.contains("bot") || lower.contains("crawler") || lower.contains("spider") {
+        "Bot".to_string()
+    } else {
+        "Unknown".to_string()
+    }
 }
 
 pub fn hash_ip(ip: &str) -> String {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
     hasher.update(ip.as_bytes());
     format!("{:x}", hasher.finalize())
@@ -56,11 +63,11 @@ pub fn subnet_hash(ip: &str) -> String {
 }
 
 mod device;
-mod ip;
 mod external;
 mod identity;
+mod ip;
 
 pub use device::DeviceProvider;
-pub use ip::IpProvider;
 pub use external::ExternalProvider;
 pub use identity::IdentityProvider;
+pub use ip::IpProvider;

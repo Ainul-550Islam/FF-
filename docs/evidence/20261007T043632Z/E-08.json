@@ -1,0 +1,20 @@
+{
+  "artifacts": {},
+  "artifacts_missing": [],
+  "claim": "The static floor and the style gate pass \u2014 the invariants are enforced, not documented.",
+  "command": "python3 tools/prove_gap10.py --static",
+  "duration_s": 5.24,
+  "environment": "2026-10-07T04:36:33+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "STATIC: OK"
+  ],
+  "id": "E-08",
+  "log": "docs/evidence/20261007T043632Z/E-08.log",
+  "log_lines": 5,
+  "log_sha256": "a86b907d469e2d5c78b4d6911234a8c07537c03e9f3956cd64a50839c6409630",
+  "missing_markers": [],
+  "note": "The floor covers the manifest, markers, recovery, hosting, the generated client, the environment rebuild and the profile pins; the count is in the log rather than pinned here. Pint runs over the files in the gate.",
+  "started_at": "2026-10-07T04:45:49+00:00",
+  "verdict": "PROVEN"
+}

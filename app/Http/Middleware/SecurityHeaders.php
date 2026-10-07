@@ -12,6 +12,14 @@ use Symfony\Component\HttpFoundation\Response;
  * Sets conservative, universally-safe headers on every response. HSTS is
  * only emitted over HTTPS (or when explicitly forced); CSP is opt-in via
  * config so it can be rolled out without breaking the existing UI.
+ *
+ * GAP-10 A6 — CSP supports two rollout modes. With
+ * `observability.security_headers.csp_report_only` enabled (the default)
+ * the policy is sent as `Content-Security-Policy-Report-Only`, i.e. the
+ * browser reports violations but blocks nothing; with it disabled the
+ * policy is enforced through `Content-Security-Policy`. The two headers are
+ * mutually exclusive: an enforcing CSP must never be downgraded silently,
+ * and a report-only policy must never be mistaken for enforcement.
  */
 class SecurityHeaders
 {
@@ -43,7 +51,37 @@ class SecurityHeaders
         }
 
         if (config('observability.security_headers.csp_enable', false)) {
-            $response->headers->set('Content-Security-Policy', (string) config('observability.security_headers.csp_policy'));
+            $policy = $this->policy();
+
+            if ($policy === '') {
+                return;
+            }
+
+            if (config('observability.security_headers.csp_report_only', true)) {
+                $response->headers->set('Content-Security-Policy-Report-Only', $policy);
+            } else {
+                $response->headers->set('Content-Security-Policy', $policy);
+            }
         }
+    }
+
+    /**
+     * The configured policy, with the optional report collector appended.
+     */
+    protected function policy(): string
+    {
+        $policy = trim((string) config('observability.security_headers.csp_policy', ''));
+
+        $reportUri = trim((string) config('observability.security_headers.csp_report_uri', ''));
+
+        if ($reportUri === '') {
+            return $policy;
+        }
+
+        $directives = $policy === '' ? [] : [$policy];
+
+        $directives[] = 'report-uri '.$reportUri;
+
+        return implode('; ', $directives);
     }
 }

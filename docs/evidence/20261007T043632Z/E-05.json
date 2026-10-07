@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "app/Services/BackupService.php": "41232e5a49f66494b016626becf345532e9cfb7efabab5f23ec0e0f3b5fac862",
+    "config/backup.php": "b9efd0ca5f7b8053458ae6e0d186527ba3b1d17df6e9834dd62b84293a0ea649",
+    "config/filesystems.php": "aeed6bbe3bf50b3ab335288a50f96a11835e3c1e748b453fbde76b027234a7b8"
+  },
+  "artifacts_missing": [],
+  "claim": "A backup is encrypted with age, copied offsite, checksum-verified, and fails closed when the offsite target is unreachable.",
+  "command": "php vendor/bin/phpunit -c phpunit.pgsql.xml --filter BackupOffsiteTest|BackupEncryptedRestoreTest|BackupTest",
+  "duration_s": 11.97,
+  "environment": "2026-10-07T04:36:33+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "OK"
+  ],
+  "id": "E-05",
+  "log": "docs/evidence/20261007T043632Z/E-05.log",
+  "log_lines": 11,
+  "log_sha256": "a431e53910792d01c53d6b52675ad4cde4cca18d1ce7b7c90d2e09ebb7c67b3d",
+  "missing_markers": [],
+  "note": "The pg_dump-dependent cases skip when the client tools are absent; `age` presence is what decides whether the encryption path really runs here.",
+  "started_at": "2026-10-07T04:43:41+00:00",
+  "verdict": "PROVEN"
+}

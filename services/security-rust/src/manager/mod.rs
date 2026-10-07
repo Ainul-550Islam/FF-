@@ -1,6 +1,9 @@
-use crate::providers::{FraudProvider, FraudCheckRequest, FraudCheckResponse, DeviceProvider, IpProvider, ExternalProvider, IdentityProvider};
-use std::sync::Arc;
+use crate::providers::{
+    DeviceProvider, ExternalProvider, FraudCheckRequest, FraudCheckResponse, FraudProvider,
+    IdentityProvider, IpProvider,
+};
 use dashmap::DashMap;
+use std::sync::Arc;
 
 pub struct FraudManager {
     providers: DashMap<String, Arc<dyn FraudProvider>>,
@@ -8,7 +11,9 @@ pub struct FraudManager {
 
 impl FraudManager {
     pub fn new() -> Self {
-        let mgr = Self{ providers: DashMap::new() };
+        let mgr = Self {
+            providers: DashMap::new(),
+        };
         mgr.register("device", Arc::new(DeviceProvider::new()));
         mgr.register("ip", Arc::new(IpProvider::new()));
         mgr.register("external", Arc::new(ExternalProvider::new()));

@@ -1,0 +1,20 @@
+{
+  "artifacts": {},
+  "artifacts_missing": [],
+  "claim": "Every file this pass changed is reproducible \u2014 none is protected by nothing.",
+  "command": "python3 tools/audit_gap10_coverage.py",
+  "duration_s": 28.1,
+  "environment": "2026-10-07T04:52:19+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "UNPROTECTED            : 0"
+  ],
+  "id": "E-10",
+  "log": "docs/evidence/20261007T045217Z/E-10.log",
+  "log_lines": 16,
+  "log_sha256": "9a1b7ce45593b308f0febe7b21f58a4e6a706331961ed1e4c453bb24715c99d4",
+  "missing_markers": [],
+  "note": "Needs a checkout of the upstream repository in /tmp/pristine/FF--main for comparison.",
+  "started_at": "2026-10-07T05:02:32+00:00",
+  "verdict": "PROVEN"
+}

@@ -2,32 +2,40 @@
 # The actual production layout is nginx + PHP-FPM + supervisor/systemd.
 # Use this compose file as a starting point for containerised deploys;
 # keep .env out of the image and out of version control.
+#
+# GAP-10 C additions:
+#   * postgres service with WAL archiving wired to a dedicated volume, so the
+#     cluster can support point-in-time recovery (PITR) when
+#     WAL_ARCHIVE_ENABLED=true (see deploy/postgres-init.sh). The archive
+#     volume is separate from the data volume on purpose: a restore needs both,
+#     and losing the data volume must not lose the WAL history.
+#   * node-exporter, which produces the node_filesystem_* series the
+#     disk-space alerts in deploy/prometheus-alerts.yml rely on.
+#   * prometheus with the alert-rules file and the app scrape token mounted
+#     read-only.
+
+x-app-common: &app-common
+  build: .
+  restart: unless-stopped
+  env_file: .env
+  volumes:
+    - app-storage:/var/www/html/storage
 
 services:
   app:
-    build: .
-    restart: unless-stopped
-    env_file: .env
-    volumes:
-      - app-storage:/var/www/html/storage
+    <<: *app-common
     depends_on:
       - queue
+      - postgres
+      - redis
 
   queue:
-    build: .
-    restart: unless-stopped
+    <<: *app-common
     command: php artisan queue:work --tries=3 --timeout=90 --backoff=30
-    env_file: .env
-    volumes:
-      - app-storage:/var/www/html/storage
 
   scheduler:
-    build: .
-    restart: unless-stopped
+    <<: *app-common
     command: sh -c "while true; do php artisan schedule:run; sleep 60; done"
-    env_file: .env
-    volumes:
-      - app-storage:/var/www/html/storage
 
   web:
     image: nginx:alpine
@@ -40,5 +48,78 @@ services:
     depends_on:
       - app
 
+  # ---------------------------------------------------------------------------
+  # Data tier + PITR
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ffarena}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:-ffarena}
+      # PITR is opt-in: deploy/postgres-init.sh refuses to turn archiving on
+      # unless this is true AND the archive directory below is writable.
+      WAL_ARCHIVE_ENABLED: ${WAL_ARCHIVE_ENABLED:-false}
+      WAL_ARCHIVE_DIR: /var/lib/postgresql/wal-archive
+      WAL_LEVEL: ${WAL_LEVEL:-replica}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # WAL archive: survives independently of the data volume, so a restore
+      # can replay transactions up to the failure point.
+      - postgres-wal-archive:/var/lib/postgresql/wal-archive
+      - ./deploy/postgres-init.sh:/docker-entrypoint-initdb.d/10-ffarena-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ffarena} -d ${POSTGRES_DB:-ffarena}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+
+  # ---------------------------------------------------------------------------
+  # Observability
+  # ---------------------------------------------------------------------------
+  node-exporter:
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    command:
+      - '--path.rootfs=/host'
+    pid: host
+    volumes:
+      - '/:/host:ro,rslave'
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro
+      # Bearer token for the app /metrics endpoint. Create it on the host with
+      # the same value as METRICS_SCRAPE_TOKEN in .env:
+      #   printf '%s' "$METRICS_SCRAPE_TOKEN" > deploy/ffarena-scrape-token
+      - ./deploy/ffarena-scrape-token:/etc/prometheus/ffarena-scrape-token:ro
+    ports:
+      - "9090:9090"
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    restart: unless-stopped
+    # Receiver configuration (email/Slack/PagerDuty routing) is deployment
+    # specific and therefore NOT committed: mount your own
+    # deploy/alertmanager.yml, which is an EXTERNAL/ops step (E05).
+    volumes:
+      - ./deploy/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+
 volumes:
   app-storage:
+  postgres-data:
+  postgres-wal-archive:
+  redis-data:

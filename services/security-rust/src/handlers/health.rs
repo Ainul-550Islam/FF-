@@ -3,7 +3,11 @@ use crate::observability::{Logger, Metrics};
 use std::sync::Arc;
 use warp::{Filter, Rejection, Reply};
 
-pub fn routes(cfg: Config, logger: Arc<Logger>, metrics: Arc<Metrics>) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+pub fn routes(
+    cfg: Config,
+    _logger: Arc<Logger>,
+    metrics: Arc<Metrics>,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let live = warp::path!("health" / "live")
         .and(warp::get())
         .and_then(handle_live);
@@ -26,10 +30,14 @@ pub fn routes(cfg: Config, logger: Arc<Logger>, metrics: Arc<Metrics>) -> impl F
     live.or(ready).or(health).or(metrics_route)
 }
 
-fn with_config(cfg: Config) -> impl Filter<Extract = (Config,), Error = std::convert::Infallible> + Clone {
+fn with_config(
+    cfg: Config,
+) -> impl Filter<Extract = (Config,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || cfg.clone())
 }
-fn with_metrics(metrics: Arc<Metrics>) -> impl Filter<Extract = (Arc<Metrics>,), Error = std::convert::Infallible> + Clone {
+fn with_metrics(
+    metrics: Arc<Metrics>,
+) -> impl Filter<Extract = (Arc<Metrics>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || metrics.clone())
 }
 

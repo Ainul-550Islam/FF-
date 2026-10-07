@@ -32,9 +32,6 @@ class Final585Service
             'league' => $leagueService->getUserLeague($userId)?->load('league'),
             'level' => $levelService->getLevelStats($userId),
             'description' => 'Final2 585 - Gameberry 250+ dice max 52 Facebook exchange lucky dice, 6-step league Bronze Titan Top 20% Top 40 Titan badges Level 4 unlock, Game Buddies max 25 private table code/link challenge team-up classic/master/quick chat emojis weekly events gold at stake magic chest video ads free gold gems spin2win auto mode hide online status notify friends Level 4 Bronze unlock referral BGI20 ₹25 scratch cards reconciliation must STOP if mismatch G1',
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
         ];
     }
 
@@ -46,7 +43,7 @@ class Final585Service
                 throw new \Exception('Insufficient gold - gold at stake');
             }
             $betTx = $goldService->placeBet($userId, $bet, 'FINAL2_585');
-            $isWin = (bool) rand(0, 1);
+            $isWin = (bool) random_int(0, 1);
             if ($isWin) {
                 $goldService->winGold($userId, $bet * 2, 'FINAL2_585');
                 $level = app(LevelService::class)->addWin($userId);

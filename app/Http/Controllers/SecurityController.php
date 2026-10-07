@@ -54,6 +54,17 @@ class SecurityController extends Controller
 
     public function incidents(): View
     {
+        // The queue is readable by platform staff (admin/moderator) and by
+        // organizers, but never by players. `self::incidents` is registered
+        // twice in routes/web.php (the later `security.incidents.index`
+        // definition currently wins), so the gate lives here rather than only
+        // in one of the two route groups.
+        $actor = auth()->user();
+
+        if (! $actor || ! ($actor->isStaff() || $actor->isOrganizer())) {
+            abort(403);
+        }
+
         $incidents = AntiCheatIncident::query()
             ->with(['tournament', 'team', 'accusedUser', 'reporter'])
             ->latest()
@@ -83,11 +94,28 @@ class SecurityController extends Controller
     {
         $subject = $user;
         $profile = $subject->riskProfile;
-        $identity = $subject->identityVerification()->first() ?? new IdentityVerification(['status' => 'unverified']);
+        // IdentityVerification is fully guarded ($fillable = []) — build the
+        // placeholder through forceFill() exactly like AdminAccountController
+        // does; the previous constructor array raised MassAssignmentException
+        // and the security user page returned a 500.
+        $identity = $subject->identityVerification()->first()
+            ?? (new IdentityVerification())->forceFill(['status' => 'unverified']);
         $devices = $subject->devices ?? collect();
         $ipIntel = $subject->ipLinks ?? collect();
         $links = $linkService->linksFor($subject);
         $restrictions = $subject->restrictions()->latest()->get();
+        // The investigation page renders the account's risk-event history; the
+        // variable was never passed and the page returned a 500 for admins.
+        $events = $subject->riskEvents()->latest()->limit(50)->get();
+        // …plus the anti-cheat incidents this account is involved in (as the
+        // accused or as the reporter — the table labels the role per row).
+        $incidents = AntiCheatIncident::query()
+            ->with('tournament')
+            ->where('accused_user_id', $subject->id)
+            ->orWhere('reporter_user_id', $subject->id)
+            ->latest()
+            ->limit(50)
+            ->get();
 
         return view('admin.security.user', compact(
             'subject',
@@ -97,6 +125,8 @@ class SecurityController extends Controller
             'ipIntel',
             'links',
             'restrictions',
+            'events',
+            'incidents',
         ));
     }
 
@@ -162,7 +192,11 @@ class SecurityController extends Controller
         $expiresAt = isset($data['expires_in_days']) ? now()->addDays((int) $data['expires_in_days']) : null;
 
         try {
-            $service->restrict($user, $data['type'], $data['reason'], $userActor, $expiresAt);
+            // `source` is a short varchar(20) column, so it must be the
+            // literal tag and the admin must be passed as the *actor*
+            // (previously the actor landed in $source, which cast the whole
+            // User model to JSON and overflowed the column on PostgreSQL).
+            $service->restrict($user, $data['type'], $data['reason'], 'admin_manual', $userActor, $expiresAt);
 
             return back()->with('success', 'Restriction applied.');
         } catch (DomainException $e) {
@@ -204,10 +238,25 @@ class SecurityController extends Controller
         ]);
 
         try {
+            // The service signature is
+            // openIncident(Tournament $tournament, ?GameMatch $match, ?Team $team,
+            //              ?User $accusedUser, User $reporter, string $source,
+            //              string $category, string $severity, ?string $description).
+            // The calling code used to pass the acting user as the tournament,
+            // which raised a TypeError (HTTP 500) for every staff-opened
+            // incident; resolve the validated ids into models instead.
+            $tournament = Tournament::findOrFail((int) $data['tournament_id']);
+            $accused = isset($data['accused_user_id'])
+                ? User::find((int) $data['accused_user_id'])
+                : null;
+
             $service->openIncident(
+                $tournament,
+                null,
+                null,
+                $accused,
                 $userActor,
-                (int) $data['tournament_id'],
-                (int) ($data['accused_user_id'] ?? 0),
+                AntiCheatIncident::SOURCE_STAFF,
                 $data['category'],
                 $data['severity'],
                 $data['description'] ?? null,

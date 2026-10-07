@@ -20,6 +20,9 @@ class OpsController extends Controller
         return view('admin.ops.dashboard', [
             'stats' => $stats,
             'backups' => $backupList,
+            // The dashboard renders the failed-jobs table; without this the
+            // page raised "Undefined variable $failedJobs" (HTTP 500).
+            'failedJobs' => $ops->failedJobs(),
         ]);
     }
 
@@ -54,7 +57,13 @@ class OpsController extends Controller
     public function flushCache(Request $request, OperationsService $ops): RedirectResponse
     {
         $namespace = (string) $request->input('namespace', 'all');
-        $ops->flushCache($namespace);
+
+        // An unknown namespace is a refusal, not a silent no-op: the operator
+        // must never believe a flush happened (and nothing is audited when
+        // nothing was flushed).
+        if (! $ops->flushCache($namespace)) {
+            return back()->with('error', "Unknown cache namespace '{$namespace}'. Nothing was flushed.");
+        }
 
         return back()->with('status', "Cache flushed for namespace '{$namespace}'.");
     }
@@ -63,7 +72,14 @@ class OpsController extends Controller
     {
         $result = $backups->create();
 
-        return back()->with('status', 'Backup archive created: '.($result['filename'] ?? 'success'));
+        if (empty($result['ok'])) {
+            // The attempt is already audited (ops.backup_created with
+            // failed = true) — surface the honest outcome instead of a
+            // success message for a backup that does not exist on disk.
+            return back()->with('error', 'Backup failed: '.($result['error'] ?? 'unknown error'));
+        }
+
+        return back()->with('status', 'Backup archive created: '.($result['name'] ?? 'success'));
     }
 
     public function verifyBackup(Request $request, BackupService $backups): RedirectResponse
@@ -80,6 +96,15 @@ class OpsController extends Controller
 
     public function health(HealthService $health): JsonResponse
     {
-        return response()->json($health->ready());
+        // The admin endpoint reports the readiness checks FLATTENED, so the
+        // dashboard and `AdminOpsTest` can read `database` / `cache` directly.
+        // The public probe (/health/ready) keeps the nested
+        // `{status, checks}` envelope.
+        $ready = $health->ready();
+
+        return response()->json(array_merge(
+            ['status' => $ready['status'] ?? 'not_ready'],
+            (array) ($ready['checks'] ?? []),
+        ));
     }
 }

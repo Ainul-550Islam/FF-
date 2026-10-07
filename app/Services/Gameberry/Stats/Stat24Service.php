@@ -18,9 +18,6 @@ class Stat24Service
             'value' => 24 * 100,
             'growth' => 24 * 5,
             'percent' => 24 * 2,
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
         ];
     }
 

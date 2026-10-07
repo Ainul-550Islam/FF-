@@ -18,9 +18,6 @@ class Stat27Service
             'value' => 27 * 100,
             'growth' => 27 * 5,
             'percent' => 27 * 2,
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
         ];
     }
 

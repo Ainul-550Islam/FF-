@@ -1,11 +1,11 @@
 use crate::config::Config;
+use crate::domain::RiskLevel;
+use crate::manager::FraudManager;
 use crate::observability::{Logger, Metrics};
 use crate::providers::FraudCheckRequest;
-use crate::manager::FraudManager;
-use crate::domain::RiskLevel;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use warp::{Filter, Rejection, Reply};
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct EvaluateRequest {
@@ -29,7 +29,11 @@ pub struct EvaluateResponse {
     pub allow: bool,
 }
 
-pub fn routes(cfg: Config, logger: Arc<Logger>, metrics: Arc<Metrics>) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+pub fn routes(
+    _cfg: Config,
+    logger: Arc<Logger>,
+    metrics: Arc<Metrics>,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let fraud_manager = Arc::new(FraudManager::new());
 
     let evaluate = warp::path!("api" / "v1" / "fraud" / "evaluate")
@@ -50,13 +54,19 @@ pub fn routes(cfg: Config, logger: Arc<Logger>, metrics: Arc<Metrics>) -> impl F
     evaluate.or(overall)
 }
 
-fn with_manager(manager: Arc<FraudManager>) -> impl Filter<Extract = (Arc<FraudManager>,), Error = std::convert::Infallible> + Clone {
+fn with_manager(
+    manager: Arc<FraudManager>,
+) -> impl Filter<Extract = (Arc<FraudManager>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || manager.clone())
 }
-fn with_logger(logger: Arc<Logger>) -> impl Filter<Extract = (Arc<Logger>,), Error = std::convert::Infallible> + Clone {
+fn with_logger(
+    logger: Arc<Logger>,
+) -> impl Filter<Extract = (Arc<Logger>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || logger.clone())
 }
-fn with_metrics(metrics: Arc<Metrics>) -> impl Filter<Extract = (Arc<Metrics>,), Error = std::convert::Infallible> + Clone {
+fn with_metrics(
+    metrics: Arc<Metrics>,
+) -> impl Filter<Extract = (Arc<Metrics>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || metrics.clone())
 }
 
@@ -66,7 +76,7 @@ async fn handle_evaluate(
     logger: Arc<Logger>,
     metrics: Arc<Metrics>,
 ) -> Result<impl Reply, Rejection> {
-    let fraud_req = FraudCheckRequest{
+    let fraud_req = FraudCheckRequest {
         user_id: req.user_id,
         ip: req.ip,
         user_agent: req.user_agent,
@@ -88,7 +98,7 @@ async fn handle_evaluate(
     metrics.increment("fraud.evaluate", None);
     logger.info("fraud evaluation", serde_json::json!({"user_id": req.user_id, "score": overall_score, "level": level.to_string()}));
 
-    let resp = EvaluateResponse{
+    let resp = EvaluateResponse {
         user_id: req.user_id,
         overall_score,
         risk_level: level.to_string(),
@@ -104,8 +114,8 @@ async fn handle_evaluate(
 
 async fn handle_overall(
     user_id: i64,
-    manager: Arc<FraudManager>,
-    logger: Arc<Logger>,
+    _manager: Arc<FraudManager>,
+    _logger: Arc<Logger>,
     metrics: Arc<Metrics>,
 ) -> Result<impl Reply, Rejection> {
     metrics.increment("fraud.overall", None);

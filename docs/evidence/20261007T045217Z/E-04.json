@@ -1,0 +1,23 @@
+{
+  "artifacts": {
+    "app/Services/PaymentService.php": "1bb2471797803caab01300c2454187e7933687d42998168c570456fe23255134",
+    "tests/Feature/Payments/SettlementExactlyOnceTest.php": "183b621f38ac3e6fe96775265c4b98c23f6917e441bb9d31dbc79d874cc4150a"
+  },
+  "artifacts_missing": [],
+  "claim": "Money settles exactly once under concurrent writers, and losing attempts are audited as duplicates.",
+  "command": "php vendor/bin/phpunit -c phpunit.pgsql.xml --filter SettlementExactlyOnceTest|WebhookRaceTest|PaymentRaceTest|WalletRaceTest",
+  "duration_s": 41.05,
+  "environment": "2026-10-07T04:52:19+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "OK"
+  ],
+  "id": "E-04",
+  "log": "docs/evidence/20261007T045217Z/E-04.log",
+  "log_lines": 10,
+  "log_sha256": "68e541551c8cb5a7211671d28c04ce2324ad0dfae0496e8a5f1204d1fea804f6",
+  "missing_markers": [],
+  "note": "pcntl makes the fork-based cases real parallel writers; without it the same invariants are asserted sequentially and the output says so.",
+  "started_at": "2026-10-07T04:59:03+00:00",
+  "verdict": "PROVEN"
+}

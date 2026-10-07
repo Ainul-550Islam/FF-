@@ -14,7 +14,12 @@ class PaymentController extends Controller
     public function __construct(
         protected PaymentService $payments,
     ) {
-        $this->middleware(['auth', 'active']);
+        // The controller-level `$this->middleware()` call that used to live
+        // here is a Laravel 10 API that no longer exists in Laravel 11/12 and
+        // made every action throw "Call to undefined method ...::middleware()".
+        // The same protection is already applied on the routes: every
+        // PaymentController route sits inside the 'auth' + 'active' group in
+        // routes/web.php (see the group opened around line 314).
     }
 
     public function methods(Request $request)

@@ -3,17 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\LedgerEntry;
 use App\Models\Payment;
 use App\Models\Payout;
 use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
+use App\Services\AuditLogService;
 use App\Services\PaymentService;
 use App\Services\WalletService;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use RuntimeException;
 
 class AdminController extends Controller
 {
@@ -108,93 +112,163 @@ class AdminController extends Controller
         return view('admin.wallet', compact('user', 'wallet', 'delta', 'ledger'));
     }
 
-    public function creditWallet(Request $request, User $user, WalletService $wallets): RedirectResponse
+    public function creditWallet(Request $request, User $user, WalletService $wallets, AuditLogService $audit): RedirectResponse
     {
-        $request->validate([
+        $data = $request->validate([
             'amount' => 'required|numeric|min:0.01',
             'reason' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:255',
         ]);
 
-        $amountMinor = (int) round(((float) $request->input('amount')) * 100);
-        $wallet = $wallets->walletFor($user);
+        $amountMinor = (int) round(((float) $data['amount']) * 100);
+        $description = (string) ($data['description'] ?? $data['reason'] ?? 'Admin credit adjustment');
 
-        $wallets->credit(
-            $wallet->id,
-            $amountMinor,
-            'admin_adjustment',
-            'user',
-            $user->id,
-            (string) ($request->input('reason') ?: 'Admin credit adjustment'),
-            auth()->id(),
-        );
+        // WalletService::credit(Wallet $wallet, int $amountMinor, string $type,
+        // string $description, ?User $actor, ?string $referenceType,
+        // ?int $referenceId). The previous call passed the wallet *id* as the
+        // first argument, which the service interprets as the legacy
+        // `credit($userId, …)` shape — the credit landed on the wrong wallet
+        // (the player's balance stayed 0) and the description/actor/reference
+        // arguments were shifted. Pass the resolved Wallet model and the
+        // documented argument order instead.
+        //
+        // The audit row is written in the same transaction as the credit (and
+        // with the loud record() API), so a manual wallet adjustment can never
+        // happen without its audit trail.
+        $actor = auth()->user();
+
+        DB::transaction(function () use ($wallets, $user, $amountMinor, $description, $actor, $audit) {
+            $wallets->credit(
+                $wallets->walletFor($user),
+                $amountMinor,
+                LedgerEntry::TYPE_ADJUSTMENT,
+                $description,
+                $actor,
+                'user',
+                $user->id,
+            );
+
+            $audit->record($actor, 'wallet.credited', 'user', $user->id, [
+                'target_user' => $user,
+                'metadata' => [
+                    'amount_minor' => $amountMinor,
+                    'description' => $description,
+                    'reference_type' => 'user',
+                    'reference_id' => $user->id,
+                ],
+            ]);
+        });
 
         return back()->with('success', 'Wallet credited.');
     }
 
-    public function debitWallet(Request $request, User $user, WalletService $wallets): RedirectResponse
+    public function debitWallet(Request $request, User $user, WalletService $wallets, AuditLogService $audit): RedirectResponse
     {
-        $request->validate([
+        $data = $request->validate([
             'amount' => 'required|numeric|min:0.01',
             'reason' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:255',
         ]);
 
-        $amountMinor = (int) round(((float) $request->input('amount')) * 100);
-        $wallet = $wallets->walletFor($user);
+        $amountMinor = (int) round(((float) $data['amount']) * 100);
+        $description = (string) ($data['description'] ?? $data['reason'] ?? 'Admin debit adjustment');
+
+        $actor = auth()->user();
 
         try {
-            $wallets->debit(
-                $wallet->id,
-                $amountMinor,
-                'admin_adjustment',
-                'user',
-                $user->id,
-                (string) ($request->input('reason') ?: 'Admin debit adjustment'),
-                auth()->id(),
-            );
+            DB::transaction(function () use ($wallets, $user, $amountMinor, $description, $actor, $audit) {
+                $wallets->debit(
+                    $wallets->walletFor($user),
+                    $amountMinor,
+                    LedgerEntry::TYPE_ADJUSTMENT,
+                    $description,
+                    $actor,
+                    'user',
+                    $user->id,
+                );
+
+                $audit->record($actor, 'wallet.debited', 'user', $user->id, [
+                    'target_user' => $user,
+                    'metadata' => [
+                        'amount_minor' => $amountMinor,
+                        'description' => $description,
+                        'reference_type' => 'user',
+                        'reference_id' => $user->id,
+                    ],
+                ]);
+            });
 
             return back()->with('success', 'Wallet debited.');
-        } catch (DomainException $e) {
+        } catch (DomainException|RuntimeException $e) {
+            // Insufficient balance is an expected, user-correctable outcome —
+            // surface it as a flashed error instead of an HTTP 500. The
+            // wallet/ledger are untouched (the service rolls back).
             return back()->with('error', $e->getMessage());
         }
     }
 
-    public function makeModerator(Request $request): RedirectResponse
+    public function makeModerator(Request $request, AuditLogService $audit): RedirectResponse
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:users,id',
+        // The admin dashboard form and the HTTP tests promote by *email*
+        // (resources/views/admin/dashboard.blade.php posts `email`). Only
+        // `user_id` used to be accepted, so a valid promotion silently failed
+        // validation and the role never changed.
+        $data = $request->validate([
+            'email' => 'required_without:user_id|nullable|email|exists:users,email',
+            'user_id' => 'required_without:email|nullable|integer|exists:users,id',
         ]);
 
-        $user = User::findOrFail($request->input('user_id'));
+        $user = isset($data['user_id'])
+            ? User::findOrFail((int) $data['user_id'])
+            : User::where('email', $data['email'])->firstOrFail();
         $before = $user->role;
         $user->role = 'moderator';
         $user->save();
 
-        AuditLog::create([
-            'actor_id' => auth()->id(),
-            'action' => 'admin.role_changed',
-            'entity_type' => 'user',
-            'entity_id' => $user->id,
-            'before' => ['role' => $before],
-            'after' => ['role' => 'moderator'],
-        ]);
+        // AuditLog rows are append-only and `$fillable = []`; they may only be
+        // written by AuditLogService (which whitelists the action, redacts the
+        // payload and stamps the request id). The previous AuditLog::create()
+        // call raised MassAssignmentException and the role change was never
+        // audited.
+        $audit->recordAdminAction(
+            auth()->user(),
+            'role.change',
+            'user',
+            $user->id,
+            [
+                'target_user' => $user,
+                'before' => ['role' => $before],
+                'after' => ['role' => 'moderator'],
+            ],
+        );
 
         return back()->with('success', "{$user->name} promoted to moderator.");
     }
 
-    public function removeModerator(User $user): RedirectResponse
+    public function removeModerator(User $user, AuditLogService $audit): RedirectResponse
     {
+        // Fail closed: this endpoint demotes *moderators*. An admin account is
+        // never demoted through it (the demotion is refused and surfaced as a
+        // flashed error, exactly as the security tests require).
+        if ($user->role === 'admin') {
+            return back()->with('error', 'Admin accounts cannot be demoted.');
+        }
+
         $before = $user->role;
         $user->role = 'player';
         $user->save();
 
-        AuditLog::create([
-            'actor_id' => auth()->id(),
-            'action' => 'admin.role_changed',
-            'entity_type' => 'user',
-            'entity_id' => $user->id,
-            'before' => ['role' => $before],
-            'after' => ['role' => 'player'],
-        ]);
+        $audit->recordAdminAction(
+            auth()->user(),
+            'role.change',
+            'user',
+            $user->id,
+            [
+                'target_user' => $user,
+                'before' => ['role' => $before],
+                'after' => ['role' => 'player'],
+            ],
+        );
 
         return back()->with('success', "{$user->name} demoted to player.");
     }

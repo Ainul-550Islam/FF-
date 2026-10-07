@@ -18,9 +18,6 @@ class Stat30Service
             'value' => 30 * 100,
             'growth' => 30 * 5,
             'percent' => 30 * 2,
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
         ];
     }
 

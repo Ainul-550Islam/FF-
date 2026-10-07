@@ -309,6 +309,14 @@ class AccountSecurityController extends Controller
 
     public function setDefaultPaymentMethod(PaymentMethod $paymentMethod, PaymentMethodService $service): RedirectResponse
     {
+        // This endpoint is addressed by payment-method id, so ownership must be
+        // enforced before anything else: without it a non-owner is silently
+        // redirected with an error message instead of being refused, which
+        // leaks the existence of another user's method.
+        if ((int) $paymentMethod->user_id !== (int) auth()->id()) {
+            abort(403);
+        }
+
         try {
             $service->setDefault(auth()->user(), $paymentMethod);
 
@@ -320,6 +328,10 @@ class AccountSecurityController extends Controller
 
     public function destroyPaymentMethod(PaymentMethod $paymentMethod, PaymentMethodService $service): RedirectResponse
     {
+        if ((int) $paymentMethod->user_id !== (int) auth()->id()) {
+            abort(403);
+        }
+
         try {
             $service->remove(auth()->user(), $paymentMethod);
 

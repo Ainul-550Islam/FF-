@@ -18,9 +18,6 @@ class Stat23Service
             'value' => 23 * 100,
             'growth' => 23 * 5,
             'percent' => 23 * 2,
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
         ];
     }
 

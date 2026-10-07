@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "app/Http/Middleware/EnsureNumberedSimulationSafe.php": "cc520b67734aea22a38bf722f9a35a8a30b081fd0bb3501059485a8b6ea59cda",
+    "bootstrap/app.php": "e10eb21b0a2002903a4d1771c6d5acb1f49689c7ee015acef2a867669f11a130",
+    "routes/api_gameberry_numbered.php": "3101fe28ae4d001dd0c8cf2e9449dd7779441dc75f4a0ad66b2626f727e9a943"
+  },
+  "artifacts_missing": [],
+  "claim": "LIVE OVER HTTP: a running production server answers 404 for the reported write and 200 for a real page.",
+  "command": "python3 tools/live_probe.py --expect-production",
+  "duration_s": 10.21,
+  "environment": "2026-10-07T04:52:19+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "LIVE-PROBE: OK"
+  ],
+  "id": "E-03L",
+  "log": "docs/evidence/20261007T045217Z/E-03L.log",
+  "log_lines": 21,
+  "log_sha256": "ff5f4f0af24f93456ad41b0575dc73a8b5bbb9bc7b6fc66033df9d5dabaefca9",
+  "missing_markers": [],
+  "note": "Starts the application over a real socket and speaks HTTP to it. This is the only proof here that exercises the server rather than the test harness.",
+  "started_at": "2026-10-07T04:57:43+00:00",
+  "verdict": "PROVEN"
+}

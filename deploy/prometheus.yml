@@ -2,6 +2,13 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# GAP-10 C — alert rules. Every rule references a series one of the scrape
+# jobs below actually produces; see deploy/prometheus-alerts.yml for the
+# provenance of each name. Receiver routing is an ops/EXTERNAL step (E05).
+rule_files:
+  - 'prometheus-alerts.yml'
+  - '/etc/prometheus/rules/*.yml'
+
 scrape_configs:
   - job_name: 'ffarena-app'
     static_configs:
@@ -9,6 +16,11 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 15s
     scrape_timeout: 5s
+    # The app endpoint is fail-closed: it answers 401 without this header and
+    # 404 when FEATURE_PROMETHEUS / METRICS_SCRAPE_TOKEN are unset.
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/ffarena-scrape-token
 
   - job_name: 'ffarena-redis'
     static_configs:
@@ -24,3 +36,9 @@ scrape_configs:
     static_configs:
       - targets: ['nginx:9113']
     scrape_interval: 15s
+
+  # Host level series (filesystem free space) used by the disk-space alerts.
+  - job_name: 'ffarena-node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s

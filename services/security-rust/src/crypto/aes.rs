@@ -26,7 +26,9 @@ pub enum CryptoError {
 impl std::fmt::Display for CryptoError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CryptoError::InvalidKeyLength => write!(f, "Encryption key must be exactly 32 bytes for AES-256"),
+            CryptoError::InvalidKeyLength => {
+                write!(f, "Encryption key must be exactly 32 bytes for AES-256")
+            }
             CryptoError::EncryptionFailed(e) => write!(f, "Encryption failed: {}", e),
             CryptoError::DecryptionFailed(e) => write!(f, "Decryption failed: {}", e),
             CryptoError::InvalidFormat => write!(f, "Invalid encrypted format"),
@@ -61,12 +63,12 @@ impl AesGcmCrypto {
                 return Self::new(&decoded);
             }
         }
-        
+
         // Try raw bytes
         if key_str.len() == 32 {
             return Self::new(key_str.as_bytes());
         }
-        
+
         Err(CryptoError::InvalidKeyLength)
     }
 
@@ -116,8 +118,7 @@ impl AesGcmCrypto {
             .decrypt(nonce, ciphertext)
             .map_err(|e| CryptoError::DecryptionFailed(e.to_string()))?;
 
-        String::from_utf8(plaintext_bytes)
-            .map_err(|e| CryptoError::DecryptionFailed(e.to_string()))
+        String::from_utf8(plaintext_bytes).map_err(|e| CryptoError::DecryptionFailed(e.to_string()))
     }
 
     /// Encrypt with associated data (for additional security)
@@ -174,8 +175,7 @@ impl AesGcmCrypto {
             .decrypt(nonce, payload)
             .map_err(|e| CryptoError::DecryptionFailed(e.to_string()))?;
 
-        String::from_utf8(plaintext_bytes)
-            .map_err(|e| CryptoError::DecryptionFailed(e.to_string()))
+        String::from_utf8(plaintext_bytes).map_err(|e| CryptoError::DecryptionFailed(e.to_string()))
     }
 }
 
@@ -294,7 +294,6 @@ pub struct TokenCacheStats {
 
 /// Redis-backed encrypted token cache
 /// L1: In-memory encrypted, L2: Redis with encrypted values
-
 pub struct RedisEncryptedTokenCache {
     l1_cache: Arc<EncryptedTokenCache>,
     // In production, add Redis client:
@@ -319,10 +318,10 @@ impl RedisEncryptedTokenCache {
         // Try L1 first
         match self.l1_cache.get(key) {
             Ok(Some(token)) => return Ok(Some(token)),
-            Ok(None) => {},
+            Ok(None) => {}
             Err(CryptoError::Expired) => {
                 self.l1_cache.delete(key);
-            },
+            }
             Err(e) => return Err(e),
         }
 
@@ -383,7 +382,13 @@ mod tests {
         let key = b"0123456789abcdef0123456789abcdef";
         let cache = EncryptedTokenCache::new(key).unwrap();
         let token = "bkash_token_abc123";
-        cache.set("bkash:grant".to_string(), token.to_string(), Duration::from_secs(3600)).unwrap();
+        cache
+            .set(
+                "bkash:grant".to_string(),
+                token.to_string(),
+                Duration::from_secs(3600),
+            )
+            .unwrap();
         let retrieved = cache.get("bkash:grant").unwrap().unwrap();
         assert_eq!(retrieved, token);
     }
@@ -392,7 +397,13 @@ mod tests {
     fn test_token_cache_expiry() {
         let key = b"0123456789abcdef0123456789abcdef";
         let cache = EncryptedTokenCache::new(key).unwrap();
-        cache.set("test".to_string(), "token".to_string(), Duration::from_millis(1)).unwrap();
+        cache
+            .set(
+                "test".to_string(),
+                "token".to_string(),
+                Duration::from_millis(1),
+            )
+            .unwrap();
         std::thread::sleep(Duration::from_millis(2));
         let result = cache.get("test");
         assert!(result.is_err()); // Expired

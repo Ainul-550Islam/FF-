@@ -1,4 +1,4 @@
-use crate::domain::{RiskLevel, RiskSignal};
+use crate::domain::RiskLevel;
 use crate::providers::FraudCheckResponse;
 
 pub fn evaluate(responses: &[FraudCheckResponse]) -> i32 {
@@ -25,9 +25,9 @@ pub fn should_block(score: i32) -> bool {
 }
 
 pub fn should_review(score: i32) -> bool {
-    score >= 70 && score < 100
+    (70..100).contains(&score)
 }
 
 pub fn should_monitor(score: i32) -> bool {
-    score >= 30 && score < 70
+    (30..70).contains(&score)
 }

@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EventType {
@@ -23,7 +23,7 @@ pub struct Event {
 
 impl Event {
     pub fn new(event_type: EventType, user_id: i64, data: serde_json::Value) -> Self {
-        Self{
+        Self {
             id: uuid::Uuid::new_v4().to_string(),
             event_type,
             user_id,
@@ -44,8 +44,14 @@ pub struct InMemoryPublisher {
 }
 
 impl InMemoryPublisher {
-    pub fn new() -> Self { Self{ events: std::sync::Mutex::new(Vec::new()) } }
-    pub fn events(&self) -> Vec<Event> { self.events.lock().unwrap().clone() }
+    pub fn new() -> Self {
+        Self {
+            events: std::sync::Mutex::new(Vec::new()),
+        }
+    }
+    pub fn events(&self) -> Vec<Event> {
+        self.events.lock().unwrap().clone()
+    }
 }
 
 impl Publisher for InMemoryPublisher {

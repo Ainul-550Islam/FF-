@@ -83,4 +83,62 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Payout controls (GAP-10 A4)
+    |--------------------------------------------------------------------------
+    |
+    | Defence in depth around admin money movement.
+    |
+    | `payout_dual_control_threshold_minor` is the smallest payout amount (in
+    | minor units — poisha) for which maker-checker applies: the administrator
+    | who approved a payout is not allowed to also disburse it. `0` (the safe
+    | default) means every payout that went through the payout queue requires a
+    | second administrator, whatever its size. Payouts that were created
+    | already-approved as part of a batch prize-distribution approval are not
+    | gated by this key — the distribution approval is a separate, separately
+    | audited maker action (see PayoutService::makerFor()).
+    |
+    | `payout_reference_max_length` bounds the reviewed external reference a
+    | manual completion must carry, so an operator cannot paste an unbounded
+    | blob into the audit trail. The payouts.provider_reference column stores
+    | at most 80 characters; the full reviewed value is kept in the payout
+    | event metadata.
+    |
+    */
+
+    'payout_dual_control_threshold_minor' => (int) env('PAYOUT_DUAL_CONTROL_THRESHOLD_MINOR', 0),
+
+    'payout_reference_max_length' => 255,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ingress rate limits (GAP-10 A5)
+    |--------------------------------------------------------------------------
+    |
+    | Provider webhooks and hosted-gateway returns are machine traffic, and
+    | both are signature-verified — but "signature-verified" is not "safe to
+    | leave unbounded": an unsigned flood still costs a signature comparison,
+    | a database read and an audit row per request, and a shared secret makes
+    | a brute-force attempt cheap to launch. These ceilings are generous on
+    | purpose (a provider can burst after its own outage) and finite, and both
+    | are keyed by provider + client IP so one noisy source cannot consume
+    | another's budget.
+    |
+    | Set through the environment because the right ceiling depends on the
+    | provider's retry policy; `0` disables the limit, which
+    | deploy/validate-env.py refuses in production.
+    |
+    */
+
+    'rate_limits' => [
+
+        // Legacy Phase 08 endpoint: POST /webhooks/payments/{provider}
+        'webhook' => (int) env('PAYMENT_WEBHOOK_RATE_LIMIT', 240),
+
+        // Hosted-gateway payer return: GET/POST /payments/callback/{provider}
+        'callback' => (int) env('PAYMENT_CALLBACK_RATE_LIMIT', 120),
+
+    ],
+
 ];

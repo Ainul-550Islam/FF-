@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\ProfileService;
+use App\Support\Seo;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,48 @@ class ProfileController extends Controller
         }
 
         $profile = $profiles->publicProfile($target, auth()->user());
+
+        // Phase 17 — a profile is indexable only while the *viewer* may see it
+        // and the owner chose public privacy. The metadata never contains more
+        // than the page itself renders: a hidden profile is noindex and carries
+        // no description, no JSON-LD and no bio, so a crawler can never read
+        // what the page withholds.
+        $seo = app(Seo::class);
+        $seo->canonical(route('profile.show', $target));
+
+        if (($profile['visible'] ?? false) === true && ($profile['privacy'] ?? 'private') === 'public') {
+            $displayName = (string) ($profile['name'] ?? $target->name);
+            $username = (string) ($profile['username'] ?? $target->username ?? '');
+
+            $seo->title($displayName.($username !== '' ? ' (@'.$username.')' : '').' — FF Arena')
+                ->description(
+                    trim((string) ($profile['bio'] ?? '')) !== ''
+                        ? (string) $profile['bio']
+                        : 'FF Arena player profile for '.$displayName.'.'
+                )
+                ->indexable(true)
+                ->ogType('profile')
+                ->jsonLd([
+                    '@context' => 'https://schema.org',
+                    '@type' => 'ProfilePage',
+                    'url' => route('profile.show', $target),
+                    'inLanguage' => 'en-BD',
+                    'mainEntity' => [
+                        '@type' => 'Person',
+                        'name' => $displayName,
+                        'alternateName' => $username,
+                        'description' => trim((string) ($profile['bio'] ?? '')),
+                        'url' => route('profile.show', $target),
+                        'address' => array_filter([
+                            '@type' => 'PostalAddress',
+                            'addressCountry' => $profile['country'] ?? null,
+                            'addressRegion' => $profile['region'] ?? null,
+                        ], static fn ($value) => $value !== null && $value !== ''),
+                    ],
+                ]);
+        } else {
+            $seo->indexable(false);
+        }
 
         return view('profile.show', [
             'user' => $target,

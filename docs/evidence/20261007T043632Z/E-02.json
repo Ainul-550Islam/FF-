@@ -1,0 +1,23 @@
+{
+  "artifacts": {
+    "docs/required-tests/GAP10_BACKEND_TEST_IDS.txt": "ddccb61439d33ce9a46e86787889da32783bfa808f5d36c793aa5622cd1ab64f",
+    "tools/run_required_tests.py": "83497cc642064bf09e4842a71dee043e89255b323a3dc40315a5bd38c500172e"
+  },
+  "artifacts_missing": [],
+  "claim": "Every required test runs and passes on the production dialect \u2014 skips are failures.",
+  "command": "python3 tools/run_required_tests.py --config phpunit.pgsql.xml",
+  "duration_s": 159.13,
+  "environment": "2026-10-07T04:36:33+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "required tests: 36/36 passed"
+  ],
+  "id": "E-02",
+  "log": "docs/evidence/20261007T043632Z/E-02.log",
+  "log_lines": 38,
+  "log_sha256": "faaa71cea1cd15a3fc80681dfffafca7bfaec47fd61bd3f0b5ba2b6a45bc581a",
+  "missing_markers": [],
+  "note": "This is the gate that makes 'the money paths ran' true rather than assumed.",
+  "started_at": "2026-10-07T04:42:00+00:00",
+  "verdict": "PROVEN"
+}

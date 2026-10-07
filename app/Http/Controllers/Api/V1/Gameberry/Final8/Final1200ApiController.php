@@ -29,13 +29,7 @@ class Final1200ApiController extends Controller
             'feature' => 1200,
             'view' => 'feature_1115',
             'service' => 'Final1165Service',
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
             'g1_must_reconcile' => true,
-            'full_file_content' => true,
-            'sequential_output' => true,
-            'zero_files_omitted' => true,
             'gameberry_features' => [
                 'dice_collection_250',
                 'lucky_dice_52_max',
@@ -107,8 +101,6 @@ class Final1200ApiController extends Controller
                 'data' => $result,
                 'message' => 'Final8 1200 result: '.($result['is_win'] ? 'win' : 'loss').' - Gold at stake, magic chest, Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening',
                 'feature' => 1200,
-                'production_ready' => true,
-                'no_shortening' => true,
             ]);
         } catch (\Exception $e) {
             return response()->json([

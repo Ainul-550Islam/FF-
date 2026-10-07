@@ -1,11 +1,17 @@
-use super::{FraudProvider, FraudCheckRequest, FraudCheckResponse, hash_ip, subnet_hash};
+use super::{hash_ip, subnet_hash, FraudCheckRequest, FraudCheckResponse, FraudProvider};
 use crate::domain::RiskLevel;
 
 pub struct IpProvider;
 impl IpProvider {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
     fn is_private_ip(ip: &str) -> bool {
-        ip.starts_with("10.") || ip.starts_with("192.168.") || ip.starts_with("127.") || ip.starts_with("172.16.") || ip == "::1"
+        ip.starts_with("10.")
+            || ip.starts_with("192.168.")
+            || ip.starts_with("127.")
+            || ip.starts_with("172.16.")
+            || ip == "::1"
     }
     fn is_tor_exit_node(ip: &str) -> bool {
         // Placeholder list - in production would check against Tor exit node list
@@ -14,8 +20,12 @@ impl IpProvider {
 }
 
 impl FraudProvider for IpProvider {
-    fn key(&self) -> &str { "ip" }
-    fn label(&self) -> &str { "IP Intelligence" }
+    fn key(&self) -> &str {
+        "ip"
+    }
+    fn label(&self) -> &str {
+        "IP Intelligence"
+    }
     fn check(&self, req: &FraudCheckRequest) -> FraudCheckResponse {
         let mut score = 0;
         let mut reason = "clean_ip".to_string();
@@ -45,15 +55,25 @@ impl FraudProvider for IpProvider {
 
         let risk_level = RiskLevel::from_score(score);
 
-        FraudCheckResponse{
+        FraudCheckResponse {
             provider: self.key().to_string(),
             score,
             risk_level,
             reason_code: reason,
             confidence,
-            evidence: Some(serde_json::json!({"ip": req.ip, "hashed_ip": req.ip.as_ref().map(|ip| hash_ip(ip))})),
+            evidence: Some(
+                serde_json::json!({"ip": req.ip, "hashed_ip": req.ip.as_ref().map(|ip| hash_ip(ip))}),
+            ),
         }
     }
-    fn capabilities(&self) -> Vec<String> { vec!["ip_check".to_string(), "tor_detection".to_string(), "proxy_detection".to_string()] }
-    fn metadata(&self) -> serde_json::Value { serde_json::json!({"type": "ip", "version": "1.0"}) }
+    fn capabilities(&self) -> Vec<String> {
+        vec![
+            "ip_check".to_string(),
+            "tor_detection".to_string(),
+            "proxy_detection".to_string(),
+        ]
+    }
+    fn metadata(&self) -> serde_json::Value {
+        serde_json::json!({"type": "ip", "version": "1.0"})
+    }
 }

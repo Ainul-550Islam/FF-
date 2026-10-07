@@ -6,6 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Virtual gold wallet (Gameberry economy).
+ *
+ * Concurrency (GAP-10 A2): `addGold()`/`spendGold()` used to call
+ * `$this->lockForUpdate()`, which on a model instance simply *builds* a query
+ * builder and never executes a statement — zero queries, no row lock. Two
+ * concurrent spends could therefore both read the same balance and both
+ * succeed (double-spend). The methods now open the transaction and fetch the
+ * row with `static::query()->whereKey(...)->lockForUpdate()->firstOrFail()`,
+ * exactly like `WalletService` does for the real BDT wallet, and all balance
+ * checks and writes use that locked row.
+ */
 class GoldWallet extends Model
 {
     use HasFactory;
@@ -44,22 +56,23 @@ class GoldWallet extends Model
         }
 
         return DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
-            $this->lockForUpdate();
-            $this->refresh();
+            $wallet = $this->lockRow();
 
-            $this->gold_balance += $amount;
-            $this->total_earned += $amount;
+            $wallet->gold_balance += $amount;
+            $wallet->total_earned += $amount;
             if ($type === 'win') {
-                $this->total_won += $amount;
+                $wallet->total_won += $amount;
             }
-            $this->save();
+            $wallet->save();
+
+            $this->syncFrom($wallet);
 
             return GoldTransaction::create([
-                'user_id' => $this->user_id,
-                'gold_wallet_id' => $this->id,
+                'user_id' => $wallet->user_id,
+                'gold_wallet_id' => $wallet->id,
                 'type' => $type,
                 'amount' => $amount,
-                'balance_after' => $this->gold_balance,
+                'balance_after' => $wallet->gold_balance,
                 'reference_type' => $referenceType,
                 'reference_id' => $referenceId,
                 'description' => $description,
@@ -74,31 +87,56 @@ class GoldWallet extends Model
         }
 
         return DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
-            $this->lockForUpdate();
-            $this->refresh();
+            $wallet = $this->lockRow();
 
-            if ($this->gold_balance < $amount) {
+            if ($wallet->gold_balance < $amount) {
                 throw new \Exception('Insufficient gold balance');
             }
 
-            $this->gold_balance -= $amount;
-            $this->total_spent += $amount;
+            $wallet->gold_balance -= $amount;
+            $wallet->total_spent += $amount;
             if ($type === 'bet' || $type === 'loss') {
-                $this->total_lost += $amount;
+                $wallet->total_lost += $amount;
             }
-            $this->save();
+            $wallet->save();
+
+            $this->syncFrom($wallet);
 
             return GoldTransaction::create([
-                'user_id' => $this->user_id,
-                'gold_wallet_id' => $this->id,
+                'user_id' => $wallet->user_id,
+                'gold_wallet_id' => $wallet->id,
                 'type' => $type,
                 'amount' => -$amount,
-                'balance_after' => $this->gold_balance,
+                'balance_after' => $wallet->gold_balance,
                 'reference_type' => $referenceType,
                 'reference_id' => $referenceId,
                 'description' => $description,
             ]);
         });
+    }
+
+    /**
+     * SELECT … FOR UPDATE the wallet row. Must be called inside a transaction.
+     */
+    protected function lockRow(): static
+    {
+        /** @var static $wallet */
+        $wallet = static::query()
+            ->whereKey($this->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        return $wallet;
+    }
+
+    /**
+     * Keep the in-memory instance in sync with the committed row so callers
+     * that read `$wallet->gold_balance` after the call see the new value
+     * (the previous implementation relied on `refresh()` for that).
+     */
+    protected function syncFrom(self $wallet): void
+    {
+        $this->setRawAttributes($wallet->getAttributes(), true);
     }
 
     public function hasEnoughGold(int $amount): bool

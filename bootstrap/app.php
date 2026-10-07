@@ -8,6 +8,8 @@ use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureBearerToken;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureIdempotency;
+use App\Http\Middleware\EnsureNumberedSimulationSafe;
+use App\Http\Middleware\EnsureRecentPasswordConfirmation;
 use App\Http\Middleware\EnsureTokenIsValid;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsStaff;
@@ -39,9 +41,30 @@ return Application::configure(basePath: dirname(__DIR__))
             if (file_exists(base_path('routes/api_gameberry.php'))) {
                 require base_path('routes/api_gameberry.php');
             }
+
+            // GAP-10 A3 (Option B) — the numbered simulation families
+            // (core / final* / stats) are development-only template clones and
+            // are registered ONLY when the feature flag is on AND the app runs
+            // in local/testing. In production the route files are never
+            // required, so the endpoints do not exist at all; the
+            // `numbered.simulation` middleware is the second line of defence.
+            if (EnsureNumberedSimulationSafe::routesMayBeRegistered()) {
+                if (file_exists(base_path('routes/gameberry_numbered.php'))) {
+                    require base_path('routes/gameberry_numbered.php');
+                }
+                if (file_exists(base_path('routes/api_gameberry_numbered.php'))) {
+                    require base_path('routes/api_gameberry_numbered.php');
+                }
+            }
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // GAP-10 (finding F-25) — trusted proxies are applied by
+        // App\Providers\TrustedProxyServiceProvider, NOT here: this callback
+        // runs while the HTTP kernel is being resolved, before the
+        // configuration is loaded, so `config()` is not available yet (calling
+        // it fails the boot). See that provider's docblock for the details.
+
         // Phase 16 — global hardening middleware (runs for web AND api).
         $middleware->append([
             AssignAuditRequestId::class,
@@ -62,6 +85,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'staff' => EnsureUserIsStaff::class,
             'active' => EnsureActiveAccount::class,
             'feature' => EnsureFeatureEnabled::class,
+
+            // GAP-10 A1 — numbered simulation guard (core / final* / stats).
+            'numbered.simulation' => EnsureNumberedSimulationSafe::class,
+
+            // GAP-10 A4 — step-up (recent password confirmation) for admin
+            // money actions.
+            'password.recent' => EnsureRecentPasswordConfirmation::class,
 
             // Phase 15 — API middleware.
             'bearer' => EnsureBearerToken::class,

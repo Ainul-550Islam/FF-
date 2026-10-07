@@ -25,8 +25,12 @@ pub struct Edge {
 pub fn find_linked_accounts(user_id: i64, edges: &[Edge]) -> Vec<i64> {
     let mut linked = Vec::new();
     for edge in edges {
-        if edge.from == user_id { linked.push(edge.to); }
-        if edge.to == user_id { linked.push(edge.from); }
+        if edge.from == user_id {
+            linked.push(edge.to);
+        }
+        if edge.to == user_id {
+            linked.push(edge.from);
+        }
     }
     linked
 }

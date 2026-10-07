@@ -51,6 +51,46 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Business signature (GAP-10 A5)
+    |--------------------------------------------------------------------------
+    |
+    | The inbound layer above verifies the PROVIDER's transport signature. The
+    | payment state machine then re-verifies the same body with a second,
+    | independent secret — the "business" signature — so the two checks cannot
+    | be defeated by compromising one secret, and so a gateway that signs with
+    | a key we do not control still cannot reach `PaymentService`.
+    |
+    | Until GAP-10 that second layer used one shared secret
+    | (`services.payments.webhook_secret`) with no timestamp. It now accepts a
+    | per-provider secret and an optional signed timestamp with a tolerance
+    | window, while staying backwards compatible: a provider that never sends a
+    | timestamp keeps working through the legacy raw-body scheme, and replay
+    | protection for those senders rests on the event-id idempotency in the
+    | ingress layer.
+    |
+    | A provider with no entry here falls back to the Phase 08 shared secret, so
+    | an existing deployment does not have to change anything to keep working.
+    |
+    */
+    'business' => [
+        // Per-provider secrets for the business layer. Never committed: set
+        // them through the environment (or a secret manager).
+        'providers' => [
+            'bkash' => env('PAYMENT_BUSINESS_BKASH_SECRET'),
+            'nagad' => env('PAYMENT_BUSINESS_NAGAD_SECRET'),
+            'rocket' => env('PAYMENT_BUSINESS_ROCKET_SECRET'),
+            'sslcommerz' => env('PAYMENT_BUSINESS_SSLCOMMERZ_SECRET'),
+            'card' => env('PAYMENT_BUSINESS_CARD_SECRET'),
+        ],
+
+        // Maximum age of a timestamped business signature (seconds). A supplied
+        // timestamp that is older (or in the future beyond this window) is
+        // refused; an absent timestamp keeps the legacy behaviour.
+        'timestamp_tolerance' => (int) env('PAYMENT_BUSINESS_TIMESTAMP_TOLERANCE', 300),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Outbound delivery
     |--------------------------------------------------------------------------
     */

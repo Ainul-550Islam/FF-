@@ -43,6 +43,9 @@
     },
     {
       "name": "Inbound Webhooks"
+    },
+    {
+      "name": "Companion Services"
     }
   ],
   "paths": {
@@ -3742,6 +3745,472 @@
           }
         },
         "description": "**Rate limit:** `api_webhook (60/min/IP)`.\n\nAuthenticated by HMAC-SHA256 over the raw body (`X-Signature`), a fresh `X-Timestamp`, and an event-id idempotency check. Content-Type must be `application/json`."
+      }
+    },
+    "/api/v1/go/payments/methods": {
+      "get": {
+        "summary": "Payment providers known to the Go gateway",
+        "operationId": "get_api_v1_go_payments_methods",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Go payment gateway. Returns the provider list the Go gateway accepts (bkash, nagad, rocket, manual). When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
+      }
+    },
+    "/api/v1/go/payments": {
+      "post": {
+        "summary": "Initiate a payment through the Go gateway",
+        "operationId": "post_api_v1_go_payments",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "201": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "team_id": 1,
+                "provider": "bkash",
+                "amount_minor": 50000,
+                "currency": "BDT"
+              }
+            }
+          }
+        },
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Go payment gateway. With the gateway disabled the request is NOT proxied: the endpoint replies `{message: \"Go payment disabled, use /api/v1/payments\", fallback: true}` with HTTP 200 and the caller keeps using `/api/v1/payments`. When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
+      }
+    },
+    "/api/v1/go/payments/{payment}": {
+      "get": {
+        "summary": "Payment status through the Go gateway",
+        "operationId": "get_api_v1_go_payments__payment_",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "payment",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Payment id"
+          }
+        ],
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Go payment gateway. The Go gateway is the source of truth for payments it created; payments created by `/api/v1/payments` should be read from that resource instead. When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
+      }
+    },
+    "/api/v1/go/payments/health": {
+      "get": {
+        "summary": "Go gateway health and enabled flag",
+        "operationId": "get_api_v1_go_payments_health",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Go payment gateway. Always answers from the application: `{status, service, enabled}`. It does not call the gateway, so it never fails when the gateway is down. When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
+      }
+    },
+    "/api/v1/rust/security/evaluate": {
+      "post": {
+        "summary": "Evaluate a user's fraud risk (Rust engine)",
+        "operationId": "post_api_v1_rust_security_evaluate",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "201": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "user_id": 1,
+                "ip": "203.0.113.10",
+                "user_agent": "FFArena/1.0 (android)",
+                "device_id": "e7f1c0d2",
+                "email": "player@example.com",
+                "phone": "01712345678"
+              }
+            }
+          }
+        },
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Rust security service. Aggregated decision from every fraud provider: overall score, risk level and an allow/review/block recommendation. When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
+      }
+    },
+    "/api/v1/rust/security/device": {
+      "post": {
+        "summary": "Device-reputation check (Rust engine)",
+        "operationId": "post_api_v1_rust_security_device",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "201": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "user_id": 1,
+                "device_id": "e7f1c0d2"
+              }
+            }
+          }
+        },
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Rust security service. Single-provider check: device fingerprint only. When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
+      }
+    },
+    "/api/v1/rust/security/ip": {
+      "post": {
+        "summary": "IP-reputation check (Rust engine)",
+        "operationId": "post_api_v1_rust_security_ip",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "201": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "user_id": 1,
+                "ip": "203.0.113.10"
+              }
+            }
+          }
+        },
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Rust security service. Single-provider check: IP only. When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
+      }
+    },
+    "/api/v1/rust/security/identity": {
+      "post": {
+        "summary": "Identity-consistency check (Rust engine)",
+        "operationId": "post_api_v1_rust_security_identity",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "201": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "user_id": 1,
+                "email": "player@example.com",
+                "phone": "01712345678"
+              }
+            }
+          }
+        },
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Rust security service. Single-provider check: e-mail / phone / identity signals only. When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
+      }
+    },
+    "/api/v1/rust/security/risk-score": {
+      "post": {
+        "summary": "Risk score only, without a recommendation",
+        "operationId": "post_api_v1_rust_security_risk_score",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "201": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "user_id": 1,
+                "ip": "203.0.113.10",
+                "device_id": "e7f1c0d2"
+              }
+            }
+          }
+        },
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Rust security service. Same signals as `/evaluate` but the response carries only `score`, `level` and `recommendation`. When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
+      }
+    },
+    "/api/v1/rust/security/providers": {
+      "get": {
+        "summary": "Fraud providers the Rust engine can run",
+        "operationId": "get_api_v1_rust_security_providers",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Rust security service. Static list served by the application: `{providers: [device, ip, external, identity]}`. When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
+      }
+    },
+    "/api/v1/rust/security/health": {
+      "get": {
+        "summary": "Rust security health and enabled flag",
+        "operationId": "get_api_v1_rust_security_health",
+        "tags": [
+          "Companion Services"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (companion-service JSON or local fallback; not enveloped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "**Rate limit:** `api (authenticated)`.\n\n**Companion-service proxy** for the optional Rust security service. Always answers from the application: `{status, service, enabled}`. It does not call the engine, so it never fails when the engine is down. When the service is disabled (`config/services_go_rust.php`) the endpoint answers locally instead of proxying. The response is the service's own JSON object and is **not** wrapped in the standard `{data, meta}` envelope."
       }
     }
   },

@@ -7,10 +7,12 @@ use App\Contracts\GoogleIdTokenVerifierInterface;
 use App\Contracts\GoogleOAuthProviderInterface;
 use App\Contracts\MetricsInterface;
 use App\Contracts\PhoneOtpProviderInterface;
+use App\Events\SettlementCompleted;
 use App\Gateways\GoogleTokenInfoIdVerifier;
 use App\Gateways\LogPhoneOtpProvider;
 use App\Gateways\SmsGatewayPhoneOtpProvider;
 use App\Gateways\SocialiteGoogleProvider;
+use App\Listeners\SendSettlementCompletedNotifications;
 use App\Models\MarketingAutomation;
 use App\Models\PersonalAccessToken;
 use App\Services\MarketingAffiliateService;
@@ -100,6 +102,12 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function registerQueueObservability(): void
     {
+        // GAP-10 A8 — the settlement-completed event is dispatched AFTER the
+        // settlement transaction commits (the event implements
+        // ShouldDispatchAfterCommit); this listener writes the notification
+        // outbox rows through App\Services\NotificationService.
+        Event::listen(SettlementCompleted::class, SendSettlementCompletedNotifications::class);
+
         Event::listen(JobProcessed::class, function (JobProcessed $event) {
             Metrics::increment('queue.jobs_processed', 1, [
                 'connection' => (string) ($event->connectionName ?? 'unknown'),
@@ -191,6 +199,28 @@ class AppServiceProvider extends ServiceProvider
         // Payment initiation: 5 per minute per user.
         RateLimiter::for('payment-initiate', function (Request $request) {
             return Limit::perMinute(5)->by('payment-initiate:user:'.($request->user()?->id ?? $request->ip()));
+        });
+
+        // GAP-10 A5 — provider payment webhooks (Phase 08 endpoint). Keyed by
+        // provider + client IP: a provider retrying after an outage keeps its
+        // own budget, a single abusive source exhausts only its own. The
+        // signature is still verified inside the handler; this only bounds the
+        // work an unauthenticated caller can ask for.
+        RateLimiter::for('payment-webhook', function (Request $request) {
+            $limit = (int) config('payments.rate_limits.webhook', 240);
+
+            return Limit::perMinute(max(1, $limit))
+                ->by('payment-webhook:'.(string) $request->route('provider').':'.$request->ip());
+        });
+
+        // GAP-10 A5 — hosted-gateway payer return (GET/POST). A real payer
+        // return is one request per payment; a burst is a misbehaving
+        // integration or an attacker. Same provider + IP key.
+        RateLimiter::for('payment-callback', function (Request $request) {
+            $limit = (int) config('payments.rate_limits.callback', 120);
+
+            return Limit::perMinute(max(1, $limit))
+                ->by('payment-callback:'.(string) $request->route('provider').':'.$request->ip());
         });
 
         // Verification email resends: 3 per hour per user.

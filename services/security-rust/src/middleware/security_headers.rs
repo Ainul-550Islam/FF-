@@ -1,4 +1,4 @@
-use warp::{Filter, Reply, Rejection};
+use warp::{Filter, Rejection, Reply};
 
 /// Pass-through filter that composes into security chains. Declared with
 /// `Error = Rejection` (instead of the map-based `Infallible` variant) so it

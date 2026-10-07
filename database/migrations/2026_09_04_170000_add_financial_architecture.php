@@ -8,6 +8,23 @@ use Illuminate\Support\Facades\Schema;
 return new class() extends Migration
 {
     /**
+     * GAP-10 (PostgreSQL profile fix) — this migration is deliberately
+     * per-statement tolerant: every step is guarded by a has-table/has-column
+     * check or wrapped in a try/catch that swallows "already exists".
+     *
+     * That only works outside an explicit migration transaction. On
+     * PostgreSQL a failed statement aborts the *whole* transaction
+     * (`25P02 current transaction is aborted`), so the next statement — even
+     * the `hasColumn()` probe inside a `try` — fails and `migrate:fresh`
+     * collapses. Running each statement in autocommit mode restores the
+     * intended behaviour on both PostgreSQL and SQLite, and the migration's
+     * statements are individually idempotent, so no atomicity is lost.
+     *
+     * @var bool
+     */
+    public $withinTransaction = false;
+
+    /**
      * Phase 08 — payments + wallet + immutable ledger + refunds.
      *
      * payments          : gains integer minor-unit amounts (poisha), currency,

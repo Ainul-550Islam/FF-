@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use tokio::time::{sleep, Duration};
 use crate::observability::{Logger, Metrics};
 use crate::storage::FraudStore;
+use std::sync::Arc;
+use tokio::time::{sleep, Duration};
 
 pub struct Worker {
     store: Arc<dyn FraudStore>,
@@ -11,7 +11,11 @@ pub struct Worker {
 
 impl Worker {
     pub fn new(store: Arc<dyn FraudStore>, logger: Arc<Logger>, metrics: Arc<Metrics>) -> Self {
-        Self{ store, logger, metrics }
+        Self {
+            store,
+            logger,
+            metrics,
+        }
     }
     pub async fn start(&self) {
         loop {
@@ -25,7 +29,11 @@ impl Worker {
     }
 }
 
-pub async fn process_pending(store: Arc<dyn FraudStore>, logger: Arc<Logger>, metrics: Arc<Metrics>) {
+pub async fn process_pending(
+    store: Arc<dyn FraudStore>,
+    logger: Arc<Logger>,
+    metrics: Arc<Metrics>,
+) {
     let worker = Worker::new(store, logger, metrics);
     worker.process_pending().await;
 }

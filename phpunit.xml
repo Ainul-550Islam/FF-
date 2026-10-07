@@ -24,8 +24,21 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!-- The dialect this profile proves. `force="true"` on <env> is not
+             enough: PHPUnit writes $_ENV and putenv(), and Laravel's env()
+             reads $_SERVER first, which PHP fills from the process environment
+             at startup. The <server> entry is what actually pins it, so a
+             leaked DB_CONNECTION cannot turn this profile into a different
+             database reporting a green run. FFARENA_TEST_PROFILE lets the
+             suite assert, from inside, that the pin held
+             (tests/Feature/ProfilePinningTest.php). -->
+        <server name="DB_DATABASE" value=":memory:"/>
+        <server name="DB_URL" value=""/>
+        <server name="DB_CONNECTION" value="sqlite"/>
+        <server name="FFARENA_TEST_PROFILE" value="sqlite"/>
+        <env name="FFARENA_TEST_PROFILE" value="sqlite" force="true"/>
+        <env name="DB_CONNECTION" value="sqlite" force="true"/>
+        <env name="DB_DATABASE" value=":memory:" force="true"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
@@ -33,6 +46,25 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- GAP-10 A7 — pin every notification / push flag the suite depends on,
+             with force="true" so the developer's .env can never change a test
+             outcome. Keep these in sync with config/notifications.php,
+             config/features.php (notification_*, mobile_push) and
+             config/mobile.php (PUSH_*). -->
+        <env name="NOTIFICATIONS_EMAIL" value="true" force="true"/>
+        <env name="FEATURE_NOTIFICATION_EMAIL" value="true" force="true"/>
+        <env name="FEATURE_NOTIFICATION_PUSH" value="true" force="true"/>
+        <env name="FEATURE_NOTIFICATION_SMS" value="false" force="true"/>
+        <env name="FEATURE_MOBILE_PUSH" value="true" force="true"/>
+        <env name="PUSH_FCM_ENABLED" value="false" force="true"/>
+        <env name="PUSH_APNS_ENABLED" value="false" force="true"/>
+
+        <!-- GAP-10 A1/A3 — the numbered simulation families (gameberry/core,
+             gameberry/final*, gameberry/stats) are registered in the test
+             environment so their guards can be exercised. Production stays
+             fail-closed: the flag is ignored outside local/testing. -->
+        <env name="GAMEBERRY_NUMBERED_SIMULATIONS" value="true" force="true"/>
+
         <env name="REDIS_HOST" value="127.0.0.1"/>
         <env name="REDIS_PORT" value="6379"/>
         <env name="REDIS_DB" value="15"/>

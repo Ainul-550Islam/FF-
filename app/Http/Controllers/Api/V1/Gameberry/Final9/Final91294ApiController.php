@@ -36,13 +36,7 @@ class Final91294ApiController extends Controller
             'feature' => $this->feature,
             'view' => 'gameberry.final9.feature_'. 1209,
             'service' => 'Final9'.$this->serviceNumber.'Service',
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
             'g1_must_reconcile' => true,
-            'full_file_content' => true,
-            'sequential_output' => true,
-            'zero_files_omitted' => true,
             'gameberry_features' => [
                 'dice_collection_250',
                 'lucky_dice_52_max',
@@ -120,8 +114,6 @@ class Final91294ApiController extends Controller
                 'data' => $result,
                 'message' => 'Final9 Production 1200+ Full Code No Skip Existing Logic Preserved 1294 result: '.($result['is_win'] ? 'win' : 'loss').' - Gold at stake, magic chest, Level 4 Bronze unlock, reconciliation must hold STOP if mismatch G1 - Full file content no shortening',
                 'feature' => $this->feature,
-                'production_ready' => true,
-                'no_shortening' => true,
             ]);
         } catch (\Exception $e) {
             return response()->json([

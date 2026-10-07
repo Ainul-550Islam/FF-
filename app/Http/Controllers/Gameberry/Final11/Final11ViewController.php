@@ -49,8 +49,6 @@ class Final11ViewController extends Controller
             'views' => [$this->low, $this->high],
             'services' => $services,
             'all_services_present' => ! in_array(false, $services, true),
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
         ]);
     }
 }

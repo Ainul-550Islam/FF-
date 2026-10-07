@@ -32,4 +32,23 @@ return [
     'admin_beta' => env('FEATURE_ADMIN_BETA', false),
     'api_v2' => env('FEATURE_API_V2', false),
     'observability_prometheus' => env('FEATURE_PROMETHEUS', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Numbered simulation routes (GAP-10 A3, Option B)
+    |--------------------------------------------------------------------------
+    |
+    | The template-generated `core`, `final*` and `stats` Gameberry families
+    | (routes/gameberry_numbered.php, routes/api_gameberry_numbered.php) are
+    | development-only simulations: near-identical clones, some of which move
+    | virtual gold/gems. They are hidden behind this flag and are additionally
+    | gated on the local/testing environment in bootstrap/app.php, so they can
+    | never be reached in production even if the flag is set by mistake.
+    |
+    | Default: false (fail closed). Set GAMEBERRY_NUMBERED_SIMULATIONS=true in
+    | a local/testing environment only. Full removal is tracked in
+    | FILE_AUDIT.md / docs/GAP-10-FINDINGS-REGISTER.md (A3).
+    |
+    */
+    'gameberry_numbered_simulations' => env('GAMEBERRY_NUMBERED_SIMULATIONS', false),
 ];

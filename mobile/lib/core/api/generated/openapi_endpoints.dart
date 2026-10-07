@@ -133,6 +133,34 @@ class OpenApiEndpoints {
     scope: null,
   );
 
+  static const post_api_v1_go_payments = ApiEndpoint(
+    method: 'post',
+    path: '/api/v1/go/payments',
+    tag: 'Companion Services',
+    scope: null,
+  );
+
+  static const get_api_v1_go_payments_health = ApiEndpoint(
+    method: 'get',
+    path: '/api/v1/go/payments/health',
+    tag: 'Companion Services',
+    scope: null,
+  );
+
+  static const get_api_v1_go_payments_methods = ApiEndpoint(
+    method: 'get',
+    path: '/api/v1/go/payments/methods',
+    tag: 'Companion Services',
+    scope: null,
+  );
+
+  static const get_api_v1_go_payments__payment_ = ApiEndpoint(
+    method: 'get',
+    path: '/api/v1/go/payments/{payment}',
+    tag: 'Companion Services',
+    scope: null,
+  );
+
   static const get_api_v1_leaderboards = ApiEndpoint(
     method: 'get',
     path: '/api/v1/leaderboards',
@@ -431,6 +459,55 @@ class OpenApiEndpoints {
     method: 'get',
     path: '/api/v1/players/{user}/ranking',
     tag: 'Players & Leaderboards',
+    scope: null,
+  );
+
+  static const post_api_v1_rust_security_device = ApiEndpoint(
+    method: 'post',
+    path: '/api/v1/rust/security/device',
+    tag: 'Companion Services',
+    scope: null,
+  );
+
+  static const post_api_v1_rust_security_evaluate = ApiEndpoint(
+    method: 'post',
+    path: '/api/v1/rust/security/evaluate',
+    tag: 'Companion Services',
+    scope: null,
+  );
+
+  static const get_api_v1_rust_security_health = ApiEndpoint(
+    method: 'get',
+    path: '/api/v1/rust/security/health',
+    tag: 'Companion Services',
+    scope: null,
+  );
+
+  static const post_api_v1_rust_security_identity = ApiEndpoint(
+    method: 'post',
+    path: '/api/v1/rust/security/identity',
+    tag: 'Companion Services',
+    scope: null,
+  );
+
+  static const post_api_v1_rust_security_ip = ApiEndpoint(
+    method: 'post',
+    path: '/api/v1/rust/security/ip',
+    tag: 'Companion Services',
+    scope: null,
+  );
+
+  static const get_api_v1_rust_security_providers = ApiEndpoint(
+    method: 'get',
+    path: '/api/v1/rust/security/providers',
+    tag: 'Companion Services',
+    scope: null,
+  );
+
+  static const post_api_v1_rust_security_risk_score = ApiEndpoint(
+    method: 'post',
+    path: '/api/v1/rust/security/risk-score',
+    tag: 'Companion Services',
     scope: null,
   );
 

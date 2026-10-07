@@ -22,7 +22,7 @@ class MarketingAnalyticsDashboardController
 
         // Tracked visitors and user attribution
         $totalVisitors = MarketingAttribution::query()
-            ->where('created_at', '>=', $since)
+            ->where('first_seen_at', '>=', $since)
             ->distinct('anonymous_id')
             ->count('anonymous_id');
 
@@ -33,7 +33,7 @@ class MarketingAnalyticsDashboardController
         }
 
         $totalAttributedUsers = MarketingAttribution::query()
-            ->where('created_at', '>=', $since)
+            ->where('first_seen_at', '>=', $since)
             ->whereNotNull('user_id')
             ->distinct('user_id')
             ->count('user_id');
@@ -89,7 +89,7 @@ class MarketingAnalyticsDashboardController
         // Top sources
         $topSources = MarketingAttribution::query()
             ->whereNotNull('source')
-            ->where('created_at', '>=', $since)
+            ->where('first_seen_at', '>=', $since)
             ->select('source', DB::raw('count(*) as count'))
             ->groupBy('source')
             ->orderByDesc('count')
@@ -109,7 +109,7 @@ class MarketingAnalyticsDashboardController
         // Top campaigns
         $topCampaigns = MarketingAttribution::query()
             ->whereNotNull('campaign')
-            ->where('created_at', '>=', $since)
+            ->where('first_seen_at', '>=', $since)
             ->select('campaign', DB::raw('count(*) as count'))
             ->groupBy('campaign')
             ->orderByDesc('count')
@@ -136,7 +136,7 @@ class MarketingAnalyticsDashboardController
             $key = $c->utm_campaign ?: $c->slug;
             $touches = MarketingAttribution::query()
                 ->where('campaign_key', $key)
-                ->where('created_at', '>=', $since)
+                ->where('first_seen_at', '>=', $since)
                 ->count();
 
             if ($touches === 0) {

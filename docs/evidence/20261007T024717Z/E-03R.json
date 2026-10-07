@@ -1,0 +1,20 @@
+{
+  "artifacts": {},
+  "artifacts_missing": [],
+  "claim": "RED TEST: with the guard removed the same A1 test fails \u2014 it reproduces the reported production bypass.",
+  "command": "python3 tools/prove_gap10.py --red-a1",
+  "duration_s": 6.72,
+  "environment": "2026-10-07T02:47:18+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "RED-TEST: reproduced"
+  ],
+  "id": "E-03R",
+  "log": "docs/evidence/20261007T024717Z/E-03R.log",
+  "log_lines": 6,
+  "log_sha256": "8a54d5e93a07706bc9829883de162f6603350630d6a6a5af0ab93e73ba19b4eb",
+  "missing_markers": [],
+  "note": "Falsification, not verification: the guard is deleted in a COPY of the tree and the same test file is run there. A test that cannot fail proves nothing.",
+  "started_at": "2026-10-07T02:52:47+00:00",
+  "verdict": "PROVEN"
+}

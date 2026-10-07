@@ -20,9 +20,13 @@ pub struct MatchAnomaly {
     pub evidence: serde_json::Value,
 }
 
-pub fn detect_impossible_progression(user_id: i64, current_level: i32, previous_level: i32) -> Option<MatchAnomaly> {
+pub fn detect_impossible_progression(
+    user_id: i64,
+    current_level: i32,
+    previous_level: i32,
+) -> Option<MatchAnomaly> {
     if current_level - previous_level > 1000 {
-        Some(MatchAnomaly{
+        Some(MatchAnomaly {
             match_id: format!("match-{}", user_id),
             user_id,
             anomaly_type: AnomalyType::ImpossibleProgression,

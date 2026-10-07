@@ -11,19 +11,24 @@ pub enum RiskLevel {
 impl fmt::Display for RiskLevel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RiskLevel::Low => write!(f,"low"),
-            RiskLevel::Medium => write!(f,"medium"),
-            RiskLevel::High => write!(f,"high"),
-            RiskLevel::Critical => write!(f,"critical"),
+            RiskLevel::Low => write!(f, "low"),
+            RiskLevel::Medium => write!(f, "medium"),
+            RiskLevel::High => write!(f, "high"),
+            RiskLevel::Critical => write!(f, "critical"),
         }
     }
 }
 impl RiskLevel {
     pub fn from_score(score: i32) -> Self {
-        if score >= 100 { RiskLevel::Critical }
-        else if score >= 70 { RiskLevel::High }
-        else if score >= 30 { RiskLevel::Medium }
-        else { RiskLevel::Low }
+        if score >= 100 {
+            RiskLevel::Critical
+        } else if score >= 70 {
+            RiskLevel::High
+        } else if score >= 30 {
+            RiskLevel::Medium
+        } else {
+            RiskLevel::Low
+        }
     }
     pub fn score_threshold(&self) -> i32 {
         match self {
@@ -69,9 +74,13 @@ impl Restriction {
     pub fn is_expired(&self) -> bool {
         if let Some(exp) = self.expires_at {
             chrono::Utc::now() > exp
-        } else { false }
+        } else {
+            false
+        }
     }
-    pub fn should_lift(&self) -> bool { self.is_expired() }
+    pub fn should_lift(&self) -> bool {
+        self.is_expired()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

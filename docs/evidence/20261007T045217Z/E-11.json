@@ -1,0 +1,26 @@
+{
+  "artifacts": {
+    "app/Http/Controllers/TeamController.php": "665296b839e487ebcd82d161fe1ca602cb96fb756221af71fd9237833e960960",
+    "app/Services/RegistrationService.php": "9f299f3dedcaf08aeaadc4978a271141f0bbd88a9af43b4788a3410f6874aeff",
+    "app/Services/RosterService.php": "37ed2847800a0a697c02127016c60ceb13d9d1c0e938d22b9dbb6c49faeb5b45",
+    "app/Services/TournamentParticipationService.php": "2fdedbda9aef81f0ab034ebc140717920f2b6c020dcfa4aec47c227787589e3c",
+    "tests/Feature/Concurrency/SlotClaimSerialisationTest.php": "1f4db5eab8d04520a1df235938b0d753a66acdcd1ae9e135da12f23debd3a96c"
+  },
+  "artifacts_missing": [],
+  "claim": "RED TEST: with the parent-row locks removed, the slot-claim test fails \u2014 a waiting writer takes a slot that was already taken.",
+  "command": "python3 tools/prove_gap10.py --red-f39",
+  "duration_s": 30.29,
+  "environment": "2026-10-07T04:52:19+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "RED-TEST: reproduced"
+  ],
+  "id": "E-11",
+  "log": "docs/evidence/20261007T045217Z/E-11.log",
+  "log_lines": 10,
+  "log_sha256": "bbbf768445d12c0f059abe30372b57b170da2b17e7c0ba881882d4f58bcfb7f4",
+  "missing_markers": [],
+  "note": "Runs in a scratch copy at /tmp/gap10-red-f39: the workspace keeps its locks. A pass here without a failure in the copy would mean the regression test is decoration.",
+  "started_at": "2026-10-07T04:58:22+00:00",
+  "verdict": "PROVEN"
+}

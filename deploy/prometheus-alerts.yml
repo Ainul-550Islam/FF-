@@ -1,0 +1,278 @@
+# FF Arena — Prometheus alerting rules (GAP-10 C).
+#
+# Every series referenced here is one this deployment genuinely produces:
+#
+#  * application series — rendered by App\Http\Controllers\MetricsController
+#    at GET /metrics (the metric names are the ones the code emits through
+#    App\Support\Metrics; dots become underscores and the `ffarena_` prefix is
+#    added, e.g. Metrics::increment('http.responses') ->
+#    ffarena_http_responses). Requires FEATURE_PROMETHEUS=true and
+#    METRICS_SCRAPE_TOKEN to be set on the app.
+#  * operational gauges — also from /metrics, read from the live database:
+#    ffarena_queue_depth, ffarena_queue_failed_total,
+#    ffarena_queue_oldest_seconds, ffarena_scheduler_heartbeat_age_seconds,
+#    ffarena_backup_age_seconds, ffarena_reconciliation_conflicts.
+#  * exporter series — produced by the scrape jobs in deploy/prometheus.yml
+#    (postgres_exporter: pg_up; redis_exporter: redis_up; nginx_exporter:
+#    nginx_up; node_exporter: node_filesystem_avail_bytes).
+#
+# No rule may reference a series that nothing exports: a rule that can never
+# fire is worse than no rule, because it reads as coverage. Receiver routing
+# and on-call delivery remain EXTERNAL (see docs/GAP-09-EXTERNAL-VERIFICATION-REGISTER.md,
+# E05).
+
+groups:
+
+  # ---------------------------------------------------------------------------
+  # Availability — is each component up at all?
+  # ---------------------------------------------------------------------------
+  - name: ffarena-availability
+    rules:
+      - alert: FFAppDown
+        expr: up{job="ffarena-app"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: app
+        annotations:
+          summary: "FF Arena app is not scrapeable (up == 0) for 2m"
+          description: "Prometheus cannot scrape the application. Either the web tier is down, nginx is not proxying /metrics, or FEATURE_PROMETHEUS/METRICS_SCRAPE_TOKEN changed."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFAppMetricsEndpointMissing
+        expr: absent(ffarena_up)
+        for: 5m
+        labels:
+          severity: warning
+          component: app
+        annotations:
+          summary: "The application exposes no ffarena_up series"
+          description: "The scrape succeeds but the app metric set is empty, so app-level alerts (5xx, queue, backups) are blind. Check METRICS_DRIVER=prometheus and the scrape token."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFRateLimitExporterMissing
+        expr: up{job=~"ffarena-postgres|ffarena-redis|ffarena-nginx"} == 0
+        for: 3m
+        labels:
+          severity: warning
+          component: observability
+        annotations:
+          summary: "Exporter job {{ $labels.job }} is down"
+          description: "The scrape target is unreachable, so database/redis/nginx alerts below cannot be trusted."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFDatabaseDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL is down or not accepting connections"
+          description: "postgres_exporter reports pg_up == 0. Payments, payouts and settlement writes are failing."
+          runbook: "docs/GAP-06-DISASTER-RECOVERY-RUNBOOK.md"
+
+      - alert: FFRedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Queues, cache, locks and rate limiting all degrade with Redis unavailable."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFNginxDown
+        expr: nginx_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: web
+        annotations:
+          summary: "nginx is not serving"
+          description: "nginx-prometheus-exporter reports the web tier is not accepting traffic."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+  # ---------------------------------------------------------------------------
+  # Application health — user-visible correctness
+  # ---------------------------------------------------------------------------
+  - name: ffarena-application
+    rules:
+      - alert: FFHigh5xxRate
+        expr: |
+          sum(rate(ffarena_http_responses{status="5xx"}[5m]))
+            /
+          clamp_min(sum(rate(ffarena_http_responses[5m])), 0.001)
+            > 0.02
+        for: 10m
+        labels:
+          severity: critical
+          component: app
+        annotations:
+          summary: "More than 2% of responses are 5xx for 10m"
+          description: "5xx share is {{ $value | humanizePercentage }}. Check /health/ready, the error log channel and recent deploys."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFServerErrorsBurst
+        expr: sum(increase(ffarena_http_server_errors[10m])) > 25
+        for: 5m
+        labels:
+          severity: warning
+          component: app
+        annotations:
+          summary: "Burst of server errors ({{ $value }} in 10m)"
+          description: "http.server_errors is rising faster than traffic explains."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFSlowResponses
+        expr: |
+          rate(ffarena_http_response_ms_sum[5m])
+            /
+          clamp_min(rate(ffarena_http_response_ms_count[5m]), 0.001)
+            > 1500
+        for: 15m
+        labels:
+          severity: warning
+          component: app
+        annotations:
+          summary: "Average response time above 1.5s for 15m"
+          description: "Average latency is {{ $value }}ms. Usual causes: missing index, queue backlog, database contention."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFPaymentReconciliationConflict
+        expr: ffarena_reconciliation_conflicts > 0
+        for: 15m
+        labels:
+          severity: critical
+          component: payments
+        annotations:
+          summary: "{{ $value }} tournament settlement(s) are not balanced"
+          description: "A FinancialSettlement row reports underfunded/overallocated/mismatch: collected money does not equal allocated prizes. Investigate before further payouts are released."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+  # ---------------------------------------------------------------------------
+  # Queue and scheduler
+  # ---------------------------------------------------------------------------
+  - name: ffarena-queue
+    rules:
+      - alert: FFQueueBacklog
+        expr: ffarena_queue_depth > 500
+        for: 15m
+        labels:
+          severity: warning
+          component: queue
+        annotations:
+          summary: "Queue backlog above 500 jobs for 15m"
+          description: "{{ $value }} jobs are pending. Check that workers are running and not crash-looping."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFQueueStalled
+        expr: ffarena_queue_oldest_seconds > 900
+        for: 10m
+        labels:
+          severity: critical
+          component: queue
+        annotations:
+          summary: "Oldest queued job is over 15 minutes old"
+          description: "Work is being enqueued but not processed — workers are down, wedged, or all reading a different queue."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFQueueFailures
+        expr: sum(increase(ffarena_queue_jobs_failed[15m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: queue
+        annotations:
+          summary: "Queue jobs are failing ({{ $value }} in 15m)"
+          description: "Failed jobs are accumulating. Inspect failed_jobs and the queue log channel."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFSchedulerStalled
+        expr: ffarena_scheduler_heartbeat_age_seconds > 300
+        for: 5m
+        labels:
+          severity: critical
+          component: scheduler
+        annotations:
+          summary: "Scheduler heartbeat is stale ({{ $value }}s)"
+          description: "ffarena:ops:heartbeat has not run for over 5 minutes: reconciliation, retention cleanup and settlement retries are not running."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+  # ---------------------------------------------------------------------------
+  # Data protection — the alert that catches "backups silently stopped"
+  # ---------------------------------------------------------------------------
+  - name: ffarena-backups
+    rules:
+      - alert: FFBackupTooOld
+        expr: ffarena_backup_age_seconds > 93600
+        for: 30m
+        labels:
+          severity: critical
+          component: backups
+        annotations:
+          summary: "Newest verified backup is older than 26 hours"
+          description: "The scheduled backup is not completing or not landing. RPO is being exceeded — treat as a data-loss risk."
+          runbook: "docs/GAP-06-DISASTER-RECOVERY-RUNBOOK.md"
+
+      - alert: FFNoBackupVisible
+        expr: absent(ffarena_backup_last_success_timestamp_seconds)
+        for: 30m
+        labels:
+          severity: critical
+          component: backups
+        annotations:
+          summary: "No verified backup is visible to the application"
+          description: "Either no backup has ever completed or the backup directory is unreadable. Verify with `php artisan ffarena:backup:verify`."
+          runbook: "docs/GAP-06-DISASTER-RECOVERY-RUNBOOK.md"
+
+  # ---------------------------------------------------------------------------
+  # Host resources
+  # ---------------------------------------------------------------------------
+  - name: ffarena-hosts
+    rules:
+      - alert: FFDiskSpaceLow
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+            /
+          node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+            < 0.15
+        for: 10m
+        labels:
+          severity: critical
+          component: hosts
+        annotations:
+          summary: "Less than 15% disk space left on {{ $labels.mountpoint }}"
+          description: "Free space is {{ $value | humanizePercentage }}. Database WAL archiving and backups both fail when the disk fills."
+          runbook: "docs/INCIDENT_RESPONSE.md"
+
+      - alert: FFDiskSpaceCritical
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+            /
+          node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+            < 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: hosts
+        annotations:
+          summary: "Less than 5% disk space left on {{ $labels.mountpoint }}"
+          description: "Immediate action needed: PostgreSQL will refuse writes when the volume fills."
+          runbook: "docs/GAP-06-DISASTER-RECOVERY-RUNBOOK.md"
+
+      - alert: FFPostgresConnectionsSaturated
+        expr: |
+          pg_stat_database_numbackends{datname="ffarena"}
+            /
+          clamp_min(pg_settings_max_connections, 1)
+            > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL connections above 80% of max_connections"
+          description: "Connection saturation: raise the pool limit, reduce worker concurrency, or look for leaked connections."
+          runbook: "docs/INCIDENT_RESPONSE.md"

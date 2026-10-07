@@ -4,12 +4,31 @@ namespace App\Http\Controllers;
 
 use App\Models\Payout;
 use App\Models\Tournament;
+use App\Services\AuditLogService;
 use App\Services\PayoutService;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Throwable;
 
+/**
+ * Admin payout queue (Phase 09).
+ *
+ * Every state transition here is money-adjacent, so each action runs the
+ * service call and its audit row inside ONE database transaction:
+ *
+ *  - the audit row is written with the loud `record()` API (not
+ *    `recordQuietly()`), so if the audit trail cannot be written the whole
+ *    action rolls back — a payout can never complete without the audit row
+ *    that explains who released it (GAP-10 A4),
+ *  - a failure raised by PayoutService (including the maker-checker refusal)
+ *    aborts the transaction before anything is committed.
+ *
+ * Step-up authentication (recent password confirmation) is applied to these
+ * routes by `EnsureRecentPasswordConfirmation`, not by this controller.
+ */
 class PayoutController extends Controller
 {
     public function index(Request $request): View
@@ -30,75 +49,131 @@ class PayoutController extends Controller
         return view('admin.payouts', compact('payouts', 'statuses', 'tournaments', 'status', 'tournamentId'));
     }
 
-    public function approve(Payout $payout, PayoutService $service): RedirectResponse
+    public function approve(Payout $payout, PayoutService $service, AuditLogService $audit): RedirectResponse
     {
-        try {
-            $service->approve($payout, auth()->user());
-
-            return back()->with('success', 'Payout approved.');
-        } catch (DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+        return $this->transition(
+            $payout,
+            $audit,
+            'payout.approved',
+            'Payout approved.',
+            [],
+            fn (Payout $fresh) => $service->approve($fresh, auth()->user()),
+        );
     }
 
-    public function process(Payout $payout, PayoutService $service): RedirectResponse
+    public function process(Payout $payout, PayoutService $service, AuditLogService $audit): RedirectResponse
     {
-        try {
-            $service->process($payout, auth()->user());
-
-            return back()->with('success', 'Payout processed.');
-        } catch (DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+        return $this->transition(
+            $payout,
+            $audit,
+            'payout.processed',
+            'Payout processed.',
+            [],
+            fn (Payout $fresh) => $service->process($fresh, auth()->user()),
+        );
     }
 
-    public function processOverride(Request $request, Payout $payout, PayoutService $service): RedirectResponse
+    public function processOverride(Request $request, Payout $payout, PayoutService $service, AuditLogService $audit): RedirectResponse
     {
         $request->validate(['reason' => 'required|string|min:3|max:500']);
+        $reason = (string) $request->input('reason');
 
-        try {
-            $service->processWithOverride($payout, auth()->user(), (string) $request->input('reason'));
-
-            return back()->with('success', 'Payout processed with override.');
-        } catch (DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+        return $this->transition(
+            $payout,
+            $audit,
+            'payout.override',
+            'Payout processed with override.',
+            ['reason' => $reason],
+            fn (Payout $fresh) => $service->processWithOverride($fresh, auth()->user(), $reason),
+        );
     }
 
-    public function complete(Request $request, Payout $payout, PayoutService $service): RedirectResponse
+    public function complete(Request $request, Payout $payout, PayoutService $service, AuditLogService $audit): RedirectResponse
     {
         $reference = $request->input('reference') ? (string) $request->input('reference') : null;
 
-        try {
-            $service->completeManually($payout, auth()->user(), $reference);
-
-            return back()->with('success', 'Payout marked as completed.');
-        } catch (DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+        return $this->transition(
+            $payout,
+            $audit,
+            'payout.completed',
+            'Payout marked as completed.',
+            ['reference' => $reference],
+            fn (Payout $fresh) => $service->completeManually($fresh, auth()->user(), $reference),
+        );
     }
 
-    public function fail(Request $request, Payout $payout, PayoutService $service): RedirectResponse
+    public function fail(Request $request, Payout $payout, PayoutService $service, AuditLogService $audit): RedirectResponse
     {
         $reason = (string) $request->input('reason', 'Marked failed by administrator');
 
-        try {
-            $service->markFailed($payout, auth()->user(), $reason);
-
-            return back()->with('success', 'Payout marked as failed.');
-        } catch (DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+        return $this->transition(
+            $payout,
+            $audit,
+            'payout.failed',
+            'Payout marked as failed.',
+            ['reason' => $reason],
+            fn (Payout $fresh) => $service->markFailed($fresh, auth()->user(), $reason),
+        );
     }
 
-    public function cancel(Payout $payout, PayoutService $service): RedirectResponse
+    public function cancel(Payout $payout, PayoutService $service, AuditLogService $audit): RedirectResponse
     {
-        try {
-            $service->cancel($payout, auth()->user());
+        return $this->transition(
+            $payout,
+            $audit,
+            'payout.cancelled',
+            'Payout cancelled.',
+            [],
+            fn (Payout $fresh) => $service->cancel($fresh, auth()->user()),
+        );
+    }
 
-            return back()->with('success', 'Payout cancelled.');
+    /**
+     * Run one payout transition and its audit row in a single transaction.
+     *
+     * @param  array<string, mixed>  $extraMetadata
+     * @param  callable(Payout): Payout  $action
+     */
+    protected function transition(
+        Payout $payout,
+        AuditLogService $audit,
+        string $actionName,
+        string $successMessage,
+        array $extraMetadata,
+        callable $action,
+    ): RedirectResponse {
+        $actor = auth()->user();
+
+        try {
+            DB::transaction(function () use ($payout, $audit, $actor, $action, $actionName, $extraMetadata) {
+                $fresh = $action($payout);
+
+                $audit->record($actor, $actionName, 'payout', $fresh->id, [
+                    'tournament_id' => $fresh->tournament_id,
+                    'target_user_id' => $fresh->recipient_user_id,
+                    'after' => ['status' => $fresh->status],
+                    'metadata' => array_merge([
+                        'amount_minor' => $fresh->amountMinor(),
+                        'currency' => (string) $fresh->currency,
+                        'provider' => (string) $fresh->provider,
+                        'rank' => (int) $fresh->rank,
+                        'approved_by' => $fresh->approved_by,
+                        'processed_by' => $fresh->processed_by,
+                    ], $extraMetadata),
+                ]);
+            });
+
+            return back()->with('success', $successMessage);
         } catch (DomainException $e) {
             return back()->with('error', $e->getMessage());
+        } catch (Throwable $e) {
+            // A non-domain failure (including an audit write failure) has
+            // already rolled the transaction back. Surface it instead of
+            // pretending the payout moved.
+            report($e);
+
+            return back()->with('error', 'The payout action could not be completed and was rolled back.');
         }
     }
+
 }

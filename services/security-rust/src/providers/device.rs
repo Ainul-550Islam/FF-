@@ -1,14 +1,20 @@
-use super::{FraudProvider, FraudCheckRequest, FraudCheckResponse, device_label_from_ua};
+use super::{device_label_from_ua, FraudCheckRequest, FraudCheckResponse, FraudProvider};
 use crate::domain::RiskLevel;
 
 pub struct DeviceProvider;
 impl DeviceProvider {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 }
 
 impl FraudProvider for DeviceProvider {
-    fn key(&self) -> &str { "device" }
-    fn label(&self) -> &str { "Device Intelligence" }
+    fn key(&self) -> &str {
+        "device"
+    }
+    fn label(&self) -> &str {
+        "Device Intelligence"
+    }
     fn check(&self, req: &FraudCheckRequest) -> FraudCheckResponse {
         let mut score = 0;
         let mut reason = "clean_device".to_string();
@@ -42,15 +48,21 @@ impl FraudProvider for DeviceProvider {
 
         let risk_level = RiskLevel::from_score(score);
 
-        FraudCheckResponse{
+        FraudCheckResponse {
             provider: self.key().to_string(),
             score,
             risk_level,
             reason_code: reason,
             confidence,
-            evidence: Some(serde_json::json!({"user_agent": req.user_agent, "device_id": req.device_id})),
+            evidence: Some(
+                serde_json::json!({"user_agent": req.user_agent, "device_id": req.device_id}),
+            ),
         }
     }
-    fn capabilities(&self) -> Vec<String> { vec!["device_check".to_string(), "bot_detection".to_string()] }
-    fn metadata(&self) -> serde_json::Value { serde_json::json!({"type": "device", "version": "1.0"}) }
+    fn capabilities(&self) -> Vec<String> {
+        vec!["device_check".to_string(), "bot_detection".to_string()]
+    }
+    fn metadata(&self) -> serde_json::Value {
+        serde_json::json!({"type": "device", "version": "1.0"})
+    }
 }

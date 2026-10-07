@@ -9,7 +9,7 @@ pub struct Metrics {
 
 impl Metrics {
     pub fn new() -> Self {
-        Self{
+        Self {
             counters: Arc::new(Mutex::new(HashMap::new())),
             gauges: Arc::new(Mutex::new(HashMap::new())),
         }

@@ -78,7 +78,7 @@ flutter build ios --release --flavor prod \
   --dart-define=FFARENA_ENV=production
 ```
 
-## 4. Android release signing
+## 4. Android release signing (fail-closed since GAP-10 D)
 
 Signing reads credentials from the environment or Gradle properties — never
 from committed files:
@@ -88,11 +88,36 @@ export FFARENA_KEYSTORE_PATH=/secure/release.keystore
 export FFARENA_KEYSTORE_PASSWORD=...
 export FFARENA_KEY_ALIAS=upload
 export FFARENA_KEY_PASSWORD=...
-flutter build apk --release --flavor prod ...
+export FFARENA_APP_LINK_HOST=ffarena.example.com    # a real host, not a placeholder
+flutter build appbundle --release --flavor prod     # store artifact
 ```
 
-When the credentials are absent, the release build falls back to debug
-signing **for local verification only** — never for store uploads.
+### The gate
+
+`android/app/build.gradle.kts` **refuses** a release build it cannot sign.
+The previous behaviour — silently falling back to the debug key — produced an
+artifact that looks shippable, is rejected by Play, and permanently breaks the
+upgrade path of anyone who installed it. That failure mode is now impossible:
+
+| Situation | Result |
+| --- | --- |
+| All four signing secrets present, real App Link host | Signed release build |
+| Any signing secret missing | **Build fails** with the list of missing variables |
+| `FFARENA_APP_LINK_HOST` missing or still `*.example.com` | **Build fails** — deep links must resolve to a host you own |
+| `applicationId` / `namespace` still `com.example.*` | **Build fails** at configuration time |
+| `FFARENA_ALLOW_DEBUG_SIGNED_RELEASE=true` | Debug-signed artifact is produced and the build logs `NOT FOR DISTRIBUTION` |
+| Unset (the default) | Fail closed |
+
+Local verification of a release build is therefore an explicit, deliberate act:
+
+```bash
+FFARENA_ALLOW_DEBUG_SIGNED_RELEASE=true flutter build apk --release --flavor dev
+```
+
+**Never upload an artifact built that way.** The upload key must live in an
+HSM/KMS with an offline-escrowed backup (E19 in
+`docs/GAP-09-EXTERNAL-VERIFICATION-REGISTER.md`), and until those credentials
+exist and a signed upload has been accepted, store publication is not verified.
 
 ## 5. iOS signing & capabilities
 
@@ -120,7 +145,26 @@ See `docs/MOBILE_DEEP_LINKS.md`. In short:
 
 See `docs/mobile/releases/CHANGELOG.md` and `RELEASE_TEMPLATE.md`.
 
-## 8. Limitations of this sandbox
+## 8. Release runbooks (step by step)
+
+This guide is the reference for *what* a release needs. The two runbooks are the
+operational procedure for actually cutting one, and they are the documents to
+follow in order:
+
+* `docs/MOBILE-ANDROID-RELEASE-RUNBOOK.md` — Play Store: the Gradle gate and
+  the five names it requires, keystore custody, staged rollout, rollback.
+* `docs/MOBILE-IOS-RELEASE-RUNBOOK.md` — App Store: the signing model, the Mac
+  checklist (the Android gate is automated; the iOS gate is a process), phased
+  release, rollback.
+
+Both end with a **"what this runbook does NOT verify"** section. Read it before
+promising a date: it names the things this repository cannot prove — E19
+(signing-key custody in an HSM/KMS), E25 (a live Prometheus target), E26 (a load
+test), E27 (the incident rota), a real device matrix, and the store review
+outcome — all of which are still PENDING in
+`docs/GAP-09-EXTERNAL-VERIFICATION-REGISTER.md`.
+
+## 9. Limitations of this sandbox
 
 This sandbox has no Android SDK, Xcode, Chrome or GTK toolchains
 (`flutter doctor` reports them missing), so no device/desktop binary was

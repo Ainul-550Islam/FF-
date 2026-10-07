@@ -91,11 +91,7 @@ class Final1072Controller extends Controller
             'success' => true,
             'data' => $stats,
             'feature' => 1072,
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
             'g1_must_reconcile' => true,
-            'full_file_content' => true,
         ]);
     }
 }

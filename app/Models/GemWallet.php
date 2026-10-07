@@ -6,6 +6,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Virtual gem wallet (Gameberry economy).
+ *
+ * Concurrency (GAP-10 A2): see App\Models\GoldWallet — `$this->lockForUpdate()`
+ * on a model instance executes no query at all, so `addGems()`/`spendGems()`
+ * had no row lock and concurrent spends could double-spend gems. The locked
+ * row is now fetched inside the transaction and used for the balance check
+ * and the write.
+ */
 class GemWallet extends Model
 {
     use HasFactory;
@@ -42,22 +51,23 @@ class GemWallet extends Model
         }
 
         return DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
-            $this->lockForUpdate();
-            $this->refresh();
+            $wallet = $this->lockRow();
 
-            $this->gem_balance += $amount;
-            $this->total_earned += $amount;
+            $wallet->gem_balance += $amount;
+            $wallet->total_earned += $amount;
             if ($type === 'purchase') {
-                $this->total_purchased += $amount;
+                $wallet->total_purchased += $amount;
             }
-            $this->save();
+            $wallet->save();
+
+            $this->syncFrom($wallet);
 
             return GemTransaction::create([
-                'user_id' => $this->user_id,
-                'gem_wallet_id' => $this->id,
+                'user_id' => $wallet->user_id,
+                'gem_wallet_id' => $wallet->id,
                 'type' => $type,
                 'amount' => $amount,
-                'balance_after' => $this->gem_balance,
+                'balance_after' => $wallet->gem_balance,
                 'reference_type' => $referenceType,
                 'reference_id' => $referenceId,
                 'description' => $description,
@@ -72,28 +82,51 @@ class GemWallet extends Model
         }
 
         return DB::transaction(function () use ($amount, $type, $referenceType, $referenceId, $description) {
-            $this->lockForUpdate();
-            $this->refresh();
+            $wallet = $this->lockRow();
 
-            if ($this->gem_balance < $amount) {
+            if ($wallet->gem_balance < $amount) {
                 throw new \Exception('Insufficient gems');
             }
 
-            $this->gem_balance -= $amount;
-            $this->total_spent += $amount;
-            $this->save();
+            $wallet->gem_balance -= $amount;
+            $wallet->total_spent += $amount;
+            $wallet->save();
+
+            $this->syncFrom($wallet);
 
             return GemTransaction::create([
-                'user_id' => $this->user_id,
-                'gem_wallet_id' => $this->id,
+                'user_id' => $wallet->user_id,
+                'gem_wallet_id' => $wallet->id,
                 'type' => $type,
                 'amount' => -$amount,
-                'balance_after' => $this->gem_balance,
+                'balance_after' => $wallet->gem_balance,
                 'reference_type' => $referenceType,
                 'reference_id' => $referenceId,
                 'description' => $description,
             ]);
         });
+    }
+
+    /**
+     * SELECT … FOR UPDATE the wallet row. Must be called inside a transaction.
+     */
+    protected function lockRow(): static
+    {
+        /** @var static $wallet */
+        $wallet = static::query()
+            ->whereKey($this->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        return $wallet;
+    }
+
+    /**
+     * Keep the in-memory instance in sync with the committed row.
+     */
+    protected function syncFrom(self $wallet): void
+    {
+        $this->setRawAttributes($wallet->getAttributes(), true);
     }
 
     public function hasEnoughGems(int $amount): bool

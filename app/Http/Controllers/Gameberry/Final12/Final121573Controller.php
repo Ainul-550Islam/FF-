@@ -95,11 +95,7 @@ class Final121573Controller extends Controller
             'success' => true,
             'data' => $stats,
             'feature' => $this->feature,
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
             'g1_must_reconcile' => true,
-            'full_file_content' => true,
         ]);
     }
 }

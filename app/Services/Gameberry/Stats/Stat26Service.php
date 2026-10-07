@@ -18,9 +18,6 @@ class Stat26Service
             'value' => 26 * 100,
             'growth' => 26 * 5,
             'percent' => 26 * 2,
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
         ];
     }
 

@@ -47,6 +47,38 @@ return [
             'report' => false,
         ],
 
+        /*
+        |------------------------------------------------------------------
+        | Offsite backup target (GAP-10 C)
+        |------------------------------------------------------------------
+        |
+        | The disk the backup engine copies the encrypted snapshot to and
+        | verifies by checksum. The default is a plain local path so a host
+        | with no object-storage package and no credentials still has an
+        | offsite copy (attached volume, NFS/CIFS mount, rclone remote) —
+        | point BACKUP_OFFSITE_ROOT at a path that outlives the host.
+        |
+        | Set BACKUP_OFFSITE_DRIVER=s3 to use object storage; that needs
+        | `composer require league/flysystem-aws-s3-v3` plus the keys below
+        | (the deployment gate refuses to promote a release with
+        | BACKUP_OFFSITE_REQUIRED=true and no bucket).
+        |
+        */
+
+        'backup-offsite' => [
+            'driver' => env('BACKUP_OFFSITE_DRIVER', 'local'),
+            'root' => env('BACKUP_OFFSITE_ROOT', storage_path('app/offsite-backups')),
+            'key' => env('BACKUP_OFFSITE_KEY', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('BACKUP_OFFSITE_SECRET', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('BACKUP_OFFSITE_REGION', env('AWS_DEFAULT_REGION')),
+            'bucket' => env('BACKUP_OFFSITE_BUCKET', env('AWS_BUCKET')),
+            'endpoint' => env('BACKUP_OFFSITE_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env('BACKUP_OFFSITE_USE_PATH_STYLE_ENDPOINT', false),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

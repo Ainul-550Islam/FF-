@@ -23,12 +23,8 @@ class Final1153Service
             'dice' => app(DiceCollectionService::class)->getUserCollection($userId),
             'league' => app(LeagueService::class)->getUserLeague($userId)?->load('league'),
             'level' => app(LevelService::class)->getLevelStats($userId),
-            'description' => 'Final8 1153 - 250+ dice max 52 Facebook exchange lucky dice, 6-step league Bronze Titan Top 20% Top 40 Titan badges Level 4 unlock, Game Buddies max 25 private table code/link challenge team-up classic/master/quick chat emojis weekly events gold at stake magic chest video ads free gold gems spin2win auto mode hide online status notify friends Level 4 Bronze unlock referral BGI20 ₹25 scratch cards reconciliation STOP if mismatch G1 - No shortening - Existing logic preserved - Full file content - Production ready 100%',
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
+            'description' => 'Final8 1153 - 250+ dice max 52 Facebook exchange lucky dice, 6-step league Bronze Titan Top 20% Top 40 Titan badges Level 4 unlock, Game Buddies max 25 private table code/link challenge team-up classic/master/quick chat emojis weekly events gold at stake magic chest video ads free gold gems spin2win auto mode hide online status notify friends Level 4 Bronze unlock referral BGI20 ₹25 scratch cards reconciliation STOP if mismatch G1 - No shortening - Existing logic preserved - Full file content - ',
             'g1_must_reconcile' => true,
-            'full_file_content' => true,
         ];
     }
 
@@ -40,7 +36,7 @@ class Final1153Service
                 throw new \Exception('Insufficient gold - gold at stake - need enough gold for bet - gold wallets gem wallets reconciliation must hold');
             }
             $betTx = $goldService->placeBet($userId, $bet, 'FINAL7_1153');
-            $isWin = (bool) rand(0, 1);
+            $isWin = (bool) random_int(0, 1);
             if ($isWin) {
                 $goldService->winGold($userId, $bet * 2, 'FINAL7_1153');
                 $level = app(LevelService::class)->addWin($userId);
@@ -54,7 +50,7 @@ class Final1153Service
                 throw new \Exception('Reconciliation failed STOP G1 - financial totals must reconcile - difference detected - do not declare complete - must STOP');
             }
 
-            return ['user_id' => $userId, 'mode' => $mode, 'bet' => $bet, 'is_win' => $isWin, 'level' => $level, 'league' => $league, 'reconcile' => $reconcile, 'bet_tx' => $betTx, 'feature_1153' => true, 'full_code' => true, 'no_shortening' => true];
+            return ['user_id' => $userId, 'mode' => $mode, 'bet' => $bet, 'is_win' => $isWin, 'level' => $level, 'league' => $league, 'reconcile' => $reconcile, 'bet_tx' => $betTx, 'feature_1153' => true, 'full_code' => true];
         });
     }
 }

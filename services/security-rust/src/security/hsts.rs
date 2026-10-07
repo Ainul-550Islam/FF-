@@ -1,12 +1,11 @@
-use warp::{Filter, Rejection, Reply};
 use std::collections::HashMap;
+use warp::{Filter, Rejection, Reply};
 
 /// HSTS (HTTP Strict Transport Security) enforcement
 /// - max-age=31536000 (1 year)
 /// - includeSubDomains
 /// - preload (for HSTS preload list submission)
 /// - Enforces HTTPS, prevents downgrade attacks
-
 pub const HSTS_HEADER_VALUE: &str = "max-age=31536000; includeSubDomains; preload";
 pub const HSTS_MAX_AGE: u32 = 31536000; // 1 year in seconds
 
@@ -21,7 +20,6 @@ pub const HSTS_MAX_AGE: u32 = 31536000; // 1 year in seconds
 /// - Cross-Origin-Opener-Policy: same-origin
 /// - Cross-Origin-Embedder-Policy: require-corp
 /// - Permissions-Policy: geolocation=(), microphone=(), camera=()
-
 pub fn hsts_headers() -> HashMap<&'static str, &'static str> {
     let mut headers = HashMap::new();
     headers.insert("Strict-Transport-Security", HSTS_HEADER_VALUE);
@@ -29,11 +27,17 @@ pub fn hsts_headers() -> HashMap<&'static str, &'static str> {
     headers.insert("X-Frame-Options", "DENY");
     headers.insert("X-XSS-Protection", "0");
     headers.insert("Referrer-Policy", "no-referrer");
-    headers.insert("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+    headers.insert(
+        "Content-Security-Policy",
+        "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+    );
     headers.insert("X-Permitted-Cross-Domain-Policies", "none");
     headers.insert("Cross-Origin-Opener-Policy", "same-origin");
     headers.insert("Cross-Origin-Embedder-Policy", "require-corp");
-    headers.insert("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+    headers.insert(
+        "Permissions-Policy",
+        "geolocation=(), microphone=(), camera=()",
+    );
     headers
 }
 
@@ -60,7 +64,8 @@ pub fn apply_hsts_headers(reply: impl Reply + 'static) -> impl Reply {
 /// For submission to https://hstspreload.org/
 pub fn is_hsts_preload_compliant(headers: &HashMap<String, String>) -> Result<(), String> {
     // Check HSTS header exists
-    let hsts = headers.get("Strict-Transport-Security")
+    let hsts = headers
+        .get("Strict-Transport-Security")
         .or_else(|| headers.get("strict-transport-security"))
         .ok_or("Missing Strict-Transport-Security header")?;
 
@@ -70,15 +75,22 @@ pub fn is_hsts_preload_compliant(headers: &HashMap<String, String>) -> Result<()
     }
 
     // Parse max-age
-    let max_age_str = hsts.split("max-age=").nth(1)
+    let max_age_str = hsts
+        .split("max-age=")
+        .nth(1)
         .and_then(|s| s.split(';').next())
         .unwrap_or("0");
-    
-    let max_age: u32 = max_age_str.trim().parse()
+
+    let max_age: u32 = max_age_str
+        .trim()
+        .parse()
         .map_err(|_| "Invalid max-age value")?;
 
     if max_age < 31536000 {
-        return Err(format!("HSTS max-age must be at least 31536000, got {}", max_age));
+        return Err(format!(
+            "HSTS max-age must be at least 31536000, got {}",
+            max_age
+        ));
     }
 
     // Must have includeSubDomains
@@ -100,29 +112,31 @@ pub fn enforce_https() -> impl Filter<Extract = (), Error = Rejection> + Clone {
     warp::header::optional::<String>("x-forwarded-proto")
         .and(warp::header::optional::<String>("x-forwarded-ssl"))
         .and(warp::path::full())
-        .and_then(|proto: Option<String>, ssl: Option<String>, path: warp::path::FullPath| async move {
-            // Allow health check over HTTP for load balancer
-            if path.as_str() == "/health/live" || path.as_str() == "/health" {
-                return Ok(());
-            }
-
-            // Check if behind proxy with X-Forwarded-Proto
-            if let Some(p) = proto {
-                if p.to_lowercase() == "http" {
-                    // In production, should reject or redirect
-                    // For API, return error
-                    return Err(warp::reject::custom(HttpsRequired));
+        .and_then(
+            |proto: Option<String>, ssl: Option<String>, path: warp::path::FullPath| async move {
+                // Allow health check over HTTP for load balancer
+                if path.as_str() == "/health/live" || path.as_str() == "/health" {
+                    return Ok(());
                 }
-            }
 
-            if let Some(s) = ssl {
-                if s.to_lowercase() == "off" {
-                    return Err(warp::reject::custom(HttpsRequired));
+                // Check if behind proxy with X-Forwarded-Proto
+                if let Some(p) = proto {
+                    if p.to_lowercase() == "http" {
+                        // In production, should reject or redirect
+                        // For API, return error
+                        return Err(warp::reject::custom(HttpsRequired));
+                    }
                 }
-            }
 
-            Ok(())
-        })
+                if let Some(s) = ssl {
+                    if s.to_lowercase() == "off" {
+                        return Err(warp::reject::custom(HttpsRequired));
+                    }
+                }
+
+                Ok(())
+            },
+        )
         .untuple_one()
 }
 
@@ -152,10 +166,7 @@ pub fn generate_csp_nonce() -> String {
     use rand::RngCore;
     let mut nonce_bytes = [0u8; 16];
     rand::thread_rng().fill_bytes(&mut nonce_bytes);
-    base64::Engine::encode(
-        &base64::engine::general_purpose::STANDARD,
-        nonce_bytes,
-    )
+    base64::Engine::encode(&base64::engine::general_purpose::STANDARD, nonce_bytes)
 }
 
 /// CSP header with nonce support
@@ -220,10 +231,7 @@ pub fn validate_secret_strength(secret: &str, name: &str) -> Result<(), String> 
 
     // Check low entropy
     if is_low_entropy(secret) {
-        return Err(format!(
-            "{} is too weak, low entropy",
-            name
-        ));
+        return Err(format!("{} is too weak, low entropy", name));
     }
 
     Ok(())
@@ -268,7 +276,10 @@ mod tests {
 
     #[test]
     fn test_hsts_header() {
-        assert_eq!(HSTS_HEADER_VALUE, "max-age=31536000; includeSubDomains; preload");
+        assert_eq!(
+            HSTS_HEADER_VALUE,
+            "max-age=31536000; includeSubDomains; preload"
+        );
         assert_eq!(HSTS_MAX_AGE, 31536000);
     }
 
@@ -297,7 +308,9 @@ mod tests {
         assert!(validate_secret_strength("short", "TEST").is_err());
         assert!(validate_secret_strength("secret", "TEST").is_err());
         assert!(validate_secret_strength("0123456789abcdef0123456789abcdef", "TEST").is_err());
-        assert!(validate_secret_strength("a_very_strong_secret_key_32_chars_long!", "TEST").is_ok());
+        assert!(
+            validate_secret_strength("a_very_strong_secret_key_32_chars_long!", "TEST").is_ok()
+        );
     }
 
     #[test]

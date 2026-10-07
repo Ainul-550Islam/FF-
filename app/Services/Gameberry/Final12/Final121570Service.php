@@ -70,12 +70,8 @@ class Final121570Service
             'demotion_top_40' => self::TOP_40,
             'level_4_bronze' => self::LEVEL_4_BRONZE,
             'level_12_titan' => self::LEVEL_12_TITAN,
-            'description' => 'Final12 Production 1500+ Full Code No Skip Existing Logic Preserved 1570 - Gameberry 250+ dice collection max 52 Facebook-only exchange lucky dice gem reward, 6-step league Bronze Silver Gold Platinum Diamond Titan Top 20% promotion Top 40 demotion Titan badges Level 4 Bronze unlock Level 12 Titan unlock, Game Buddies max 25 private table code/link sharing challenge button team-up mode classic/master/quick chat emojis weekly events gold at stake magic chest video ads free gold gems spin2win auto mode hide online status notify friends referral BGI20 Rs25 scratch cards gold wallets gem wallets reconciliation financial totals must reconcile G1 must STOP if mismatch - Full file content no shortening - Existing logic preserved - Production ready 100%',
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
+            'description' => 'Final12 Production 1500+ Full Code No Skip Existing Logic Preserved 1570 - Gameberry 250+ dice collection max 52 Facebook-only exchange lucky dice gem reward, 6-step league Bronze Silver Gold Platinum Diamond Titan Top 20% promotion Top 40 demotion Titan badges Level 4 Bronze unlock Level 12 Titan unlock, Game Buddies max 25 private table code/link sharing challenge button team-up mode classic/master/quick chat emojis weekly events gold at stake magic chest video ads free gold gems spin2win auto mode hide online status notify friends referral BGI20 Rs25 scratch cards gold wallets gem wallets reconciliation financial totals must reconcile G1 must STOP if mismatch - Full file content no shortening - Existing logic preserved - ',
             'g1_must_reconcile' => true,
-            'full_file_content' => true,
         ];
     }
 
@@ -93,7 +89,7 @@ class Final121570Service
             }
 
             $betTx = $goldService->placeBet($userId, $bet, 'FINAL12_1570');
-            $isWin = (bool) rand(0, 1);
+            $isWin = (bool) random_int(0, 1);
 
             if ($isWin) {
                 $winAmount = $bet * 2;
@@ -133,8 +129,6 @@ class Final121570Service
                 'bet_tx' => $betTx,
                 'feature_1570' => true,
                 'full_code' => true,
-                'no_shortening' => true,
-                'existing_logic_preserved' => true,
             ];
         });
     }

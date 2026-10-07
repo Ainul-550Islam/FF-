@@ -16,11 +16,10 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!-- R9 lives inside tests/Feature and is picked up above; listing it
+             twice makes PHPUnit emit "already added to test suite" warnings. -->
         <testsuite name="Integration">
             <directory>tests/Integration</directory>
-        </testsuite>
-        <testsuite name="R9_PostgreSQL">
-            <directory>tests/Feature/R9</directory>
         </testsuite>
     </testsuites>
     <source>
@@ -35,7 +34,18 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="pgsql" force="false"/>
+        <!-- The dialect this profile proves. `force="true"` on <env> is not
+             enough: PHPUnit writes $_ENV and putenv(), and Laravel's env()
+             reads $_SERVER first, which PHP fills from the process environment
+             at startup. The <server> entry is what actually pins it, so a
+             leaked DB_CONNECTION cannot turn this profile into a different
+             database reporting a green run. FFARENA_TEST_PROFILE lets the
+             suite assert, from inside, that the pin held
+             (tests/Feature/ProfilePinningTest.php). -->
+        <server name="DB_CONNECTION" value="pgsql"/>
+        <server name="FFARENA_TEST_PROFILE" value="pgsql"/>
+        <env name="FFARENA_TEST_PROFILE" value="pgsql" force="true"/>
+        <env name="DB_CONNECTION" value="pgsql" force="true"/>
         <env name="DB_HOST" value="127.0.0.1" force="false"/>
         <env name="DB_PORT" value="5432" force="false"/>
         <env name="DB_DATABASE" value="ffarena_test" force="false"/>
@@ -48,5 +58,24 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- GAP-10 A7 — pin every notification / push flag the suite depends on,
+             with force="true" so the developer's .env can never change a test
+             outcome. Keep these in sync with config/notifications.php,
+             config/features.php (notification_*, mobile_push) and
+             config/mobile.php (PUSH_*). -->
+        <env name="NOTIFICATIONS_EMAIL" value="true" force="true"/>
+        <env name="FEATURE_NOTIFICATION_EMAIL" value="true" force="true"/>
+        <env name="FEATURE_NOTIFICATION_PUSH" value="true" force="true"/>
+        <env name="FEATURE_NOTIFICATION_SMS" value="false" force="true"/>
+        <env name="FEATURE_MOBILE_PUSH" value="true" force="true"/>
+        <env name="PUSH_FCM_ENABLED" value="false" force="true"/>
+        <env name="PUSH_APNS_ENABLED" value="false" force="true"/>
+
+        <!-- GAP-10 A1/A3 — the numbered simulation families (gameberry/core,
+             gameberry/final*, gameberry/stats) are registered in the test
+             environment so their guards can be exercised. Production stays
+             fail-closed: the flag is ignored outside local/testing. -->
+        <env name="GAMEBERRY_NUMBERED_SIMULATIONS" value="true" force="true"/>
+
     </php>
 </phpunit>

@@ -1,0 +1,14 @@
+{
+  "age": "1.2.1",
+  "captured_at": "2026-10-07T02:47:17+00:00",
+  "composer": "Composer version 2.10.3 2026-08-27 13:34:23",
+  "host": "Linux-6.1.158+-x86_64-with-glibc2.41",
+  "php": "PHP 8.4.26 (cli) (built: Sep 24 2026 17:16:18) (NTS)",
+  "phpunit": "PHPUnit 11.5.56 by Sebastian Bergmann and contributors.",
+  "postgres_client": "pg_isready (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)",
+  "postgres_server": "psql (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)",
+  "python": "3.13.14",
+  "redis": "redis-cli 8.0.2",
+  "tree_files": "3541",
+  "tree_fingerprint": "e2cce757689857747abced89b33ff1db499fcc13c138c11dbb3b661e702461a6"
+}

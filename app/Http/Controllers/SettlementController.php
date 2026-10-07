@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Payout;
 use App\Models\Tournament;
 use App\Services\PrizeDistributionService;
 use App\Services\ReconciliationService;
@@ -37,7 +38,29 @@ class SettlementController extends Controller
         $distribution = $prizeService->latestDistribution($tournament);
         $adjustments = $tournament->settlementAdjustments()->latest()->get();
 
-        return view('admin.settlement', compact('tournament', 'summary', 'tiers', 'distribution', 'adjustments'));
+        // The view renders the payout ledger for the allocation and the frozen
+        // settlement record, so both must be passed alongside the summary.
+        // Missing them surfaced as a 500 ("Undefined variable $payouts").
+        $payouts = $distribution !== null
+            ? $distribution->payouts()->with(['recipient', 'team'])->orderBy('rank')->get()
+            : Payout::query()->where('tournament_id', $tournament->id)->with(['recipient', 'team'])->orderBy('rank')->get();
+
+        $settlement = $tournament->financialSettlement()->first();
+
+        // The settlement form only renders while the tiers are still editable
+        // (same rule the service enforces in saveTiers()).
+        $tiersEditable = $prizeService->tiersEditable($tournament);
+
+        return view('admin.settlement', compact(
+            'tournament',
+            'summary',
+            'tiers',
+            'distribution',
+            'adjustments',
+            'payouts',
+            'settlement',
+            'tiersEditable',
+        ));
     }
 
     public function showByTournament(

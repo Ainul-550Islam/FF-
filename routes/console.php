@@ -10,6 +10,8 @@ use App\Console\Commands\CleanupOtpCommand;
 use App\Console\Commands\CleanupWebhookDeliveriesCommand;
 use App\Console\Commands\CleanupWebhookEventsCommand;
 use App\Console\Commands\OpsHeartbeatCommand;
+use App\Console\Commands\ReconcileGameSessions;
+use App\Console\Commands\ReconcilePendingSettlements;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -32,6 +34,19 @@ Artisan::command('inspire', function () {
 
 // Scheduler heartbeat for readiness/alerting (every minute).
 Schedule::command(OpsHeartbeatCommand::class)->everyMinute()->withoutOverlapping();
+
+// GAP-10 A8 — settlement and Gameberry session reconciliation. Both commands
+// dispatch queued work (never money movement) and are bounded per run, so a
+// backlog drains gradually instead of flooding the queue. onOneServer keeps a
+// multi-node scheduler from working the same backlog twice, and
+// withoutOverlapping keeps a slow run from stacking onto the next tick.
+Schedule::command(ReconcilePendingSettlements::class)->hourly()
+    ->onOneServer()
+    ->withoutOverlapping();
+
+Schedule::command(ReconcileGameSessions::class)->everyThirtyMinutes()
+    ->onOneServer()
+    ->withoutOverlapping();
 
 // Backup (daily, off-peak) + weekly verification.
 Schedule::command(BackupCreateCommand::class)->dailyAt('03:00')->withoutOverlapping();

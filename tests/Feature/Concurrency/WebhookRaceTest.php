@@ -191,6 +191,12 @@ class WebhookRaceTest extends TestCase
             DB::table('users')->where('email', 'like', 'webhookrace-%@ffarena.local')->delete();
         }
 
+        // Forked children run outside any test transaction and therefore
+        // commit rows (marketing touches, notifications, webhook records)
+        // that the rest of the suite can see. Wipe the schema so no later
+        // class reads stale rows — see finding F-16.
+        $this->artisan('migrate:fresh');
+
         parent::tearDown();
     }
 }

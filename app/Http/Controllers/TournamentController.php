@@ -31,11 +31,15 @@ class TournamentController extends Controller
         // default listing behaviour is unchanged when no filters are given.
         $search = trim((string) $request->query('q', ''));
         if ($search !== '') {
-            // Escape LIKE wildcards so user input can never broaden the match.
-            $escaped = addcslashes($search, '%_\\');
-            $query->where(function ($builder) use ($escaped) {
-                $builder->where('name', 'like', "%{$escaped}%")
-                    ->orWhere('map', 'like', "%{$escaped}%");
+            // Case-insensitive on every dialect: PostgreSQL's `like` is
+            // case-sensitive while SQLite's is not, so compare lowercased
+            // columns against a lowercased pattern instead of relying on the
+            // driver's collation. LIKE wildcards stay escaped so user input
+            // can never broaden the match.
+            $needle = '%'.mb_strtolower(addcslashes($search, '%_\\')).'%';
+            $query->where(function ($builder) use ($needle) {
+                $builder->whereRaw('lower(name) like ?', [$needle])
+                    ->orWhereRaw('lower(map) like ?', [$needle]);
             });
         }
 

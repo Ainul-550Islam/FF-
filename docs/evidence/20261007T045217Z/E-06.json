@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "app/Http/Middleware/SecurityHeaders.php": "95437b217994d36d041c9349ac5e7c03ca2d03305af3e6214424036604b226a8",
+    "config/observability.php": "1a66b9a97a8511ea5209f305b9cef879454ecf8007661e4fb43bc2c038a3d81e",
+    "routes/health.php": "26c32ddefa86867d96c1e9b0202853ffa7dc94429faca9262c69e25cc0cb7ed4"
+  },
+  "artifacts_missing": [],
+  "claim": "The metrics endpoint fails closed without its feature flag and token, and exports the gauges the alerts use.",
+  "command": "php vendor/bin/phpunit -c phpunit.pgsql.xml --filter PrometheusMetricsTest|SecurityHeadersCspTest",
+  "duration_s": 5.07,
+  "environment": "2026-10-07T04:52:19+00:00",
+  "exit_code": 0,
+  "expected_markers": [
+    "OK"
+  ],
+  "id": "E-06",
+  "log": "docs/evidence/20261007T045217Z/E-06.log",
+  "log_lines": 10,
+  "log_sha256": "158a4896befea2860c45533c3d23f724de0fdea8482c7b6914e55af3a645f7ef",
+  "missing_markers": [],
+  "note": "Alert rules are generated from the exported metric names only (F-23); this proof covers the exporter, not a live Prometheus scrape target (that is E25, external).",
+  "started_at": "2026-10-07T04:59:19+00:00",
+  "verdict": "PROVEN"
+}

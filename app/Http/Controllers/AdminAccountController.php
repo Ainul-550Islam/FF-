@@ -23,10 +23,14 @@ class AdminAccountController extends Controller
         $query = User::query();
 
         if ($q !== '') {
-            $query->where(function ($sq) use ($q) {
-                $sq->where('name', 'like', "%{$q}%")
-                    ->orWhere('username', 'like', "%{$q}%")
-                    ->orWhere('email', 'like', "%{$q}%");
+            // Case-insensitive on every dialect (PostgreSQL `like` is
+            // case-sensitive, SQLite's is not) and wildcard-safe: the needle
+            // is lowercased and LIKE metacharacters are escaped.
+            $needle = '%'.mb_strtolower(addcslashes($q, '%_\\')).'%';
+            $query->where(function ($sq) use ($needle) {
+                $sq->whereRaw('lower(name) like ?', [$needle])
+                    ->orWhereRaw('lower(username) like ?', [$needle])
+                    ->orWhereRaw('lower(email) like ?', [$needle]);
             });
         }
 

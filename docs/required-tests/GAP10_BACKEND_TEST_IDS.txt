@@ -1,0 +1,149 @@
+# FF Arena — required-test manifest (GAP-10)
+#
+# Format (one entry per line, `#` starts a comment):
+#
+#   <ID> | <phpunit --filter value> | <spec row / source> | <why it is required> [| max_skips=N (justification)]
+#
+# `max_skips` is only for a test class that deliberately covers two dialects: it
+# then necessarily skips the half that does not apply to the profile being run.
+# The budget is a maximum, not a licence — a NEW skip beyond it still fails the
+# gate — and the justification must name the dialect. Every other entry has an
+# implicit budget of zero.
+#
+# The filter value is passed to `php vendor/bin/phpunit --filter <value>`, so it
+# may name a class (`Tests\Feature\Finance\AtomicSettlementTest`) or a single
+# test method. The runner (tools/run_required_tests.py) fails the build when a
+# required entry:
+#
+#   * matches no test at all (the test was deleted or renamed — the guard rotted),
+#   * is skipped, incomplete or risky (a green run must mean the path really ran),
+#   * fails or errors.
+#
+# tests/Static/test_gap10_identity_floor.py asserts every ID below exists in the
+# repository with the same name, so an entry cannot silently disappear.
+#
+# Row references point at docs/required-tests/TRACKER_143_REVIEW.csv and
+# docs/FF-ARENA-FINAL-MASTER-GAP-MATRIX.md as quoted by first.md. Those two
+# files are NOT part of this repository snapshot (see
+# docs/GAP-10-FINDINGS-REGISTER.md, finding F-01); the row numbers below are
+# therefore carried from the specification and are the authoritative link.
+
+# ---------------------------------------------------------------------------
+# A1 — production guard on the numbered simulation families
+# ---------------------------------------------------------------------------
+# The finding: with APP_ENV=production, POST /v1/gameberry/core/feature-192/play
+# returned 200 and mutated the caller's gold wallet, while final9 was refused —
+# the guard only matched `gameberry/final…`. Two controls are asserted, because
+# either alone is a single point of failure: the route files are not registered
+# outside local/testing (checked in a subprocess, since a booted process cannot
+# un-register a route), and the middleware refuses every mutating request under
+# a numbered family with 403 regardless of the route table.
+
+GAP10-A1-001 | Tests\Feature\Gameberry\NumberedSimulationProductionGuardTest | A1 production guard | In production the numbered route files are not registered even when the feature flag is on (verified by booting a second process), the reported core and final9 writes are refused with 403, and no gold or gem transaction is written; in testing the same call succeeds and settles exactly one gold bet, so the refusal is policy rather than a broken URI.
+
+# ---------------------------------------------------------------------------
+# A8 — the ten spec items (rows 018, 035–039, 041, 054–056)
+# ---------------------------------------------------------------------------
+
+GAP10-A8-018 | Tests\Feature\Gameberry\GameberryAntiCheatTest | row 018 | Server-side anti-cheat on game actions: impossible speed is flagged, and a plausible session is left alone.
+GAP10-A8-035 | Tests\Feature\Gameberry\GameberryAntiCheatTest::test_out_of_order_timestamps_and_duplicate_actions_block | row 035 | Out-of-order timestamps and duplicate action ids are refused rather than guessed at.
+GAP10-A8-036 | Tests\Feature\Gameberry\GameberryAntiCheatTest::test_actions_outside_the_session_window_are_detected | row 036 | Actions reported outside the session window are detected (replayed or forged actions).
+GAP10-A8-037 | Tests\Feature\Gameberry\GameberryAntiCheatTest::test_escalation_opens_a_phase10_incident_for_a_flagged_session | row 037 | A flagged session escalates through the Phase 10 incident path, with the audit trail intact.
+GAP10-A8-038 | Tests\Feature\Finance\AtomicSettlementTest | row 038 | A settlement is atomic: ledger entries, snapshot and payout state commit or roll back together. | max_skips=1 (two writers cannot be modelled on sqlite, so the concurrency assertion runs on the pgsql profile — where this entry runs 10/10 with no skip)
+GAP10-A8-039 | Tests\Feature\Finance\AtomicSettlementTest::test_replaying_a_settlement_is_idempotent | row 039 | Settling twice moves money once (idempotency key), including a concurrent second attempt.
+GAP10-A8-041 | Tests\Feature\Finance\LedgerIntegrityServiceTest | row 041 | Ledger integrity: balance drift, negative balances, orphan rows, owner mismatch and chain breaks are detected and never auto-repaired.
+GAP10-A8-054 | Tests\Feature\Finance\ReconcileCommandsTest | row 054 | `settlements:reconcile` dispatches bounded batches, respects --dry-run and never rewrites financial history.
+GAP10-A8-055 | Tests\Feature\Finance\ReconcileCommandsTest::test_stale_sessions_are_closed_as_abandoned_without_touching_money | row 055 | `game-sessions:reconcile` closes stale sessions as abandoned and never overwrites a real result.
+GAP10-A8-056 | Tests\Feature\Finance\ReconcileCommandsTest::test_drift_is_reported_and_never_auto_corrected | row 056 | Reconciliation drift is reported to a human and left exactly as it was found.
+
+# ---------------------------------------------------------------------------
+# A2 — the virtual-wallet row lock (the `$this->lockForUpdate()` no-op)
+# ---------------------------------------------------------------------------
+# `$this->lockForUpdate()` on a model instance returns a query builder and
+# executes zero queries, so concurrent spends could double-spend gold and gems.
+# The pgsql entry proves the lock with two real connections; the SQLite-safe
+# entry proves the SQL the model actually issues, so the regression is caught
+# even on a profile that cannot model a second writer.
+
+GAP10-A2-001 | Tests\Feature\Postgres\VirtualWalletLockTest | A2 row lock | Two real PostgreSQL connections: the second writer blocks on FOR UPDATE until the first commits, and the final balance is correct — the locked row is the one that is read and written.
+GAP10-A2-002 | Tests\Feature\Gameberry\VirtualWalletLockQueryTest | A2 lock SQL | The spend/add paths issue a locking SELECT (captured SQL / toRawSql on the pgsql grammar) rather than a no-op builder call, so a regression is caught on every dialect.
+GAP10-A2-003 | Tests\Feature\Concurrency\SlotClaimSerialisationTest | A2 lock family (F-39) | A writer that waits on the parent-row lock cannot claim a slot, promote a waitlisted team or add a roster member that another transaction has already taken. Deterministic on the PostgreSQL profile (a forked child is guaranteed to be blocked); the three services assert their own refusal.
+
+# ---------------------------------------------------------------------------
+# A4 — payout defence in depth
+# ---------------------------------------------------------------------------
+
+GAP10-A4-001 | Tests\Feature\Payments\PayoutDualControlTest | A4 maker-checker | The administrator who approved a queued payout cannot release, override-complete or manually complete it; every refusal is audited.
+GAP10-A4-002 | Tests\Feature\Payments\PayoutDualControlTest::test_manual_completion_requires_a_reference_for_a_prize_payout | A4 reviewed reference | A prize payout cannot be marked paid without a bounded, reviewed external reference.
+GAP10-A4-003 | Tests\Feature\Payments\AdminStepUpTest | A4 step-up | Payout approve/process/override/complete/fail/cancel and admin refunds require a recent password confirmation; stale or missing confirmation fails closed.
+GAP10-A4-004 | Tests\Feature\Payments\PayoutDualControlTest::test_admin_approval_writes_the_audit_row_in_the_same_transaction | A4 audit in transaction | The admin payout audit row is part of the money transaction, so a rollback leaves no false audit trail.
+GAP10-A4-005 | Tests\Feature\Payments\PayoutDualControlTest::test_batch_distribution_payouts_are_not_gated_by_the_queue_maker | A4 scope | Batch payouts approved by a prize distribution are not gated by the queue maker (the distribution approval is its own control).
+
+# ---------------------------------------------------------------------------
+# A5 — webhook ingress hardening
+# ---------------------------------------------------------------------------
+
+GAP10-A5-001 | Tests\Feature\PaymentSecurityTest | A5 signatures | Valid signatures settle, wrong signatures are refused with the surface's published status, replays are idempotent.
+GAP10-A5-002 | Tests\Feature\Concurrency\WebhookRaceTest | A5 replay race | Two concurrent duplicate deliveries settle the payment exactly once.
+GAP10-A5-003 | Tests\Feature\R10\WebhookEngineTest | A5 engine | Outbound signing, timestamp tolerance and delivery bookkeeping are unchanged by the hardened ingress.
+GAP10-A5-004 | Tests\Feature\Payments\PaymentEndpointThrottleTest | A5 rate limits | Both payment ingress endpoints (POST /webhooks/payments/{provider} and GET|POST /payments/callback/{provider}) carry a throttle; the (limit+1)th request from one provider + IP answers 429 while another provider or IP is unaffected, and a correctly signed webhook inside the limit still settles the payment exactly once.
+GAP10-A5-005 | Tests\Feature\Payments\ProviderBusinessSecretTest | A5 business signature | The second, independent signature layer honours per-provider secrets (one provider's secret cannot sign for another, and the retired shared secret no longer signs for a provider that has its own), accepts a fresh timestamped signature, refuses a stale or future-dated one without falling back to the legacy scheme, still accepts a legacy timestampless sender, and refuses before any payment state changes.
+
+# ---------------------------------------------------------------------------
+# A7 — the suite no longer depends on the developer's .env
+# ---------------------------------------------------------------------------
+# `.env.example` sets NOTIFICATIONS_EMAIL=false while config/notifications.php
+# defaults to true, so copying the example to .env changed test outcomes.
+# phpunit.xml now pins every NOTIFICATIONS_* / PUSH_* flag with force="true".
+# The outbox behaviour is covered by the notification suite; the flags are
+# pinned by the static floor, which reads phpunit.xml directly.
+
+GAP10-A7-001 | Tests\Feature\NotificationServiceTest | A7 notification flags | Email/push/SMS notification behaviour is decided by the pinned configuration, not by whatever .env happens to be present.
+GAP10-A7-002 | Tests\Feature\NotificationIntegrationTest | A7 outbox flags | The notification outbox integration path runs with the pinned flags (force="true"), so a developer's .env cannot change the result.
+
+# ---------------------------------------------------------------------------
+# A6 — CSP report-only rollout
+# ---------------------------------------------------------------------------
+
+GAP10-A6-001 | Tests\Feature\Phase16\SecurityHeadersCspTest | A6 CSP | Report-only by default, enforcing when enabled, and the shipped default policy matches this app's real usage.
+
+# ---------------------------------------------------------------------------
+# C — backup, offsite copy, observability
+# ---------------------------------------------------------------------------
+
+GAP10-C-001 | Tests\Feature\Phase16\BackupTest | C backup | Database snapshot, checksum, verification, retention and restore dry-run. | max_skips=1 (the class covers both dialects: the in-memory refusal runs on sqlite, the pg_dump connect-failure probe runs on pgsql, so exactly one is skipped per profile)
+GAP10-C-002 | Tests\Feature\Phase16\BackupOffsiteTest | C offsite | Offsite copies are checksum-verified; an unreachable or required-but-unconfigured target fails the run and never reports ok.
+GAP10-C-003 | Tests\Feature\Phase16\BackupOffsiteTest::test_encryption_recipient_encrypts_the_stored_artifact_or_fails_closed | C encryption | A configured age recipient without the age binary refuses to store a cleartext dump.
+GAP10-C-004 | Tests\Feature\Phase16\PrometheusMetricsTest | C metrics | Scrape endpoint is fail-closed (404 without feature/token, 401 on a bad token) and exports the live gauges the alerts use.
+
+# ---------------------------------------------------------------------------
+# A3 — numbered simulation families
+# ---------------------------------------------------------------------------
+
+GAP10-A3-001 | Tests\Feature\Gameberry\NumberedRoutesDisabledTest | A3 Option B | The numbered simulation routes are not registered unless the flag is on, and an anonymous request gets 404 rather than a working clone endpoint.
+
+# ---------------------------------------------------------------------------
+# PostgreSQL dialect parity and money-core exactly-once (GAP-10 section F)
+# ---------------------------------------------------------------------------
+# Found while running the PostgreSQL profile end to end for the first time:
+# these defects are invisible on SQLite (which reinterprets an unknown
+# double-quoted identifier as a string literal, compares `like` case-
+# insensitively and does not enforce varchar lengths) and wrong or fatal on
+# PostgreSQL, the production database. See findings F-14 and F-15 in
+# docs/GAP-10-FINDINGS-REGISTER.md.
+
+GAP10-PG-001 | Tests\Feature\Regression\DialectParityRegressionTest | F-14 | PostgreSQL parity: the marketing dashboard filters marketing_attributions by a column that exists, tournament and admin search are case-insensitive on every dialect, and an admin restriction records a bounded source plus the acting admin.
+GAP10-PG-002 | Tests\Feature\Payments\SettlementExactlyOnceTest | F-15 | Money core: a stale writer can never fail a settled payment, and concurrent confirmations settle exactly once with every losing attempt audited as a duplicate (true parallel writers when pcntl + PostgreSQL are available, the same invariant sequentially otherwise).
+
+# ---------------------------------------------------------------------------
+# C — backup / DR: restoring an encrypted backup (finding F-19)
+# ---------------------------------------------------------------------------
+
+GAP10-C-005 | Tests\Feature\Phase16\BackupEncryptedRestoreTest | C DR | An age-encrypted backup is restored with the escrowed identity (plaintext verified against the manifest digest, cleartext never left behind) and fails closed without it — the round trip needs no external binary in the required case, and the age-driven cases skip only when the toolchain is absent.
+
+# ---------------------------------------------------------------------------
+# F — hosting: the application as the load balancer actually serves it
+# (finding F-25)
+# ---------------------------------------------------------------------------
+
+GAP10-F-001 | Tests\Feature\Hosting\ProductionHostingTest | F-25 hosting | Behind a TLS-terminating proxy the forwarded headers are believed ONLY from a listed peer (real client IP, real scheme, so HSTS is sent and IP rate limits work) and ignored for any other peer; the production env template is rejected by the deploy gate while a complete production environment passes it.

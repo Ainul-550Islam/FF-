@@ -24,9 +24,6 @@ class Final877Service
             'league' => app(LeagueService::class)->getUserLeague($userId)?->load('league'),
             'level' => app(LevelService::class)->getLevelStats($userId),
             'description' => 'Final5 877 - 250+ dice max 52 Facebook exchange lucky dice, 6-step league Bronze Titan Top 20% Top 40 Titan badges Level 4 unlock, Game Buddies max 25 private table code/link challenge team-up classic/master/quick chat emojis weekly events gold at stake magic chest video ads free gold gems spin2win auto mode hide online status notify friends Level 4 Bronze unlock referral BGI20 ₹25 scratch cards reconciliation STOP if mismatch G1 - No shortening - Existing logic preserved - Full file content',
-            'production_ready' => true,
-            'no_shortening' => true,
-            'existing_logic_preserved' => true,
             'g1_must_reconcile' => true,
         ];
     }
@@ -39,7 +36,7 @@ class Final877Service
                 throw new \Exception('Insufficient gold - gold at stake - need enough gold');
             }
             $betTx = $goldService->placeBet($userId, $bet, 'FINAL5_877');
-            $isWin = (bool) rand(0, 1);
+            $isWin = (bool) random_int(0, 1);
             if ($isWin) {
                 $goldService->winGold($userId, $bet * 2, 'FINAL5_877');
                 $level = app(LevelService::class)->addWin($userId);

@@ -7,21 +7,17 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminSupportController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
-use App\Http\Controllers\Api\V1\DisputeController;
-use App\Http\Controllers\Api\V1\LeaderboardController;
-use App\Http\Controllers\Api\V1\LiveController;
-use App\Http\Controllers\Api\V1\MatchController;
-use App\Http\Controllers\Api\V1\NotificationController;
-use App\Http\Controllers\Api\V1\PaymentController;
-use App\Http\Controllers\Api\V1\TeamController;
-use App\Http\Controllers\Api\V1\TournamentController;
-use App\Http\Controllers\Api\V1\WalletController;
+use App\Http\Controllers\Auth\ConfirmPasswordController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PhoneAuthController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\DisputeController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\LiveController;
 use App\Http\Controllers\MarketingAffiliateController;
 use App\Http\Controllers\MarketingAffiliatePayoutController;
 use App\Http\Controllers\MarketingAnalyticsDashboardController;
@@ -36,8 +32,11 @@ use App\Http\Controllers\MarketingPromoCodeController;
 use App\Http\Controllers\MarketingPushController;
 use App\Http\Controllers\MarketingTrackingController;
 use App\Http\Controllers\MarketingUtmDashboardController;
+use App\Http\Controllers\MatchController;
 use App\Http\Controllers\ModerationController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OpsController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentGatewayCallbackController;
 use App\Http\Controllers\PaymentMethodsController;
 use App\Http\Controllers\PayoutController;
@@ -46,11 +45,21 @@ use App\Http\Controllers\ScoringRuleController;
 use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\SettlementController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TournamentController;
+use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WebhookController;
 use App\Models\Dispute;
 use App\Models\GameMatch;
+use App\Models\LoginEvent;
 use App\Models\Payment;
 use App\Models\Team;
+use App\Services\AuditLogService;
+use App\Services\LoginEventService;
+use App\Services\MarketingContentService;
+use App\Support\Seo;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -139,13 +148,13 @@ Route::post('/marketing/promo/apply', [MarketingPromoCodeController::class, 'app
     ->middleware(['auth', 'throttle:10,1'])->name('marketing.promo.apply');
 
 // --- Phase 21: blog / SEO content engine ---
-Route::get('/blog', function (\Illuminate\Http\Request $request, \App\Services\MarketingContentService $service) {
+Route::get('/blog', function (Request $request, MarketingContentService $service) {
     $categoryId = $request->filled('category') ? (int) $request->query('category') : null;
     $articles = $service->publishedPaginated($categoryId);
     $categories = $service->categories();
     $activeCategory = $categoryId;
 
-    app(\App\Support\Seo::class)
+    app(Seo::class)
         ->title('Blog & Guides — FF Arena')
         ->description('Free Fire tournament guides, strategy and FF Arena news for the Bangladesh community.')
         ->canonical(route('marketing.articles.index'))
@@ -154,7 +163,7 @@ Route::get('/blog', function (\Illuminate\Http\Request $request, \App\Services\M
     return view('marketing.blog.index', compact('articles', 'categories', 'activeCategory'));
 })->name('marketing.articles.index');
 
-Route::get('/blog/{slug}', function (string $slug, \Illuminate\Http\Request $request, \App\Services\MarketingContentService $service) {
+Route::get('/blog/{slug}', function (string $slug, Request $request, MarketingContentService $service) {
     $user = $request->user();
     $isAdmin = $user && (method_exists($user, 'isAdmin') ? $user->isAdmin() : ($user->role === 'admin'));
 
@@ -167,7 +176,7 @@ Route::get('/blog/{slug}', function (string $slug, \Illuminate\Http\Request $req
         $preview = $published === null;
 
         if (! $preview) {
-            app(\App\Support\Seo::class)
+            app(Seo::class)
                 ->title($article->seo_title ?: $article->title)
                 ->description($article->seo_description ?: ($article->excerpt ?: $article->title))
                 ->canonical(route('marketing.articles.show', ['slug' => $article->slug]))
@@ -182,7 +191,7 @@ Route::get('/blog/{slug}', function (string $slug, \Illuminate\Http\Request $req
                     'mainEntityOfPage' => route('marketing.articles.show', ['slug' => $article->slug]),
                 ]);
         } else {
-            app(\App\Support\Seo::class)->indexable(false);
+            app(Seo::class)->indexable(false);
         }
 
         return response()->view('marketing.blog.show', ['article' => $article, 'preview' => $preview], 200, $preview ? [
@@ -195,7 +204,7 @@ Route::get('/blog/{slug}', function (string $slug, \Illuminate\Http\Request $req
         abort(404);
     }
 
-    app(\App\Support\Seo::class)
+    app(Seo::class)
         ->title($article->seo_title ?: $article->title)
         ->description($article->seo_description ?: ($article->excerpt ?: $article->title))
         ->canonical(route('marketing.articles.show', ['slug' => $article->slug]))
@@ -295,6 +304,16 @@ Route::middleware('guest')->group(function () {
     Route::post('/auth/phone/request', [PhoneAuthController::class, 'requestOtp'])->name('auth.phone.request')->middleware('throttle:otp-request');
     Route::get('/auth/phone/verify', [PhoneAuthController::class, 'showVerifyForm'])->name('auth.phone.verify.form');
     Route::post('/auth/phone/verify', [PhoneAuthController::class, 'verifyOtp'])->name('auth.phone.verify')->middleware('throttle:otp-verify');
+});
+
+// GAP-10 A4 — step-up authentication (password re-confirmation) for sensitive
+// admin money actions. The confirmation window is stamped in the session and
+// read by App\Http\Middleware\EnsureRecentPasswordConfirmation.
+Route::middleware(['web', 'auth', 'active'])->group(function () {
+    Route::get('/password/confirm', [ConfirmPasswordController::class, 'show'])->name('password.confirm');
+    Route::post('/password/confirm', [ConfirmPasswordController::class, 'confirm'])
+        ->middleware('throttle:login')
+        ->name('password.confirm.store');
 });
 
 // Authenticated - Active Account Required
@@ -567,22 +586,51 @@ Route::middleware('guest')->group(function () {
 });
 
 // Signed email-verification link (works for guest and authenticated).
-Route::get('/verify-email/{id}/{hash}', function (\Illuminate\Foundation\Auth\EmailVerificationRequest $request) {
+Route::get('/verify-email/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill();
+
+    // Phase 14 — verification is part of the account's security timeline.
+    $user = $request->user();
+
+    if ($user !== null) {
+        app(LoginEventService::class)->record(
+            $user,
+            LoginEvent::EVENT_EMAIL_VERIFIED,
+            LoginEvent::STATUS_SUCCESS,
+            $request,
+        );
+
+        app(AuditLogService::class)->recordQuietly($user, 'auth.email_verified', 'user', $user->id, [
+            'target_user_id' => $user->id,
+        ]);
+    }
 
     return redirect()->route('home')->with('success', 'Email verified.');
 })->middleware(['auth', 'signed'])->name('verification.verify');
 
 // Payment-provider webhooks (signature verified inside the handler).
-Route::post('/webhooks/payments/{provider}', [WebhookController::class, 'handle'])->name('webhooks.payments');
+// GAP-10 A5 — throttled per provider + IP (see AppServiceProvider): the
+// signature check is cheap but not free, and a flood must not be able to turn
+// into a database write per request.
+Route::post('/webhooks/payments/{provider}', [WebhookController::class, 'handle'])
+    ->middleware('throttle:payment-webhook')
+    ->name('webhooks.payments');
 // Hosted gateway payer-return (bKash/Nagad redirect with GET, SSLCommerz posts back).
 // The signed `state` token — not the query string — authenticates the return.
-Route::match(['get', 'post'], '/payments/callback/{provider}', [PaymentGatewayCallbackController::class, 'confirm'])->name('payments.callback');
+// GAP-10 A5 — throttled per provider + IP as well.
+Route::match(['get', 'post'], '/payments/callback/{provider}', [PaymentGatewayCallbackController::class, 'confirm'])
+    ->middleware('throttle:payment-callback')
+    ->name('payments.callback');
 
 // --- Authenticated: account, security, moderation, live, tournament actions ---
 Route::middleware(['auth', 'active'])->group(function () {
-    // Email verification (notice + resend)
-    Route::get('/verify-email', function () {
+    // Email verification (notice + resend). Already-verified users are sent
+    // straight home instead of being shown the "verify your email" page.
+    Route::get('/verify-email', function (Request $request) {
+        if ($request->user()?->hasVerifiedEmail()) {
+            return redirect()->route('home');
+        }
+
         return view('auth.verify-email');
     })->name('verification.notice');
     // The resend endpoint carries two names (both used by existing callers):
@@ -591,7 +639,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     // routes may never share one method + URI (the later one would replace
     // the earlier), so the send name is registered on the same URI as a GET
     // that simply returns to the notice page.
-    Route::post('/verify-email/resend', function (\Illuminate\Http\Request $request) {
+    Route::post('/verify-email/resend', function (Request $request) {
         $request->user()->sendEmailVerificationNotification();
 
         return back()->with('success', 'Verification link sent.');
@@ -691,12 +739,12 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
     // Payments / payouts (index aliases + payout lifecycle actions)
     Route::get('/payments', [AdminController::class, 'payments'])->name('payments.index');
     Route::get('/payouts', [PayoutController::class, 'index'])->name('payouts.index');
-    Route::post('/payouts/{payout}/approve', [PayoutController::class, 'approve'])->name('payouts.approve');
-    Route::post('/payouts/{payout}/process', [PayoutController::class, 'process'])->name('payouts.process');
-    Route::post('/payouts/{payout}/process-override', [PayoutController::class, 'processOverride'])->name('payouts.process_override');
-    Route::post('/payouts/{payout}/complete', [PayoutController::class, 'complete'])->name('payouts.complete');
-    Route::post('/payouts/{payout}/fail', [PayoutController::class, 'fail'])->name('payouts.fail');
-    Route::post('/payouts/{payout}/cancel', [PayoutController::class, 'cancel'])->name('payouts.cancel');
+    Route::post('/payouts/{payout}/approve', [PayoutController::class, 'approve'])->middleware('password.recent')->name('payouts.approve');
+    Route::post('/payouts/{payout}/process', [PayoutController::class, 'process'])->middleware('password.recent')->name('payouts.process');
+    Route::post('/payouts/{payout}/process-override', [PayoutController::class, 'processOverride'])->middleware('password.recent')->name('payouts.process_override');
+    Route::post('/payouts/{payout}/complete', [PayoutController::class, 'complete'])->middleware('password.recent')->name('payouts.complete');
+    Route::post('/payouts/{payout}/fail', [PayoutController::class, 'fail'])->middleware('password.recent')->name('payouts.fail');
+    Route::post('/payouts/{payout}/cancel', [PayoutController::class, 'cancel'])->middleware('password.recent')->name('payouts.cancel');
 
     // Settlements index alias
     Route::get('/settlements', [SettlementController::class, 'index'])->name('settlements.index');
@@ -704,7 +752,7 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
     // Payments — manual verification / failure / refund (Phase 08 lifecycle)
     Route::post('/payments/{payment}/verify', [AdminController::class, 'verifyPayment'])->name('payments.verify');
     Route::post('/payments/{payment}/fail', [AdminController::class, 'failPayment'])->name('payments.fail');
-    Route::post('/payments/{payment}/refund', [AdminController::class, 'refundPayment'])->name('payments.refund');
+    Route::post('/payments/{payment}/refund', [AdminController::class, 'refundPayment'])->middleware('password.recent')->name('payments.refund');
 
     // Wallets + ledger — per-user wallet page and manual adjustments
     Route::get('/users/{user}/wallet', [AdminController::class, 'wallet'])->name('wallet.show');
@@ -735,10 +783,10 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
 
 // --- Google OAuth entry points (guest sign-in *and* signed-in linking) ---
 Route::middleware('web')->group(function () {
-    Route::get('/auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google.redirect');
-    Route::get('/auth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
-    Route::get('/oauth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirectToGoogle'])->name('google.redirect');
-    Route::get('/oauth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'handleGoogleCallback'])->name('google.callback');
+    Route::get('/auth/google', [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google.redirect');
+    Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+    Route::get('/oauth/google', [GoogleAuthController::class, 'redirectToGoogle'])->name('google.redirect');
+    Route::get('/oauth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('google.callback');
 });
 
 // Fallback - 404

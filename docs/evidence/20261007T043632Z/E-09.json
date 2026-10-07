@@ -1,0 +1,27 @@
+{
+  "artifacts": {
+    "tools/gap10_reapply.py": "36f2a377a5aae9462d1bbcf0f01e7803083cecd1c35996012444f4afeb84b6e1",
+    "tools/gap10_record_state.py": "1a3ae4fb46f71ef8b0826a91c0e5ca3b0fe3e55dff296f34cb15046adf14d47e",
+    "tools/prune_numbered_simulations.py": "92c5ea4c73dd4bf8356abdd25e629fe4908b8761445d5c9d157005a309ef70db"
+  },
+  "artifacts_missing": [],
+  "claim": "A worst-case reset is recoverable: the tree carries its own recorded state.",
+  "command": "python3 tools/drill_gap10_recovery.py",
+  "duration_s": 66.62,
+  "environment": "2026-10-07T04:36:33+00:00",
+  "exit_code": 1,
+  "expected_markers": [
+    "DRIFT after full recovery: 0",
+    "MISSING files            : 0"
+  ],
+  "id": "E-09",
+  "log": "docs/evidence/20261007T043632Z/E-09.log",
+  "log_lines": 16,
+  "log_sha256": "caf4e50484f4640b6f2e30f229fa8c2c0ed6917f73ff193635e8e89b1c27ecc0",
+  "missing_markers": [
+    "DRIFT after full recovery: 0"
+  ],
+  "note": "Works on a copy in /tmp: the workspace is never reverted.",
+  "started_at": "2026-10-07T04:46:56+00:00",
+  "verdict": "FAILED"
+}
