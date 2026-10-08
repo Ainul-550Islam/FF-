@@ -39,8 +39,10 @@
         X-XSS-Protection "0"
         # No referrer
         Referrer-Policy "no-referrer"
-        # Strict CSP with nonce support - will be overridden by backend with dynamic nonce
-        Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+        # NOTE (AUDIT FIX-17): CSP is set per-host below. The old global
+        # `default-src 'none'; form-action 'none'` policy is correct for the
+        # JSON API hosts but BREAKS the Blade web app (no scripts, no
+        # styles, no form posts, no images).
         # Prevent Adobe products
         X-Permitted-Cross-Domain-Policies "none"
         # Cross-Origin policies
@@ -53,6 +55,21 @@
         -Server
         # Vary for CORS
         Vary "Origin"
+    }
+}
+
+# AUDIT FIX-17: per-host CSP. API hosts serve JSON only, so `default-src
+# 'none'` is correct there. The web host serves Blade + Vite + Tailwind with
+# same-origin assets, inline styles, first-party inline scripts and optional
+# GTM — it needs a functional (still strict) policy.
+(csp_api) {
+    header {
+        Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+    }
+}
+(csp_web) {
+    header {
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.ffarena.com https://payment.ffarena.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
     }
 }
 
@@ -69,6 +86,7 @@
 # Laravel API - Main application
 https://api.ffarena.com {
     import hsts_preload
+    import csp_api
 
     # TLS - use valid cert from Let's Encrypt or custom
     tls {
@@ -129,6 +147,7 @@ https://api.ffarena.com {
 # Go Payment Gateway
 https://payment.ffarena.com {
     import hsts_preload
+    import csp_api
 
     tls {
         protocols tls1.2 tls1.3
@@ -177,6 +196,7 @@ https://payment.ffarena.com {
 # Rust Security Service
 https://security.ffarena.com {
     import hsts_preload
+    import csp_api
 
     tls {
         protocols tls1.2 tls1.3
@@ -207,6 +227,7 @@ https://security.ffarena.com {
 # Main website
 https://ffarena.com, https://www.ffarena.com {
     import hsts_preload
+    import csp_web
 
     tls {
         protocols tls1.2 tls1.3
@@ -243,6 +264,7 @@ http://api.ffarena.com, http://payment.ffarena.com, http://security.ffarena.com,
 # Sandbox
 https://sandbox.ffarena.com, https://api.sandbox.ffarena.com, https://payment.sandbox.ffarena.com {
     import hsts_preload
+    import csp_web
 
     tls {
         protocols tls1.2 tls1.3

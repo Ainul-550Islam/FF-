@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::domain::RiskLevel;
 use crate::manager::FraudManager;
+use crate::middleware::auth::{handle_auth_rejection, with_service_auth};
 use crate::observability::{Logger, Metrics};
 use crate::providers::FraudCheckRequest;
 use serde::{Deserialize, Serialize};
@@ -30,7 +31,7 @@ pub struct EvaluateResponse {
 }
 
 pub fn routes(
-    _cfg: Config,
+    cfg: Config,
     logger: Arc<Logger>,
     metrics: Arc<Metrics>,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -38,7 +39,11 @@ pub fn routes(
 
     let evaluate = warp::path!("api" / "v1" / "fraud" / "evaluate")
         .and(warp::post())
-        .and(warp::body::json::<EvaluateRequest>())
+        // R9: the filter verifies the service signature over the raw body
+        // and yields the bytes; the handler parses JSON from them (a body
+        // can only be consumed once, and re-serialised JSON would not match
+        // the signed bytes).
+        .and(with_service_auth(cfg.hmac_secret.clone()))
         .and(with_manager(fraud_manager.clone()))
         .and(with_logger(logger.clone()))
         .and(with_metrics(metrics.clone()))
@@ -46,12 +51,15 @@ pub fn routes(
 
     let overall = warp::path!("api" / "v1" / "fraud" / "overall" / i64)
         .and(warp::get())
+        .and(with_service_auth(cfg.hmac_secret.clone()))
         .and(with_manager(fraud_manager.clone()))
         .and(with_logger(logger.clone()))
         .and(with_metrics(metrics.clone()))
         .and_then(handle_overall);
 
-    evaluate.or(overall)
+    evaluate
+        .or(overall)
+        .recover(handle_auth_rejection)
 }
 
 fn with_manager(
@@ -71,11 +79,23 @@ fn with_metrics(
 }
 
 async fn handle_evaluate(
-    req: EvaluateRequest,
+    body: Vec<u8>,
     manager: Arc<FraudManager>,
     logger: Arc<Logger>,
     metrics: Arc<Metrics>,
 ) -> Result<impl Reply, Rejection> {
+    let req: EvaluateRequest = match serde_json::from_slice(&body) {
+        Ok(req) => req,
+        Err(_) => {
+            return Ok(warp::reply::with_status(
+                warp::reply::json(&serde_json::json!({
+                    "error": "invalid_json",
+                    "message": "Request body is not valid JSON"
+                })),
+                warp::http::StatusCode::BAD_REQUEST,
+            ))
+        }
+    };
     let fraud_req = FraudCheckRequest {
         user_id: req.user_id,
         ip: req.ip,
@@ -109,11 +129,15 @@ async fn handle_evaluate(
         allow,
     };
 
-    Ok(warp::reply::json(&resp))
+    Ok(warp::reply::with_status(
+        warp::reply::json(&resp),
+        warp::http::StatusCode::OK,
+    ))
 }
 
 async fn handle_overall(
     user_id: i64,
+    _body: Vec<u8>,
     _manager: Arc<FraudManager>,
     _logger: Arc<Logger>,
     metrics: Arc<Metrics>,

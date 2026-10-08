@@ -4,6 +4,17 @@
 
 Before deployment verify: test suite passes, migrations valid, config valid, required env vars exist, DB connectivity, Redis connectivity, queue connectivity, health checks, app boot, storage permissions, cache config, asset availability. If required check fails, deployment must stop.
 
+The "required env vars exist" check is automated: `deploy/deploy.sh
+production` runs `deploy/validate-env.py --production` as a fatal gate
+before anything is built (staging skips it; override the file with
+`PROD_ENV_FILE`). The gate's 29 rules and the required-key table live in
+`docs/ENVIRONMENT.md`. Honest status (audit 2026-10-07): no `deploy:gate`
+artisan command ships in `app/Console/Commands/` — the checklist below is a
+MANUAL procedure until such a command is built. MT-08 in
+`docs/required-tests/MANUAL_TEST_SPECS.md` is its per-release sign-off sheet;
+`ffarena:health`, `ffarena:queue:health`, and `payments:probe` cover parts
+of it from the console today.
+
 ## Command
 
 ```bash
@@ -85,9 +96,9 @@ Production deployment must NOT blindly run destructive migrations.
 
 ## Backup / Restore
 
-- Database backup: `pg_dump` via Phase 16 backup engine, encryption where supported via `DB_BACKUP_ENCRYPTION_KEY`, retention 30 days default, integrity check via restore verification in staging
+- Database backup: snapshot/`pg_dump` via the Phase 16 backup engine, at-rest encryption via `age` (`BACKUP_ENCRYPTION_RECIPIENT`), retention per `BACKUP_RETENTION` (default 14), integrity check via weekly verify + automated restore drill
 - Restore process: never restore over production accidentally — require confirmation, restore to staging first, verify, then production with downtime window
-- PostgreSQL backup: `pg_dump -U $DB_USERNAME -d $DB_DATABASE | gzip | openssl enc -aes-256-cbc -k $DB_BACKUP_ENCRYPTION_KEY > backup.sql.gz.enc`
+- PostgreSQL backup: `pg_dump` custom-format via the backup engine (`ffarena:backup`), encrypted to the age recipient when configured — never a hand-rolled `openssl enc` pipeline (no key versioning, no integrity proof)
 - Redis persistence: AOF yes, save policies 900 1 300 10 60 10000, but Redis is cache not durable DB — do not treat as durable storage
 - Uploaded media backup: if applicable, S3 versioning + backup
 

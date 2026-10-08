@@ -99,7 +99,9 @@ class PrivateTableTest extends TestCase
         $host = User::factory()->create();
         $classic = $this->service->createTable($host->id, ['game_mode' => 'classic', 'bet_amount' => 100]);
         $master = $this->service->createTable($host->id, ['game_mode' => 'master', 'bet_amount' => 200]);
-        $quick = $this->service->createTable($host->id, ['game_mode' => 'quick', 'bet_amount' => 50]);
+        // The audit floor is a flat 100 gold for every mode (controllers +
+        // service agree), so quick plays a valid low stake here.
+        $quick = $this->service->createTable($host->id, ['game_mode' => 'quick', 'bet_amount' => 150]);
 
         $this->assertEquals(4, $classic->max_players);
         $this->assertEquals(4, $master->max_players);

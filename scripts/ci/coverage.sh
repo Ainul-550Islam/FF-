@@ -47,12 +47,19 @@ rm -f storage/coverage/clover.xml storage/coverage/coverage.txt
 php artisan config:clear >/dev/null 2>&1 || true
 
 echo "=== running PHPUnit with coverage (SQLite, full suite) ==="
+mkdir -p storage/test-results
 php -d pcov.enabled=1 -d pcov.directory=app \
-  vendor/bin/phpunit -c phpunit.coverage.xml
+  vendor/bin/phpunit -c phpunit.coverage.xml --log-junit storage/test-results/junit.xml
 
 echo ""
 echo "=== coverage summary ==="
-php scripts/ci/coverage-summary.php storage/coverage/clover.xml ${NO_FAIL:+--no-fail}
+# NOTE: NO_FAIL is always *set* (0/1), so plain ${NO_FAIL:+...} would expand
+# unconditionally and neuter the thresholds. The array below passes --no-fail
+# only when --no-fail was actually given (fixed 2026-10-07: before, the
+# COVERAGE_MIN_* floors could never fail the build even after R5 graduation).
+SUMMARY_ARGS=()
+[ "$NO_FAIL" = 1 ] && SUMMARY_ARGS+=(--no-fail)
+php scripts/ci/coverage-summary.php storage/coverage/clover.xml "${SUMMARY_ARGS[@]}"
 
 echo ""
 echo "=== coverage regression gate ==="

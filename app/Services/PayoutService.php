@@ -21,6 +21,13 @@ use Illuminate\Support\Facades\DB;
  * (manual) payouts move to `processing` and are completed by hand — no
  * external success is ever faked.
  *
+ * Maker-checker (GAP-10 A4): the administrator who approved a payout
+ * through the payout queue cannot also disburse or complete it. The gate
+ * lives here in the service — not in the HTTP policy — so web, console,
+ * and distribution flows all share the one enforcement. Refusals are
+ * recorded in the payout event trail and thrown as 403-coded
+ * DomainExceptions, which the admin controller renders as a form error.
+ *
  * Idempotency: processing an already-completed payout returns the current
  * state; the unique (distribution_id, rank) and idempotency-key constraints
  * are the race-condition backstops.
@@ -46,6 +53,9 @@ class PayoutService
      * requires review is HELD (PayoutReviewRequiredException) — it is never
      * silently paid to a flagged recipient, and never auto-confiscated. An
      * authorized admin can process it via processWithOverride().
+     *
+     * The fraud gate runs first (a held payout reports the hold);
+     * maker-checker is enforced inside processInternal().
      */
     public function process(Payout $payout, User $actor): Payout
     {
@@ -63,6 +73,9 @@ class PayoutService
     /**
      * Process a payout with an authorized fraud-review override. The override
      * is audited (reason + actor) so the exemption is always explainable.
+     *
+     * The override excuses fraud review, not the second administrator:
+     * maker-checker still applies inside processInternal().
      */
     public function processWithOverride(Payout $payout, User $actor, string $reason): Payout
     {
@@ -81,10 +94,18 @@ class PayoutService
     }
 
     /**
-     * The shared disbursement path (gate already applied).
+     * The shared disbursement path (fraud gate already applied by process();
+     * dual control is enforced below for both entry points).
      */
     protected function processInternal(Payout $payout, User $actor): Payout
     {
+        // GAP-10 A4 maker-checker. Covers the internal-credit path AND the
+        // external advanceToProcessing() path below, for both process() and
+        // processWithOverride(). Runs before the money transaction so a
+        // refusal records its violation event without touching money — see
+        // assertDualControl() for why this pre-check cannot race.
+        $this->assertDualControl($payout, $actor, 'process');
+
         $gateway = $this->gateways->gateway($payout->provider);
 
         if (! $gateway->isInternal()) {
@@ -155,13 +176,36 @@ class PayoutService
      * Manually complete an external (non-internal) payout, recording the
      * provider reference. Internal wallet payouts complete automatically
      * during process() and can never be completed by hand.
+     *
+     * GAP-10 A4: the queue maker cannot complete (dual control), and the
+     * reviewed external reference is required + length-bounded — it is the
+     * only proof the money left through the external provider.
      */
     public function completeManually(Payout $payout, User $actor, ?string $reference = null): Payout
     {
+        // Dual control BEFORE the money transaction: a refusal must leave
+        // the payout untouched while still recording the violation (a throw
+        // inside the transaction below would roll the violation row back).
+        // The approval-event set is stable once processing starts (approve()
+        // only fires on STATUS_PENDING), so this pre-check cannot race.
+        $this->assertDualControl($payout, $actor, 'complete');
+
         $gateway = $this->gateways->gateway($payout->provider);
 
         if ($gateway->isInternal()) {
             throw new DomainException('Internal wallet payouts complete automatically during processing.');
+        }
+
+        $reference = $reference !== null ? trim($reference) : null;
+
+        if ($reference === null || $reference === '') {
+            throw new DomainException('A reviewed external reference is required to complete a manual payout.');
+        }
+
+        $maxLength = (int) config('payments.payout_reference_max_length', 255);
+
+        if (mb_strlen($reference) > $maxLength) {
+            throw new DomainException("The reviewed external reference must be at most {$maxLength} characters.");
         }
 
         return DB::transaction(function () use ($payout, $actor, $reference) {
@@ -178,14 +222,14 @@ class PayoutService
             $fresh->status = Payout::STATUS_COMPLETED;
             $fresh->processed_by = $actor->id;
             $fresh->processed_at = now();
-
-            if ($reference !== null && trim($reference) !== '') {
-                $fresh->provider_reference = trim($reference);
-            }
-
+            $fresh->provider_reference = $reference;
             $fresh->save();
 
-            $this->recordEvent($fresh, $actor, PayoutEvent::EVENT_COMPLETED, $fresh->amountMinor(), ['reference' => $reference]);
+            $this->recordEvent($fresh, $actor, PayoutEvent::EVENT_COMPLETED, $fresh->amountMinor(), [
+                'reference' => $reference,
+                'maker_user_id' => $this->queueMaker($fresh),
+                'checker_user_id' => (int) $actor->id,
+            ]);
 
             return $fresh;
         });
@@ -231,6 +275,17 @@ class PayoutService
         }
 
         return DB::transaction(function () use ($payout, $actor, $reason) {
+            // AUDIT FIX (2026-10-07, FIX-07): markFailed/cancel previously
+            // mutated the passed (possibly stale, unlocked) model. A payout
+            // that concurrently COMPLETED could be overwritten back to
+            // failed/cancelled while the wallet credit stands — ledger and
+            // payout diverge. Lock + re-check like every other transition.
+            $payout = Payout::query()->where('id', $payout->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($payout->status, [Payout::STATUS_PENDING, Payout::STATUS_APPROVED, Payout::STATUS_PROCESSING], true)) {
+                throw new DomainException('This payout cannot be failed from its current state.');
+            }
+
             $payout->status = Payout::STATUS_FAILED;
             $payout->failure_reason = $reason !== '' ? $reason : null;
             $payout->save();
@@ -265,6 +320,13 @@ class PayoutService
         }
 
         return DB::transaction(function () use ($payout, $actor) {
+            // AUDIT FIX-07: lock + re-check (see markFailed).
+            $payout = Payout::query()->where('id', $payout->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($payout->status, [Payout::STATUS_PENDING, Payout::STATUS_APPROVED], true)) {
+                throw new DomainException('This payout cannot be cancelled from its current state.');
+            }
+
             $payout->status = Payout::STATUS_CANCELLED;
             $payout->save();
 
@@ -276,6 +338,8 @@ class PayoutService
 
     /**
      * Move an external payout into processing (no disbursement yet).
+     *
+     * Only called from processInternal(), after the dual-control gate.
      */
     protected function advanceToProcessing(Payout $payout, User $actor): Payout
     {
@@ -297,6 +361,79 @@ class PayoutService
 
             return $fresh;
         });
+    }
+
+    /**
+     * GAP-10 A4 — the queue maker of a payout, if it has one.
+     *
+     * The maker is read from the payout's own queue-approval event (written
+     * by approve()), never from the approved_by column: batch payouts
+     * created already-approved by PrizeDistributionService carry the
+     * distribution admin in approved_by, but their maker is the separately
+     * audited distribution approval, not the payout queue. Returns null —
+     * exempt from dual control — when there is no approval event at all
+     * (legacy / fixture data) or when the latest approval event is marked
+     * as a distribution batch (PrizeDistributionService::approve()).
+     */
+    protected function queueMaker(Payout $payout): ?int
+    {
+        $approval = PayoutEvent::query()
+            ->where('payout_id', $payout->id)
+            ->where('event', PayoutEvent::EVENT_APPROVED)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($approval === null) {
+            return null;
+        }
+
+        if (($approval->metadata['distribution_batch'] ?? false) === true) {
+            return null;
+        }
+
+        return $approval->actor_id !== null ? (int) $approval->actor_id : null;
+    }
+
+    /**
+     * GAP-10 A4 — refuse when the queue maker tries to disburse.
+     *
+     * Applies when the payout carries a queue maker (see queueMaker()) AND
+     * its amount reaches `payments.payout_dual_control_threshold_minor`
+     * (default 0: every queued payout is gated). Amounts below the threshold
+     * are explicitly relaxed by configuration. A refusal is recorded as a
+     * `payout.processing` event with `dual_control_violation` metadata and
+     * then thrown as a 403-coded DomainException, which the admin controller
+     * renders as a form error (never a stack trace).
+     */
+    protected function assertDualControl(Payout $payout, User $actor, string $stage): void
+    {
+        $maker = $this->queueMaker($payout);
+
+        if ($maker === null) {
+            return;
+        }
+
+        $threshold = (int) config('payments.payout_dual_control_threshold_minor', 0);
+
+        if ($payout->amountMinor() < $threshold) {
+            return;
+        }
+
+        if ($maker !== (int) $actor->id) {
+            return;
+        }
+
+        $this->recordEvent($payout, $actor, PayoutEvent::EVENT_PROCESSING, $payout->amountMinor(), [
+            'dual_control_violation' => true,
+            'maker_user_id' => $maker,
+            'checker_user_id' => (int) $actor->id,
+            'stage' => $stage,
+        ]);
+
+        throw new DomainException(
+            'Maker-checker control: the administrator who approved this payout cannot also '.$stage.' it.',
+            403
+        );
     }
 
     /**

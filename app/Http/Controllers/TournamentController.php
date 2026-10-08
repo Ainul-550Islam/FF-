@@ -173,8 +173,8 @@ class TournamentController extends Controller
             'name' => 'required|string|max:255',
             'game_mode' => 'required|in:squad,duo,solo',
             'map' => 'required|string|max:60',
-            'entry_fee' => 'required|numeric|min:0',
-            'prize_pool' => 'required|numeric|min:0',
+            'entry_fee' => 'required|numeric|min:0|max:1000000',
+            'prize_pool' => 'required|numeric|min:0|max:100000000',
             'team_slots' => 'required|in:8,16,32',
             'team_size' => 'required|integer|min:1|max:6',
             'rules' => 'nullable|string',
@@ -226,8 +226,8 @@ class TournamentController extends Controller
             'name' => 'required|string|max:255',
             'game_mode' => 'required|in:squad,duo,solo',
             'map' => 'required|string|max:60',
-            'entry_fee' => 'required|numeric|min:0',
-            'prize_pool' => 'required|numeric|min:0',
+            'entry_fee' => 'required|numeric|min:0|max:1000000',
+            'prize_pool' => 'required|numeric|min:0|max:100000000',
             'team_slots' => 'required|in:8,16,32',
             'team_size' => 'required|integer|min:1|max:6',
             'rules' => 'nullable|string',
@@ -238,11 +238,51 @@ class TournamentController extends Controller
             'dispute_window_hours' => 'nullable|integer|min:0|max:720',
         ]);
 
+        // AUDIT FIX (2026-10-07, FIX-21): financial/capacity fields are locked
+        // once the tournament has teams or payments. Previously an organizer
+        // could change entry_fee AFTER teams had paid (later teams pay a
+        // different fee than earlier ones, and the prize math silently drifts)
+        // or shrink team_slots below the registered count.
+        $this->assertFinancialFieldsUnlocked($tournament, $data);
+
         // fill() only touches mass-assignable fields, so a client cannot
         // tamper with organizer_id, slug or status through this endpoint.
         $tournament->fill($data)->save();
 
         return redirect()->route('tournaments.show', $tournament)->with('success', 'Tournament updated.');
+    }
+
+    /**
+     * Reject changes to money/capacity fields once the tournament has any
+     * teams or payments (FIX-21). Compared in minor units / ints so float
+     * formatting can never trip the guard.
+     */
+    protected function assertFinancialFieldsUnlocked(Tournament $tournament, array $data): void
+    {
+        $hasActivity = $tournament->teams()->exists() || $tournament->payments()->exists();
+
+        if (! $hasActivity) {
+            return;
+        }
+
+        $newFeeMinor = (int) round(((float) $data['entry_fee']) * 100);
+        $newPoolMinor = (int) round(((float) $data['prize_pool']) * 100);
+
+        if ($newFeeMinor !== $tournament->entryFeeMinor()) {
+            abort(422, 'The entry fee cannot be changed after teams have registered.');
+        }
+
+        if ($newPoolMinor !== $tournament->prizePoolMinor()) {
+            abort(422, 'The prize pool cannot be changed after teams have registered.');
+        }
+
+        if ((int) $data['team_slots'] !== (int) $tournament->team_slots) {
+            abort(422, 'Team slots cannot be changed after teams have registered.');
+        }
+
+        if ((int) $data['team_size'] !== (int) $tournament->team_size) {
+            abort(422, 'Team size cannot be changed after teams have registered.');
+        }
     }
 
     public function publish(Tournament $tournament)

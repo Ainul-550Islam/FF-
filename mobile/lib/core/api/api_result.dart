@@ -45,6 +45,21 @@ class ApiEnvelopeData {
           .toList(growable: false);
     }
 
+    // AUDIT FIX-11b: backward compatibility. Servers before the FIX-11 patch
+    // serialize paginated Resource collections as a nested
+    // `{data: {data: [...], links, meta}}` envelope, so `data` arrives as a
+    // Map instead of a List. Unwrap one level instead of returning [] (which
+    // rendered every paginated list — tournaments, ledger, payouts,
+    // notifications — permanently empty on mobile).
+    if (data is Map<String, dynamic>) {
+      final nested = data['data'];
+      if (nested is List) {
+        return nested
+            .whereType<Map<String, dynamic>>()
+            .toList(growable: false);
+      }
+    }
+
     return const [];
   }
 

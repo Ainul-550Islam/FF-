@@ -75,13 +75,18 @@ class TournamentController extends Controller
 
         $search = trim((string) $request->query('q', ''));
         if ($search !== '') {
-            $query->where('name', 'like', '%'.addcslashes($search, '%_').'%');
+            // R3 PG parity with the web tournament search: PostgreSQL `like`
+            // is case-sensitive, so compare the lowercased column against a
+            // lowercased pattern (name-only here). LIKE wildcards stay
+            // escaped so user input can never broaden the match.
+            $needle = '%'.mb_strtolower(addcslashes($search, '%_\\')).'%';
+            $query->whereRaw('lower(name) like ?', [$needle]);
         }
 
         $tournaments = $query->orderBy($order, $direction)->paginate($perPage);
 
         return ApiResponse::data(
-            TournamentResource::collection($tournaments),
+            TournamentResource::collection($tournaments->items()), // AUDIT FIX-11: flat data[] per OpenAPI (paginator would nest data.data)
             [
                 'pagination' => [
                     'current_page' => $tournaments->currentPage(),
@@ -186,7 +191,7 @@ class TournamentController extends Controller
             'game_uid' => ['required', 'string', 'max:30', 'regex:/^[A-Za-z0-9]{4,30}$/'],
             'members' => 'nullable|array',
             'members.*.player_name' => 'nullable|string|max:120',
-            'members.*.game_uid' => 'nullable|string|max:30',
+            'members.*.game_uid' => ['nullable', 'string', 'max:30', 'regex:/^[A-Za-z0-9]{4,30}$/'],
         ]);
 
         try {

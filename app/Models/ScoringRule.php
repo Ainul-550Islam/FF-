@@ -53,6 +53,16 @@ class ScoringRule extends Model
     public const MAX_PLACEMENT = 12;
 
     /**
+     * AUDIT FIX (2026-10-07, FIX-08): kills were validated as `min:0` with NO
+     * upper bound (API + web + service), so a team could submit
+     * kills=2147483647 and manufacture arbitrary points. A Free Fire lobby
+     * holds at most 48 opponents; 60 leaves headroom for future modes while
+     * keeping the scoring math sane. Enforced in MatchController (API + web)
+     * and re-checked in ScoringService::submitScore.
+     */
+    public const MAX_KILLS = 60;
+
+    /**
      * Rule sets are created exclusively through ScoringService. All fields
      * are server-controlled; nothing is mass-assignable.
      */

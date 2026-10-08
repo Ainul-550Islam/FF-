@@ -17,19 +17,30 @@ pub fn verify_hmac(secret: &str, message: &str, signature: &str) -> bool {
     expected == signature
 }
 
-pub fn verify_hmac_hex(secret: &str, message: &str, signature: &str) -> bool {
+pub fn generate_hmac_hex(secret: &str, message: &str) -> String {
     let mut mac =
         HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC can take key of any size");
     mac.update(message.as_bytes());
-    let result = mac.finalize();
-    let _hex = format!("{:x}", result.into_bytes().iter().fold(0, |_, _| 0));
-    // Simplified - use hex encoding
-    let mut mac2 = HmacSha256::new_from_slice(secret.as_bytes()).unwrap();
-    mac2.update(message.as_bytes());
-    let code = mac2.finalize().into_bytes();
-    let expected_hex = code
+    mac.finalize()
+        .into_bytes()
         .iter()
         .map(|b| format!("{:02x}", b))
-        .collect::<String>();
-    expected_hex == signature
+        .collect()
+}
+
+pub fn verify_hmac_hex(secret: &str, message: &str, signature: &str) -> bool {
+    constant_time_eq(
+        generate_hmac_hex(secret, message).as_bytes(),
+        signature.as_bytes(),
+    )
+}
+
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter()
+        .zip(b.iter())
+        .fold(0u8, |acc, (x, y)| acc | (x ^ y))
+        == 0
 }

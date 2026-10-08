@@ -10,12 +10,15 @@ use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureIdempotency;
 use App\Http\Middleware\EnsureNumberedSimulationSafe;
 use App\Http\Middleware\EnsureRecentPasswordConfirmation;
+use App\Http\Middleware\EnsureServiceHmac;
 use App\Http\Middleware\EnsureTokenIsValid;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsStaff;
 use App\Http\Middleware\HttpMetrics;
+use App\Http\Middleware\NormalizeGameberryEnvelope;
 use App\Http\Middleware\SecurityHeaders;
 use App\Support\RequestContext;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -97,9 +100,26 @@ return Application::configure(basePath: dirname(__DIR__))
             'bearer' => EnsureBearerToken::class,
             'api.token' => EnsureTokenIsValid::class,
             'idempotency' => EnsureIdempotency::class,
+            // P2 (2026-10-07): dedicated HMAC guard for Go/Rust service
+            // callbacks — services never authenticate as users.
+            'service.hmac' => EnsureServiceHmac::class,
+            // AUDIT FIX-15 — translate the legacy Gameberry success/error
+            // envelope to the standard ApiResponse contract at the boundary.
+            'gameberry.envelope' => NormalizeGameberryEnvelope::class,
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,
         ]);
+
+        // P2 (2026-10-07) — the `bearer` middleware MUST run before
+        // `auth:sanctum`. Laravel sorts route middleware by its priority
+        // list, where the auth contract outranks every custom middleware, so
+        // the route order (`bearer` first) was silently flipped: sanctum's
+        // guard rejected over-lifetime tokens with the generic
+        // `unauthenticated` envelope and the bearer's specific `token_expired`
+        // / `invalid_token` shapes were unreachable dead code. The bearer
+        // resolves the user itself (see its docblock), so running first is
+        // safe — sanctum still re-validates afterwards.
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, EnsureBearerToken::class);
 
         // Phase 14 — block deactivated/deleted accounts (with a reactivate
         // escape hatch on the security-settings page). Request correlation

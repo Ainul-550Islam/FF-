@@ -182,6 +182,13 @@ class OpenApiEndpoints {
     scope: null,
   );
 
+  static const get_api_v1_matches__match__scores = ApiEndpoint(
+    method: 'get',
+    path: '/api/v1/matches/{match}/scores',
+    tag: 'Matches',
+    scope: null,
+  );
+
   static const post_api_v1_matches__match__scores = ApiEndpoint(
     method: 'post',
     path: '/api/v1/matches/{match}/scores',

@@ -78,4 +78,11 @@ php vendor/bin/pint --test \
   tests/Unit/Push \
   tests/Feature/Phase16 \
   tests/Feature/Phase17 \
-  tests/Feature/Postgres
+  tests/Feature/Postgres \
+  app/Http/Middleware/NormalizeGameberryEnvelope.php \
+  tests/Feature/Api/AuditFixesRegressionTest.php \
+  tests/Feature/Finance/PaymentSettlementIdempotencyTest.php \
+  tests/Feature/PaymentGatewayContractTest.php \
+  app/Console/Commands/PaymentsProbeCommand.php \
+  app/Http/Middleware/EnsureServiceHmac.php \
+  tests/Feature/Api/P2BacklogRegressionTest.php

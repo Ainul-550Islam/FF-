@@ -5,12 +5,15 @@ Laravel `/api/v1` platform.
 
 ## 1. Prerequisites
 
-- Flutter SDK **3.47.3 stable** (Dart 3.13.3). The workspace SDK lives at
+- Flutter SDK **3.47.x stable** (this guide was written at 3.47.3 / Dart
+  3.13.3; GAP-10 verification ran 3.47.6 / Dart 3.13.5 — any 3.47.x
+  satisfies the pubspec floor, and the drift gate pins the format
+  language version, not the SDK). The workspace SDK lives at
   `/opt/flutter`; put it on `PATH`:
 
   ```bash
   export PATH=/opt/flutter/bin:$PATH
-  flutter --version   # Flutter 3.47.3 • stable • Dart 3.13.3
+  flutter --version   # Flutter 3.47.x • stable
   ```
 
 - A running backend. From the repository root:

@@ -169,7 +169,7 @@ class PaymentEndpointThrottleTest extends TestCase
         for ($i = 0; $i < $limit; $i++) {
             $this->withHeader('X-Signature', 'not-a-signature')
                 ->postJson(route('webhooks.payments', ['provider' => 'bkash']), $this->rejectedPayload())
-                ->assertStatus(400);   // refused for its signature, not for its rate
+                ->assertStatus(401);   // refused for its signature, not for its rate
         }
 
         // The next request from the same provider + IP is refused before the
@@ -183,13 +183,13 @@ class PaymentEndpointThrottleTest extends TestCase
         // A different provider keeps its own budget …
         $this->withHeader('X-Signature', 'not-a-signature')
             ->postJson(route('webhooks.payments', ['provider' => 'nagad']), $this->rejectedPayload())
-            ->assertStatus(400);
+            ->assertStatus(401);
 
         // … and so does a different client IP.
         $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.77'])
             ->withHeader('X-Signature', 'not-a-signature')
             ->postJson(route('webhooks.payments', ['provider' => 'bkash']), $this->rejectedPayload())
-            ->assertStatus(400);
+            ->assertStatus(401);
 
         RateLimiter::clear('payment-webhook:nagad:127.0.0.1');
         RateLimiter::clear('payment-webhook:bkash:203.0.113.77');
@@ -227,6 +227,7 @@ class PaymentEndpointThrottleTest extends TestCase
         $payment = $this->makePayment();
 
         [$body, $signature] = $this->signedPayload([
+            'event' => 'payment.succeeded',
             'payment_id' => $payment->id,
             'provider_reference' => $payment->provider_reference,
             'amount_minor' => $payment->amountMinor(),
@@ -237,14 +238,14 @@ class PaymentEndpointThrottleTest extends TestCase
         // Two rejected attempts (inside the limit of 3) …
         $this->withHeader('X-Signature', 'nope')
             ->postJson(route('webhooks.payments', ['provider' => 'bkash']), $this->rejectedPayload())
-            ->assertStatus(400);
+            ->assertStatus(401);
 
         $this->withHeader('X-Signature', 'nope')
             ->postJson(route('webhooks.payments', ['provider' => 'bkash']), $this->rejectedPayload())
-            ->assertStatus(400);
+            ->assertStatus(401);
 
         // … must not stop the real callback that follows.
-        $this->withHeader('X-Signature', $signature)
+        $this->withHeaders(['X-Signature' => $signature, 'X-Timestamp' => (string) time()])
             ->postJson(route('webhooks.payments', ['provider' => 'bkash']), (array) json_decode($body, true))
             ->assertOk();
 
@@ -260,6 +261,7 @@ class PaymentEndpointThrottleTest extends TestCase
         $payment = $this->makePayment();
 
         [$body, $signature] = $this->signedPayload([
+            'event' => 'payment.succeeded',
             'payment_id' => $payment->id,
             'provider_reference' => $payment->provider_reference,
             'amount_minor' => $payment->amountMinor(),
@@ -287,7 +289,7 @@ class PaymentEndpointThrottleTest extends TestCase
         // The retry is the same signed body: replays are idempotent, so the
         // payment still settles exactly once.
         $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.9'])
-            ->withHeader('X-Signature', $signature)
+            ->withHeaders(['X-Signature' => $signature, 'X-Timestamp' => (string) time()])
             ->postJson(route('webhooks.payments', ['provider' => 'bkash']), (array) json_decode($body, true))
             ->assertOk();
 

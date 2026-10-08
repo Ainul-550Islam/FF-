@@ -65,6 +65,23 @@ class EnsureTokenIsValid
                 ], 401);
             }
 
+            // P2 (2026-10-07): global lifetime backstop — even a token with a
+            // far-future expires_at dies `sanctum.expiration` minutes after
+            // issuance (mirrors the `bearer` middleware check).
+            $maxLifetime = (int) config('sanctum.expiration', 0);
+
+            if ($maxLifetime > 0 && $personalAccessToken->created_at !== null && $personalAccessToken->created_at->addMinutes($maxLifetime)->isPast()) {
+                Log::info('Token exceeded maximum lifetime', [
+                    'token_id' => $personalAccessToken->id,
+                    'request_id' => $request->header('X-Request-ID', 'unknown'),
+                ]);
+
+                return response()->json([
+                    'error' => 'token_expired',
+                    'message' => 'Token exceeded the maximum lifetime',
+                ], 401);
+            }
+
             $tokenable = $personalAccessToken->tokenable;
 
             if (! $tokenable) {

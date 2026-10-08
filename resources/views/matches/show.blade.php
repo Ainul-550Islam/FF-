@@ -57,12 +57,18 @@
 
         <section class="card" aria-labelledby="room-heading">
             <h3 id="room-heading">🎟 Room Info</h3>
-            @if ($match->room_id)
+            {{-- AUDIT FIX-10: room credentials are only rendered for staff /
+                 the organizer / participating captains on ready+live matches.
+                 Everyone else sees the scheduled time only. --}}
+            @if ($match->room_id && ($canSeeRoom ?? false))
                 <div style="font-size: 15px">
                     Room ID: <strong class="tag">{{ $match->room_id }}</strong><br>
                     Password: <strong class="tag">{{ $match->room_pass }}</strong><br>
                     Time: {{ optional($match->scheduled_at)->format('d M, h:i A') }}
                 </div>
+            @elseif ($match->room_id)
+                <p class="muted">Room details are visible to participating teams once the match is live.</p>
+                <p class="muted">Time: {{ optional($match->scheduled_at)->format('d M, h:i A') }}</p>
             @else
                 <p class="muted">Room details not published yet.</p>
             @endif

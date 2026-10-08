@@ -630,6 +630,120 @@
         ]
       }
     },
+    "/api/v1/matches/{match}/scores": {
+      "get": {
+        "summary": "Match scores",
+        "operationId": "get_api_v1_matches__match__scores",
+        "tags": [
+          "Matches"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [],
+        "parameters": [
+          {
+            "name": "match",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Match id"
+          }
+        ]
+      },
+      "post": {
+        "summary": "Submit a score",
+        "operationId": "post_api_v1_matches__match__scores",
+        "tags": [
+          "Matches"
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "match",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Match id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "team_id": 1,
+                "kills": 5,
+                "placement": 1
+              }
+            }
+          }
+        },
+        "description": "**Required scope:** `scores:submit`.\n\nSupports the `Idempotency-Key` header: a replay within the TTL returns the stored response; reusing a key with a different body returns 409.\n\n**Rate limit:** `api_score (10/min/user)`."
+      }
+    },
     "/api/v1/players/{user}": {
       "get": {
         "summary": "Public player profile",
@@ -2603,74 +2717,6 @@
           }
         ],
         "description": "**Required scope:** `tournaments:read`."
-      }
-    },
-    "/api/v1/matches/{match}/scores": {
-      "post": {
-        "summary": "Submit a score",
-        "operationId": "post_api_v1_matches__match__scores",
-        "tags": [
-          "Matches"
-        ],
-        "responses": {
-          "201": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Envelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationError"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimited"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "match",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Match id"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              },
-              "example": {
-                "team_id": 1,
-                "kills": 5,
-                "placement": 1
-              }
-            }
-          }
-        },
-        "description": "**Required scope:** `scores:submit`.\n\nSupports the `Idempotency-Key` header: a replay within the TTL returns the stored response; reusing a key with a different body returns 409.\n\n**Rate limit:** `api_score (10/min/user)`."
       }
     },
     "/api/v1/payments/methods": {

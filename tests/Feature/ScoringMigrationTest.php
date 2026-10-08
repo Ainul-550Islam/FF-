@@ -47,7 +47,7 @@ class ScoringMigrationTest extends TestCase
         $team->name = 'Team '.Str::random(6);
         $team->captain_name = 'Captain';
         $team->phone = '01700000000';
-        $team->game_uid = 'UID'.rand(100000, 999999);
+        $team->game_uid = 'UID'.random_int(100000, 999999);
         $team->status = 'confirmed';
         $team->save();
 

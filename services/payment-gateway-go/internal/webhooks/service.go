@@ -135,8 +135,19 @@ func (s *Service) ProcessInbound(ctx context.Context, req WebhookRequest) (*Webh
         return nil, fmt.Errorf("webhook authentication failed: %w", err)
     }
 
-    // 3. Validate signature
-    if req.Signature != "" {
+    // 3. Validate signature. Missing signatures fail closed whenever
+    // verification is configured: a known provider always signs, and a
+    // configured global secret means unsigned traffic is forged. An empty
+    // global secret is dev-open (production boot refuses empty secrets).
+    if req.Signature == "" {
+        if _, ok := s.providerMgr[req.Provider]; ok {
+            s.metrics.Increment("webhook_auth_failed", map[string]string{"provider": req.Provider})
+            return nil, fmt.Errorf("webhook authentication failed: missing signature")
+        }
+        if s.secret != "" {
+            return nil, fmt.Errorf("webhook authentication failed: missing signature")
+        }
+    } else {
         provider, ok := s.providerMgr[req.Provider]
         if ok {
             if err := provider.VerifyWebhook(req.Payload, req.Signature); err != nil {

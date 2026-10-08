@@ -27,7 +27,7 @@ class SpinWheel extends Model
             ['result' => 'jackpot', 'gold' => 1000, 'gems' => 20, 'weight' => 10],
         ];
         $totalWeight = array_sum(array_column($config, 'weight'));
-        $rand = rand(1, $totalWeight);
+        $rand = random_int(1, $totalWeight);
         $current = 0;
         foreach ($config as $r) {
             $current += $r['weight'];

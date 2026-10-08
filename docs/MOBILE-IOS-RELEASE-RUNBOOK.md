@@ -44,7 +44,7 @@ that process.
 | --- | --- |
 | macOS with Xcode (current stable) and command line tools | `xcodebuild -version` must succeed |
 | CocoaPods | `pod --version`; `mobile/ios/Podfile` drives the pods |
-| Flutter **3.47.6**, `channel: stable` | pinned by CI (F-24); a different SDK can rewrite the generated Dart client |
+| Flutter **3.47.x** stable (GAP-10 verification ran 3.47.6) | UNPINNED in CI until the first green run (GAP-R4); the drift gate canonicalises to the pubspec's language version, so patch drift is safe — never reformat the generated client to silence a failure |
 | Apple Developer Program membership, **App Manager** role | issuing certificates and submitting builds |
 | An App Store Connect API key (issuer id, key id, `.p8`) | for `altool`/`notarytool`-style uploads from CI; the `.p8` is a secret and is never committed |
 | Bundle identifier reserved: `com.ffarena.ffarenaMobile` | matches `PRODUCT_BUNDLE_IDENTIFIER` in `mobile/ios/Runner.xcodeproj` |

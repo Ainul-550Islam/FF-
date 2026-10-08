@@ -60,7 +60,6 @@ use App\Services\MarketingContentService;
 use App\Support\Seo;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -81,21 +80,12 @@ Route::get('/health', function () {
     return response()->json(['status' => 'ok', 'service' => 'FF Arena', 'checks' => ['db' => true, 'cache' => true]]);
 })->name('health');
 
-Route::get('/health/live', function () {
-    return response()->json(['status' => 'ok']);
-})->name('health.live');
-
-Route::get('/health/ready', function () {
-    try {
-        DB::connection()->getPdo();
-        $db = true;
-    } catch (Throwable $e) {
-        $db = false;
-    }
-    $status = $db ? 200 : 503;
-
-    return response()->json(['status' => $db ? 'ok' : 'degraded', 'checks' => ['database' => $db, 'cache' => true, 'storage' => true]], $status);
-})->name('health.ready');
+// Live/readiness probes live ONLY in routes/health.php (Phase 16 canonical
+// sessionless probes, backed by HealthController + HealthService). The
+// pre-Phase-16 closure copies that used to sit here were deleted (audit
+// 2026-10-07): web.php loads first, so they shadowed the canonical probes
+// for requests while the names resolved to health.php — HealthTest
+// requires the controller shapes.
 
 // SEO
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
@@ -244,8 +234,10 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin/marketing')->name(
     // Affiliate Payouts Approval Workflow
     Route::get('/affiliates/payouts', [MarketingAffiliatePayoutController::class, 'adminIndex'])->name('affiliates.payouts.index');
     Route::get('/affiliates/payouts/{payout}', [MarketingAffiliatePayoutController::class, 'adminShow'])->name('affiliates.payouts.show');
-    Route::post('/affiliates/payouts/{payout}/approve', [MarketingAffiliatePayoutController::class, 'approve'])->name('affiliates.payouts.approve');
-    Route::post('/affiliates/payouts/{payout}/reject', [MarketingAffiliatePayoutController::class, 'reject'])->name('affiliates.payouts.reject');
+    // AUDIT FIX-09: affiliate payouts move real money (approve credits the
+    // partner wallet) — same step-up requirement as prize payouts.
+    Route::post('/affiliates/payouts/{payout}/approve', [MarketingAffiliatePayoutController::class, 'approve'])->middleware('password.recent')->name('affiliates.payouts.approve');
+    Route::post('/affiliates/payouts/{payout}/reject', [MarketingAffiliatePayoutController::class, 'reject'])->middleware('password.recent')->name('affiliates.payouts.reject');
 
     // Blog Articles Admin CRUD
     Route::get('/articles', [MarketingArticleAdminController::class, 'index'])->name('articles.index');
@@ -445,13 +437,18 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/tournaments/{tournament}/matches/{match}/resolve', [MatchController::class, 'resolve'])->name('matches.resolve');
 
     // Tournaments - Auth actions
-    Route::get('/tournaments/{tournament:slug}/register', [TeamController::class, 'showRegisterForm'])->name('teams.register.form');
+    // Team registration (audit 2026-10-07, proven at runtime): ONLY the
+    // id-bound routes below take effect. Laravel strips the `:slug` binding
+    // field from the URI when the route is added, so a `{tournament:slug}`
+    // variant collapses onto the same method+URI key as its `{tournament}`
+    // twin and the LATER one wins (RouteCollection is keyed by method+URI;
+    // orphaned names are dropped on lookup rebuild). The old slug variants
+    // (GET showRegisterForm as `teams.register.form`, POST register as a
+    // second `teams.register`) therefore NEVER registered — the GET id-URL
+    // was always the live `teams.register` — so they were deleted; keeping
+    // them would only re-create the false-duplicate trap. Follow-up:
+    // TeamController::showRegisterForm is now unreferenced.
     Route::get('/tournaments/{tournament}/register', [TeamController::class, 'showRegistration'])->name('teams.register');
-    // Team registration. Both names exist and each keeps its own URL: the
-    // legacy slug URL and the canonical id-bound URL resolve the same
-    // controller action (two routes may never share one method+URI, or the
-    // later one would shadow the earlier name).
-    Route::post('/tournaments/{tournament:slug}/register', [TeamController::class, 'register'])->name('teams.register')->middleware('throttle:tournament-register');
     Route::post('/tournaments/{tournament}/register', [TeamController::class, 'register'])->name('teams.store')->middleware('throttle:tournament-register');
 
     // Team roster + participation (Phase 03/04): every record is resolved
@@ -540,8 +537,12 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
 
     // Financial
     Route::get('/wallet', [AdminController::class, 'wallet'])->name('wallet');
-    Route::get('/payouts', [AdminController::class, 'payouts'])->name('payouts');
-    Route::get('/settlements', [SettlementController::class, 'index'])->name('settlements');
+    // (audit 2026-10-07, proven at runtime): the `admin/payouts` and
+    // `admin/settlements` registrations that sat here NEVER took effect —
+    // the admin group below registers the same method+URI keys
+    // (`admin.payouts.index`, `admin.settlements.index`) and the later
+    // registration wins, so these names never resolved. Deleted; the live
+    // owners serve. Follow-up: AdminController@payouts is now unreferenced.
     Route::get('/settlements/{tournament}', [SettlementController::class, 'show'])->name('settlements.show');
     Route::get('/tournaments/{tournament}/settlement', [SettlementController::class, 'showByTournament'])->name('tournaments.settlement');
 
@@ -562,9 +563,8 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
     Route::get('/analytics/financial', [AnalyticsController::class, 'financial'])->name('analytics.financial');
     Route::get('/analytics/security', [AnalyticsController::class, 'security'])->name('analytics.security');
 
-    // Audit & Ops
+    // Audit (the /ops dashboard lives once, in the admin group below).
     Route::get('/audit', [AuditController::class, 'index'])->name('audit');
-    Route::get('/ops', [OpsController::class, 'dashboard'])->name('ops.dashboard');
 });
 
 /*
@@ -750,14 +750,17 @@ Route::middleware(['auth', 'active', 'admin'])->prefix('admin')->name('admin.')-
     Route::get('/settlements', [SettlementController::class, 'index'])->name('settlements.index');
 
     // Payments — manual verification / failure / refund (Phase 08 lifecycle)
-    Route::post('/payments/{payment}/verify', [AdminController::class, 'verifyPayment'])->name('payments.verify');
-    Route::post('/payments/{payment}/fail', [AdminController::class, 'failPayment'])->name('payments.fail');
+    // AUDIT FIX-09: verify/fail/credit/debit are money-adjacent (verify
+    // settles + confirms the team; credit/debit move ledger balances), so
+    // they carry the same step-up requirement as payouts/refunds.
+    Route::post('/payments/{payment}/verify', [AdminController::class, 'verifyPayment'])->middleware('password.recent')->name('payments.verify');
+    Route::post('/payments/{payment}/fail', [AdminController::class, 'failPayment'])->middleware('password.recent')->name('payments.fail');
     Route::post('/payments/{payment}/refund', [AdminController::class, 'refundPayment'])->middleware('password.recent')->name('payments.refund');
 
     // Wallets + ledger — per-user wallet page and manual adjustments
     Route::get('/users/{user}/wallet', [AdminController::class, 'wallet'])->name('wallet.show');
-    Route::post('/users/{user}/wallet/credit', [AdminController::class, 'creditWallet'])->name('wallet.credit');
-    Route::post('/users/{user}/wallet/debit', [AdminController::class, 'debitWallet'])->name('wallet.debit');
+    Route::post('/users/{user}/wallet/credit', [AdminController::class, 'creditWallet'])->middleware('password.recent')->name('wallet.credit');
+    Route::post('/users/{user}/wallet/debit', [AdminController::class, 'debitWallet'])->middleware('password.recent')->name('wallet.debit');
 
     // Moderation roles (Phase 07)
     Route::post('/users/moderators', [AdminController::class, 'makeModerator'])->name('users.moderate');

@@ -115,7 +115,7 @@ class AdminController extends Controller
     public function creditWallet(Request $request, User $user, WalletService $wallets, AuditLogService $audit): RedirectResponse
     {
         $data = $request->validate([
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0.01|max:1000000', // AUDIT FIX-09: cap manual adjustments (was unbounded — a typo could credit/debit crores).
             'reason' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:255',
         ]);
@@ -165,7 +165,7 @@ class AdminController extends Controller
     public function debitWallet(Request $request, User $user, WalletService $wallets, AuditLogService $audit): RedirectResponse
     {
         $data = $request->validate([
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0.01|max:1000000', // AUDIT FIX-09: cap manual adjustments (was unbounded — a typo could credit/debit crores).
             'reason' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:255',
         ]);

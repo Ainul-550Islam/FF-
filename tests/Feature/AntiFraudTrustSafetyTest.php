@@ -74,7 +74,7 @@ class AntiFraudTrustSafetyTest extends TestCase
         $t->name = 'Team '.Str::random(6);
         $t->captain_name = $captain?->name ?? 'Captain';
         $t->phone = '01700000000';
-        $t->game_uid = 'UID'.rand(100000, 999999);
+        $t->game_uid = 'UID'.random_int(100000, 999999);
         $t->status = 'confirmed';
         $t->save();
 

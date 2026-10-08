@@ -37,7 +37,7 @@ class DisputeController extends Controller
             ->paginate(min(50, max(1, (int) $request->query('per_page', 15))));
 
         return ApiResponse::data(
-            DisputeResource::collection($disputes),
+            DisputeResource::collection($disputes->items()), // AUDIT FIX-11: flat data[] per OpenAPI
             [
                 'pagination' => [
                     'current_page' => $disputes->currentPage(),

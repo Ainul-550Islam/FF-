@@ -17,7 +17,9 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['numbered.simulation'])->group(function () {
+// AUDIT FIX-04/FIX-15: same hardening + envelope parity for the numbered
+// (local/testing-only) Gameberry API families.
+Route::middleware(['numbered.simulation', 'throttle:api', 'gameberry.envelope'])->group(function () {
     // Final7 — Feature 1001-1100 API — 15 API controllers
     Route::middleware(['auth:sanctum'])->prefix('v1/gameberry/final7')->name('api.v1.gameberry.final7.')->group(function () {
         for ($i = 1086; $i <= 1100; $i++) {

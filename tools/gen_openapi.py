@@ -52,6 +52,8 @@ PATHS = [
     ("get", "/api/v1/tournaments/{tournament}/leaderboard", "Tournament leaderboard", NONE, None, {}),
     ("get", "/api/v1/tournaments/{tournament}/bracket", "Tournament bracket", NONE, None, {}),
     ("get", "/api/v1/matches/{match}", "Show a match", NONE, None, {}),
+    # AUDIT FIX-12: score list the mobile client already calls.
+    ("get", "/api/v1/matches/{match}/scores", "Match scores", NONE, None, {}),
     ("get", "/api/v1/players/{user}", "Public player profile", NONE, None, {}),
     ("get", "/api/v1/players/{user}/ranking", "Player's rankings", NONE, None, {}),
     ("get", "/api/v1/leaderboards", "Ranked tournaments", NONE, None, {}),

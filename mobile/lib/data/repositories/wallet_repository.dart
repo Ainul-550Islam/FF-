@@ -81,6 +81,12 @@ class WalletRepository {
   }
 
   /// Polls until the server reports a terminal status (or timeout).
+  ///
+  /// AUDIT FIX-12b: the server uses LOWERCASE statuses (`paid`, `failed`,
+  /// `cancelled`, `expired`, `verified`, `succeeded`, `refunded` — see
+  /// App\Models\Payment::STATUS_*). The old UPPERCASE comparison never
+  /// matched, so polling ALWAYS burned the full 2-minute timeout, and the
+  /// `verified`/`succeeded` success states were never recognized at all.
   Future<Payment> awaitTerminal(
     int id, {
     Duration timeout = const Duration(minutes: 2),
@@ -88,15 +94,39 @@ class WalletRepository {
     final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
       final p = await payment(id);
-      final status = p.status ?? '';
-      if (status == 'PAID' ||
-          status == 'FAILED' ||
-          status == 'CANCELLED' ||
-          status == 'EXPIRED') {
+      if (isTerminal(p.status)) {
         return p;
       }
       await Future<void>.delayed(const Duration(seconds: 2));
     }
     return payment(id);
+  }
+
+  /// True for every server-side terminal payment status.
+  static bool isTerminal(String? status) {
+    switch ((status ?? '').toLowerCase()) {
+      case 'paid':
+      case 'verified':
+      case 'succeeded':
+      case 'failed':
+      case 'cancelled':
+      case 'expired':
+      case 'refunded':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /// True for the server-side success statuses (entry fee settled).
+  static bool isSuccessful(String? status) {
+    switch ((status ?? '').toLowerCase()) {
+      case 'paid':
+      case 'verified':
+      case 'succeeded':
+        return true;
+      default:
+        return false;
+    }
   }
 }

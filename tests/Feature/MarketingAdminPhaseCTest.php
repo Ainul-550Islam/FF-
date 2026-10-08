@@ -115,7 +115,9 @@ class MarketingAdminPhaseCTest extends TestCase
         $wallet = $walletService->walletFor($partnerUser);
         $this->assertSame(0, $wallet->balance_minor);
 
-        $response = $this->actingAs($admin)->post("/admin/marketing/affiliates/payouts/{$payout->id}/approve", [
+        // Step-up (password.recent): the admin has confirmed their password.
+        $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post("/admin/marketing/affiliates/payouts/{$payout->id}/approve", [
             'review_notes' => 'Approved after verification',
         ]);
 
@@ -159,7 +161,8 @@ class MarketingAdminPhaseCTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $payout = app(MarketingAffiliatePayoutService::class)->requestPayout($affiliate, 5000);
 
-        $response = $this->actingAs($admin)->post("/admin/marketing/affiliates/payouts/{$payout->id}/reject", [
+        $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post("/admin/marketing/affiliates/payouts/{$payout->id}/reject", [
             'rejection_reason' => 'Suspected artificial traffic',
             'review_notes' => 'Flagged by audit',
         ]);
@@ -180,7 +183,8 @@ class MarketingAdminPhaseCTest extends TestCase
         $payoutService->approve($payout, $admin);
 
         // Cannot reject a completed payout
-        $this->actingAs($admin)->post("/admin/marketing/affiliates/payouts/{$payout->id}/reject", [
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post("/admin/marketing/affiliates/payouts/{$payout->id}/reject", [
             'rejection_reason' => 'Too late',
         ])->assertSessionHas('error');
 

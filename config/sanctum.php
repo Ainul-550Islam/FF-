@@ -55,7 +55,11 @@ return [
     |
     */
 
-    'expiration' => null,
+    // P2 (2026-10-07): 90-day global backstop (minutes). Enforced by the
+    // `auth:sanctum` guard AND the `bearer` / `api.token` middlewares, which
+    // check it against the token's created_at — per-token `expires_at` still
+    // applies first, so shorter-lived tokens are unaffected.
+    'expiration' => env('SANCTUM_EXPIRATION', 129600),
 
     /*
     |--------------------------------------------------------------------------

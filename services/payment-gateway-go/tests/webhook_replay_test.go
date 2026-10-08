@@ -14,7 +14,7 @@ func TestWebhookReplayProtection(t *testing.T) {
     metrics := observability.NewInMemoryMetrics()
     store := storage.NewMemoryStore()
     
-    bkashCfg := providers.ProviderConfig{Enabled: false}
+    bkashCfg := providers.ProviderConfig{Secret: "test_secret", Enabled: false}
     bkash := providers.NewBkashProvider(bkashCfg, logger, metrics)
     
     providersMap := map[string]providers.Provider{
@@ -29,7 +29,7 @@ func TestWebhookReplayProtection(t *testing.T) {
         Provider:  "bkash",
         EventID:   "event-123",
         Payload:   payload,
-        Signature: "",
+        Signature: providers.GenerateHMAC("test_secret", string(payload)),
     }
     
     resp1, err := service.ProcessInbound(context.Background(), req)
@@ -83,12 +83,12 @@ func TestWebhookTimestampValidation(t *testing.T) {
     metrics := observability.NewInMemoryMetrics()
     store := storage.NewMemoryStore()
     
-    cfg := providers.ProviderConfig{Enabled: false}
+    cfg := providers.ProviderConfig{Secret: "test_secret", Enabled: false}
     bkash := providers.NewBkashProvider(cfg, logger, metrics)
-    
+
     providersMap := map[string]providers.Provider{"bkash": bkash}
     service := webhooks.NewService("test_secret", store, providersMap, logger, metrics)
-    
+
     // Old timestamp
     payload := []byte(`{"paymentID":"test"}`)
     req := webhooks.WebhookRequest{
@@ -96,6 +96,7 @@ func TestWebhookTimestampValidation(t *testing.T) {
         EventID:   "event-old-ts",
         Payload:   payload,
         Timestamp: 1000000000, // Very old
+        Signature: providers.GenerateHMAC("test_secret", string(payload)),
     }
     
     _, err := service.ProcessInbound(context.Background(), req)
@@ -117,17 +118,18 @@ func TestWebhookMalformedJSON(t *testing.T) {
     metrics := observability.NewInMemoryMetrics()
     store := storage.NewMemoryStore()
     
-    cfg := providers.ProviderConfig{Enabled: false}
+    cfg := providers.ProviderConfig{Secret: "test_secret", Enabled: false}
     bkash := providers.NewBkashProvider(cfg, logger, metrics)
-    
+
     providersMap := map[string]providers.Provider{"bkash": bkash}
     service := webhooks.NewService("test_secret", store, providersMap, logger, metrics)
-    
+
     payload := []byte(`{invalid json`)
     req := webhooks.WebhookRequest{
-        Provider: "bkash",
-        EventID:  "event-malformed",
-        Payload:  payload,
+        Provider:  "bkash",
+        EventID:   "event-malformed",
+        Payload:   payload,
+        Signature: providers.GenerateHMAC("test_secret", string(payload)),
     }
     
     _, err := service.ProcessInbound(context.Background(), req)

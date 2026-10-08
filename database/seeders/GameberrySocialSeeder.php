@@ -17,7 +17,7 @@ class GameberrySocialSeeder extends Seeder
         }
         // Create random buddies max 25
         foreach ($users as $user) {
-            $buddyCount = rand(0, 10);
+            $buddyCount = random_int(0, 10);
             $buddies = User::where('id', '!=', $user->id)->inRandomOrder()->take($buddyCount)->get();
             foreach ($buddies as $buddy) {
                 GameBuddy::firstOrCreate(['user_id' => $user->id, 'buddy_id' => $buddy->id], ['status' => 'accepted']);

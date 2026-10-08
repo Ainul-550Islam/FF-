@@ -79,10 +79,13 @@ func main() {
 
     encKey := []byte(os.Getenv("TOKEN_ENCRYPTION_KEY"))
     if len(encKey) == 0 {
-        encKey = []byte("0123456789abcdef0123456789abcdef")
+        // R9: the old dev-default fallback would encrypt production tokens
+        // with a publicly known key. Refuse instead; only production exits
+        // here, so dev keeps working.
         if cfg.IsProduction() {
-            logger.Error("TOKEN_ENCRYPTION_KEY not set in production, using dev default - MUST SET", nil)
+            log.Fatalf("TOKEN_ENCRYPTION_KEY must be set in production")
         }
+        encKey = []byte("0123456789abcdef0123456789abcdef")
     }
     tokenCache := cache.NewRedisTokenCache(encKey)
     _ = tokenCache
@@ -166,30 +169,36 @@ func main() {
         }
     })
 
+    // R9: service-to-service auth. Every money/operator route below is
+    // wrapped; the open set is health + metrics (scraped/probed without
+    // credentials) and the webhook inbound paths (signed per-provider,
+    // verified inside the webhook service — not with the service key).
+    serviceAuth := middleware.ServiceAuth(cfg.HMACSecret, cfg.IsProduction(), "/health", "/metrics", "/api/v1/webhooks/")
+
     mux := http.NewServeMux()
     mux.HandleFunc("GET /health", healthHandler.Health)
     mux.HandleFunc("GET /health/live", healthHandler.Live)
     mux.HandleFunc("GET /health/ready", healthHandler.Ready)
     mux.HandleFunc("GET /metrics", healthHandler.Metrics)
-    mux.HandleFunc("GET /api/v1/payments/methods", paymentHandler.ListMethods)
-    mux.HandleFunc("POST /api/v1/payments", paymentHandler.CreatePayment)
-    mux.HandleFunc("GET /api/v1/payments", paymentHandler.QueryPayment)
-    mux.HandleFunc("GET /api/v1/payments/{id}", paymentHandler.QueryPayment)
-    mux.HandleFunc("POST /api/v1/wallets/credit", walletHandler.Credit)
-    mux.HandleFunc("POST /api/v1/wallets/debit", walletHandler.Debit)
-    mux.HandleFunc("GET /api/v1/wallets/balance", walletHandler.GetBalance)
-    mux.HandleFunc("POST /api/v1/payouts", payoutHandler.Create)
+    mux.Handle("GET /api/v1/payments/methods", serviceAuth(http.HandlerFunc(paymentHandler.ListMethods)))
+    mux.Handle("POST /api/v1/payments", serviceAuth(http.HandlerFunc(paymentHandler.CreatePayment)))
+    mux.Handle("GET /api/v1/payments", serviceAuth(http.HandlerFunc(paymentHandler.QueryPayment)))
+    mux.Handle("GET /api/v1/payments/{id}", serviceAuth(http.HandlerFunc(paymentHandler.QueryPayment)))
+    mux.Handle("POST /api/v1/wallets/credit", serviceAuth(http.HandlerFunc(walletHandler.Credit)))
+    mux.Handle("POST /api/v1/wallets/debit", serviceAuth(http.HandlerFunc(walletHandler.Debit)))
+    mux.Handle("GET /api/v1/wallets/balance", serviceAuth(http.HandlerFunc(walletHandler.GetBalance)))
+    mux.Handle("POST /api/v1/payouts", serviceAuth(http.HandlerFunc(payoutHandler.Create)))
     mux.HandleFunc("POST /api/v1/webhooks/inbound/{provider}", webhookHandler.Inbound)
     mux.HandleFunc("POST /api/v1/webhooks/v2/inbound/{provider}", webhookHandlerV2.InboundV2)
-    mux.HandleFunc("GET /api/v1/providers/health", func(w http.ResponseWriter, r *http.Request) {
+    mux.Handle("GET /api/v1/providers/health", serviceAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Content-Type", "application/json")
         w.Write([]byte(`{"status":"ok","providers":{"bkash":{"status":"ok"},"nagad":{"status":"ok"},"rocket":{"status":"degraded"}}}`))
-    })
-    mux.HandleFunc("POST /api/v1/reconciliation/payment/{id}", func(w http.ResponseWriter, r *http.Request) {
+    })))
+    mux.Handle("POST /api/v1/reconciliation/payment/{id}", serviceAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Content-Type", "application/json")
         w.Write([]byte(`{"status":"reconciliation_triggered"}`))
-    })
-    mux.HandleFunc("GET /api/v1/webhooks/dead-letter", func(w http.ResponseWriter, r *http.Request) {
+    })))
+    mux.Handle("GET /api/v1/webhooks/dead-letter", serviceAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Content-Type", "application/json")
         stats := deadLetterQueue.Stats()
         response := map[string]interface{}{
@@ -199,8 +208,8 @@ func main() {
         }
         jsonBytes, _ := json.Marshal(response)
         w.Write(jsonBytes)
-    })
-    mux.HandleFunc("GET /api/v1/bulkhead/stats", func(w http.ResponseWriter, r *http.Request) {
+    })))
+    mux.Handle("GET /api/v1/bulkhead/stats", serviceAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Content-Type", "application/json")
         stats := bulkheads.Stats()
         distStats := distributedBulkheads.Stats()
@@ -210,7 +219,7 @@ func main() {
         }
         jsonBytes, _ := json.Marshal(response)
         w.Write(jsonBytes)
-    })
+    })))
 
     var handler http.Handler = mux
     handler = middleware.Recovery(handler)

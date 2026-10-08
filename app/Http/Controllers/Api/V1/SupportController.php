@@ -32,7 +32,7 @@ class SupportController extends Controller
         $tickets = $this->tickets->forUser($request->user(), $perPage);
 
         return ApiResponse::data(
-            SupportTicketResource::collection($tickets),
+            SupportTicketResource::collection($tickets->items()), // AUDIT FIX-11: flat data[] per OpenAPI
             [
                 'pagination' => [
                     'current_page' => $tickets->currentPage(),

@@ -183,7 +183,6 @@
             Calculation: value * 479 + user_id = 47900<br>
             Part: Part 10 File 401-500<br>
             Description: {{ $stats['description'] ?? 'Gameberry gap closure feature 479' }}<br>
-            Production ready: {{ ($stats['production_ready'] ?? true) ? 'yes' : 'no' }} |
             Existing logic preserved: {{ ($stats['existing_logic_preserved'] ?? true) ? 'yes' : 'no' }}
         </div>
     </div>

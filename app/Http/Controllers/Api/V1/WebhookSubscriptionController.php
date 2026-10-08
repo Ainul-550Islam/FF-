@@ -109,7 +109,7 @@ class WebhookSubscriptionController extends Controller
             ->paginate(min(100, max(1, (int) $request->query('per_page', 30))));
 
         return ApiResponse::data(
-            WebhookDeliveryResource::collection($deliveries),
+            WebhookDeliveryResource::collection($deliveries->items()), // AUDIT FIX-11: flat data[] per OpenAPI
             [
                 'pagination' => [
                     'current_page' => $deliveries->currentPage(),

@@ -47,6 +47,22 @@ class DockerAndHealthTest extends TestCase
         $this->assertStringContainsString('volumes:', $content);
     }
 
+    public function test_redis_eviction_policy_protects_persistent_keys(): void
+    {
+        $files = [
+            base_path('docker-compose.yml'),
+            base_path('deploy/docker-compose.tls.yml'),
+            base_path('services/docker-compose.yml'),
+        ];
+
+        foreach ($files as $file) {
+            $this->assertFileExists($file);
+            $content = file_get_contents($file);
+            $this->assertStringContainsString('volatile-ttl', $content, $file.' must evict only expiring keys');
+            $this->assertStringNotContainsString('allkeys-lru', $content, $file.' must not silently evict persistent queue/session keys');
+        }
+    }
+
     public function test_docker_compose_no_public_db_ports(): void
     {
         $content = file_get_contents(base_path('docker-compose.yml'));

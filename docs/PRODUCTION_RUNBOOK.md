@@ -116,7 +116,7 @@ The cron must run once per minute:
 ```
 
 Or use `deploy/systemd-ffarena-scheduler.service` + `.timer`. The scheduler
-runs: backup (03:00), weekly backup verify (Monday 04:00), cleanup of OTP /
+runs: backup (03:00), weekly backup verify (Monday 04:00), weekly restore drill (Monday 05:00), cleanup of OTP /
 idempotency / webhook / notification / failed-job / live-event rows, and the
 minute-level scheduler heartbeat.
 

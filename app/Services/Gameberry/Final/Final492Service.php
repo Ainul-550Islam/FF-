@@ -54,9 +54,6 @@ class Final492Service
             'can_get_chest' => $chestService->canGetChest($userId),
             'description' => 'Final 492 - Gameberry 250+ dice collection max 52 Facebook-only exchange lucky dice gem reward, 6-step league Bronze Silver Gold Platinum Diamond Titan Top 20% promotion Top 40 demotion Titan badges Level 4 Bronze unlock, Game Buddies max 25 private table code/link sharing challenge button team-up mode classic/master/quick chat emojis weekly events gold at stake magic chest video ads free gold gems spin2win auto mode hide online status notify friends Level 4 Bronze unlock referral BGI20 ₹25 scratch cards gold wallets gem wallets reconciliation financial totals must reconcile G1 must STOP if mismatch',
             'g1_constraints' => ['sqlite_must_work', 'no_credentials_logging', 'no_public_db_port', 'no_g2_live_payment', 'financial_totals_must_reconcile_stop_if_mismatch', 'preserve_existing_logic', 'no_csrf_disable_globally'],
-            'production_ready' => true,
-            'no_shortening' => true,
-            'full_file_content' => true,
             'existing_logic_preserved' => true,
         ];
     }
@@ -73,7 +70,7 @@ class Final492Service
                 throw new \Exception('Insufficient gold for bet - gold at stake');
             }
             $betTx = $goldService->placeBet($userId, $betAmount, 'FINAL492_TABLE');
-            $isWin = (bool) rand(0, 1);
+            $isWin = (bool) random_int(0, 1);
             if ($isWin) {
                 $winAmount = $betAmount * 2;
                 $goldService->winGold($userId, $winAmount, 'FINAL492_TABLE');

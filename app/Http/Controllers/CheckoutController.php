@@ -41,6 +41,13 @@ class CheckoutController extends Controller
         Team $team,
         PaymentGatewayManager $gateways,
     ): View {
+        // AUDIT FIX (2026-10-07, FIX-02): the browser checkout never
+        // authorized the payer. Any authenticated user could open the payment
+        // page (and initiate a payment) for ANY team by guessing ids. The API
+        // entry point already enforces `pay` via TeamPolicy — mirror it here.
+        abort_unless($team->belongsToTournament($tournament), 404);
+        $this->authorize('pay', $team);
+
         $amountMinor = $tournament->entryFeeMinor();
         $providers = $gateways->statuses();
 
@@ -54,6 +61,12 @@ class CheckoutController extends Controller
         PaymentService $payments,
         PaymentGatewayManager $gateways,
     ): RedirectResponse {
+        // AUDIT FIX (2026-10-07, FIX-02): authorize BEFORE validating so an
+        // attacker probing team ids gets a 403/404 without a validation
+        // oracle, and can never initiate a payment for someone else's team.
+        abort_unless($team->belongsToTournament($tournament), 404);
+        $this->authorize('pay', $team);
+
         // The provider must be one the platform actually supports; anything
         // else fails validation on `provider` rather than being coerced.
         $data = $request->validate([

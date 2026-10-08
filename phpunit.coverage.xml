@@ -54,8 +54,17 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!-- GAP-10 F-40 — the coverage profile pins its coordinates like the
+             default profile: without the <server> entries an exported
+             DB_CONNECTION/DB_DATABASE would turn the coverage run into a
+             different database (or a stray file) reporting a green run. -->
+        <server name="DB_DATABASE" value=":memory:"/>
+        <server name="DB_URL" value=""/>
+        <server name="DB_CONNECTION" value="sqlite"/>
+        <server name="FFARENA_TEST_PROFILE" value="sqlite"/>
+        <env name="FFARENA_TEST_PROFILE" value="sqlite" force="true"/>
+        <env name="DB_CONNECTION" value="sqlite" force="true"/>
+        <env name="DB_DATABASE" value=":memory:" force="true"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

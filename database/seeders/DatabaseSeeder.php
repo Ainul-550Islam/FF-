@@ -73,7 +73,7 @@ class DatabaseSeeder extends Seeder
         $done = new Tournament();
         $done->organizer_id = $organizer->id;
         $done->name = 'Duo Battle Royale';
-        $done->slug = 'duo-battle-royale-'.rand(1000, 9999);
+        $done->slug = 'duo-battle-royale-'.random_int(1000, 9999);
         $done->game_mode = 'duo';
         $done->map = 'Purgatory';
         $done->entry_fee = 50;

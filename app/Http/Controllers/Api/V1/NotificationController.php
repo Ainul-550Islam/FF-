@@ -30,7 +30,7 @@ class NotificationController extends Controller
         $notifications = $this->notifications->forUser($request->user(), $perPage);
 
         return ApiResponse::data(
-            NotificationResource::collection($notifications),
+            NotificationResource::collection($notifications->items()), // AUDIT FIX-11: flat data[] per OpenAPI
             [
                 'unread_count' => $this->notifications->unreadCount($request->user()),
                 'pagination' => [

@@ -355,7 +355,15 @@ class PrizeDistributionService
                 $payout->approved_by = $admin->id;
                 $payout->save();
 
-                $this->payouts->recordEvent($payout, $admin, PayoutEvent::EVENT_APPROVED, $payout->amountMinor());
+                // GAP-10 A4: batch payouts carry no QUEUE maker — their maker
+                // is the distribution approval below (audited on the
+                // distribution row). Mark the timeline event so the
+                // dual-control gate in PayoutService does not mistake the
+                // distribution admin for a queue approver.
+                $this->payouts->recordEvent($payout, $admin, PayoutEvent::EVENT_APPROVED, $payout->amountMinor(), [
+                    'distribution_batch' => true,
+                    'distribution_id' => $distribution->id,
+                ]);
             }
 
             $distribution->status = PrizeDistribution::STATUS_APPROVED;

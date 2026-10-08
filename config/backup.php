@@ -62,8 +62,7 @@ return [
     | `offsite_required` is the fail-closed switch: with it on, a backup whose
     | offsite copy did not land is a FAILED backup, so the failure shows up in
     | the monitoring that watches the backup job instead of being discovered
-    | during an incident. Production sets it to true (enforced by
-    | deploy/validate-env.py).
+    | during an incident. Set it to true in production.
     |
     */
 

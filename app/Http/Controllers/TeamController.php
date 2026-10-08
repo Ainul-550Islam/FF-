@@ -13,6 +13,7 @@ use App\Services\AuditLogService;
 use App\Services\FraudRiskService;
 use App\Services\LiveEventService;
 use App\Services\NotificationService;
+use App\Services\RegistrationService;
 use App\Services\RosterService;
 use App\Services\TournamentParticipationService;
 use DomainException;
@@ -29,6 +30,7 @@ class TeamController extends Controller
         protected NotificationService $notifications,
         protected LiveEventService $live,
         protected AuditLogService $audit,
+        protected RegistrationService $registrations,
     ) {}
 
     public function showRegistration(Tournament $tournament)
@@ -44,20 +46,23 @@ class TeamController extends Controller
         return view('teams.register', compact('tournament'));
     }
 
+    /**
+     * AUDIT FIX (2026-10-07, FIX-19): this method was a ~200-line duplicate
+     * of RegistrationService::register() and had ALREADY drifted — the web
+     * flow skipped the `team.registered` outbound webhook and the
+     * tournament-availability cache invalidation that the API flow performs.
+     * Web registration now delegates to the single shared engine; only the
+     * HTTP translation (validation + redirects) stays here.
+     */
     public function register(Request $request, Tournament $tournament)
     {
         $user = $request->user();
         abort_unless($user !== null, 401);
 
-        // Phase 10 — fraud/risk gate (restriction + risk-level enforcement).
-        try {
-            $this->risk->evaluateRegistration($tournament, $user);
-        } catch (DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
         // Fast-fail lifecycle checks with friendly messages. The authoritative
-        // checks run again inside the atomic claim below.
+        // checks (plus the risk gate, atomic slot claim, roster validation,
+        // notifications, live event, audit, webhook and cache invalidation)
+        // run inside the shared RegistrationService.
         if (! $tournament->acceptsRegistration()) {
             if ($tournament->hasStarted()) {
                 return back()->with('error', 'Registration is closed — this tournament has already started.');
@@ -73,114 +78,12 @@ class TeamController extends Controller
             'game_uid' => ['required', 'string', 'max:30', 'regex:/^[A-Za-z0-9]{4,30}$/'],
             'members' => 'nullable|array',
             'members.*.player_name' => 'nullable|string|max:120',
-            'members.*.game_uid' => 'nullable|string|max:30',
+            'members.*.game_uid' => ['nullable', 'string', 'max:30', 'regex:/^[A-Za-z0-9]{4,30}$/'],
         ]);
 
-        $captainUid = $this->roster->normalizeUid($data['game_uid']);
-        $members = is_array($data['members'] ?? null) ? $data['members'] : [];
-
-        $team = null;
-        $waitlisted = false;
-
         try {
-            DB::transaction(function () use ($tournament, $user, $data, $captainUid, $members, &$team, &$waitlisted) {
-                $fresh = Tournament::findOrFail($tournament->id);
-
-                if (! $fresh->acceptsRegistration()) {
-                    if ($fresh->hasStarted()) {
-                        throw new RegistrationClosedException('Registration is closed — this tournament has already started.');
-                    }
-
-                    throw new RegistrationClosedException('Registration is closed for this tournament.');
-                }
-
-                // One-team-per-captain. The database unique(tournament_id,
-                // captain_id) index is the final backstop.
-                if (Team::where('tournament_id', $fresh->id)->where('captain_id', $user->id)->exists()) {
-                    throw new RegistrationClosedException('You have already registered a team in this tournament.');
-                }
-
-                // Roster integrity (Phase 03): the captain UID must not
-                // already belong to another team in this tournament.
-                $this->roster->assertUidAvailable($fresh, $captainUid);
-
-                // ATOMIC SLOT CLAIM — SQLite-compatible concurrency guard.
-                //
-                // A single UPDATE that only succeeds while the tournament is
-                // still open, has not started, and has a free slot. In SQLite
-                // this statement acquires the write lock, so everything after
-                // it in this transaction is race-free.
-                $claimed = DB::table('tournaments')
-                    ->where('id', $fresh->id)
-                    ->where('status', Tournament::STATUS_OPEN)
-                    ->where(function ($q) {
-                        $q->whereNull('starts_at')->orWhere('starts_at', '>', now());
-                    })
-                    ->whereRaw(
-                        '(SELECT COUNT(*) FROM teams WHERE tournament_id = tournaments.id AND status IN (?, ?)) < team_slots',
-                        [Team::STATUS_PENDING, Team::STATUS_CONFIRMED]
-                    )
-                    ->update(['updated_at' => now()]);
-
-                if ($claimed !== 1) {
-                    // No slot. Re-check under the write lock: if the
-                    // tournament really is full, the team goes to the
-                    // waitlist. Otherwise registration is genuinely closed.
-                    $fresh2 = Tournament::findOrFail($fresh->id);
-
-                    if (! $fresh2->acceptsRegistration()) {
-                        if ($fresh2->hasStarted()) {
-                            throw new RegistrationClosedException('Registration is closed — this tournament has already started.');
-                        }
-
-                        throw new RegistrationClosedException('Registration is closed for this tournament.');
-                    }
-
-                    if (! $fresh2->isFull()) {
-                        throw new RegistrationClosedException('Registration is not available for this tournament.');
-                    }
-
-                    // Full → waitlist (FIFO).
-                    $team = new Team();
-                    $team->tournament_id = $fresh2->id;
-                    $team->captain_id = $user->id;
-                    $team->name = $data['name'];
-                    $team->captain_name = $data['captain_name'];
-                    $team->phone = $data['phone'];
-                    $team->game_uid = $captainUid;
-                    $team->status = Team::STATUS_WAITLISTED;
-                    $team->waitlisted_at = now();
-                    $team->save();
-
-                    $waitlisted = true;
-                } else {
-                    // Slot claimed → pending (awaits payment).
-                    $team = new Team();
-                    $team->tournament_id = $fresh->id;
-                    $team->captain_id = $user->id;
-                    $team->name = $data['name'];
-                    $team->captain_name = $data['captain_name'];
-                    $team->phone = $data['phone'];
-                    $team->game_uid = $captainUid;
-                    $team->status = Team::STATUS_PENDING;
-                    $team->save();
-                }
-
-                // Validate + persist roster members (size, duplicates,
-                // cross-team clashes) — all inside the same transaction.
-                $normalized = $this->roster->validateNewMembers($fresh, $team, $members);
-
-                foreach ($normalized as $member) {
-                    $row = new TeamMember();
-                    $row->team_id = $team->id;
-                    $row->player_name = $member['player_name'];
-                    $row->game_uid = $member['game_uid'];
-                    $row->save();
-                }
-            });
-        } catch (RegistrationClosedException $e) {
-            return back()->with('error', $e->getMessage());
-        } catch (DomainException $e) {
+            $result = $this->registrations->register($tournament, $user, $data);
+        } catch (RegistrationClosedException|DomainException $e) {
             return back()->with('error', $e->getMessage());
         } catch (QueryException $e) {
             // Database backstop: unique(tournament_id, captain_id) for the
@@ -189,52 +92,8 @@ class TeamController extends Controller
             return back()->with('error', 'A duplicate team or player was detected. Registration was not saved.');
         }
 
-        // Phase 10 — registration-volume signal (non-blocking observation).
-        $teamCount = Team::where('captain_id', $user->id)->count();
-        $maxTeams = (int) config('antifraud.registration.max_teams', 5);
-
-        if ($teamCount >= $maxTeams) {
-            $this->risk->recordSignal($user, RiskEvent::TYPE_REGISTRATION_VOLUME, RiskEvent::SEVERITY_MEDIUM, 'registration', [
-                'team_count' => $teamCount,
-            ], $tournament);
-        }
-
-        // Phase 11 — notify the captain and the organizer.
-        $teamLink = NotificationService::link('teams.show', [$tournament, $team]);
-
-        $this->notifications->send(
-            $user,
-            Notification::TYPE_TEAM_REGISTERED,
-            'Team registered',
-            'Your team '.$team->name.' was registered for '.$tournament->name.'.',
-            $teamLink,
-            ['team_id' => $team->id, 'tournament_id' => $tournament->id],
-        );
-
-        $organizer = $tournament->organizer;
-
-        if ($organizer !== null) {
-            $this->notifications->send(
-                $organizer,
-                Notification::TYPE_TEAM_REGISTERED,
-                'New team registration',
-                'Team '.$team->name.' registered for '.$tournament->name.'.',
-                $teamLink,
-                ['team_id' => $team->id, 'tournament_id' => $tournament->id],
-            );
-        }
-
-        // Phase 12 — live event (best-effort).
-        $this->live->recordQuietly($tournament, $user, LiveEvent::TYPE_TEAM_REGISTERED, [
-            'team' => $team->name,
-            'waitlisted' => $waitlisted,
-        ]);
-
-        // Phase 13 — central audit (best-effort).
-        $this->audit->recordQuietly($user, 'team.registered', 'team', $team->id, [
-            'tournament_id' => $tournament->id,
-            'metadata' => ['team' => $team->name, 'waitlisted' => $waitlisted],
-        ]);
+        $team = $result['team'];
+        $waitlisted = $result['waitlisted'];
 
         if ($waitlisted) {
             return redirect()

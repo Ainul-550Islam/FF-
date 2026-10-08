@@ -178,7 +178,9 @@ class PaymentWalletLedgerTest extends TestCase
         $payment = Payment::where('team_id', $team->id)->firstOrFail();
         $this->assertSame(Payment::STATUS_PENDING, $payment->status);
 
-        $this->actingAs($admin)->post(route('admin.payments.verify', $payment))->assertRedirect();
+        // Step-up (password.recent): the admin has confirmed their password.
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.payments.verify', $payment))->assertRedirect();
 
         $payment->refresh();
         $this->assertSame(Payment::STATUS_VERIFIED, $payment->status);
@@ -216,7 +218,8 @@ class PaymentWalletLedgerTest extends TestCase
 
         $payment = $this->payments()->createForTeam($tournament, $team, $captain, 'bkash', 'BTRX1');
 
-        $this->actingAs($admin)->post(route('admin.payments.fail', $payment))->assertRedirect();
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.payments.fail', $payment))->assertRedirect();
 
         $this->assertSame(Payment::STATUS_FAILED, $payment->fresh()->status);
     }
@@ -320,7 +323,8 @@ class PaymentWalletLedgerTest extends TestCase
         $admin = $this->makeUser('admin');
         $player = $this->makeUser('player');
 
-        $this->actingAs($admin)->post(route('admin.wallet.credit', $player), [
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.wallet.credit', $player), [
             'amount' => '150.50',
             'description' => 'Prize credit',
         ])->assertRedirect();
@@ -335,7 +339,8 @@ class PaymentWalletLedgerTest extends TestCase
         $player = $this->makeUser('player');
         $this->wallets()->walletFor($player);
 
-        $this->actingAs($admin)->post(route('admin.wallet.debit', $player), [
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.wallet.debit', $player), [
             'amount' => '50.00',
             'description' => 'overdraw',
         ])->assertSessionHas('error');
@@ -418,6 +423,8 @@ class PaymentWalletLedgerTest extends TestCase
     {
         [$payment, $captain, $admin] = $this->settledPayment();
 
+        $this->actingAs($admin)->post(route('admin.paymis->settledPayment();
+
         $this->actingAs($admin)->post(route('admin.payments.refund', $payment), [
             'reason' => '',
         ])->assertSessionHasErrors('reason');
@@ -450,7 +457,8 @@ class PaymentWalletLedgerTest extends TestCase
         $this->assertSame(Team::STATUS_PENDING, $team->fresh()->status);
 
         $payment = Payment::where('team_id', $team->id)->firstOrFail();
-        $this->actingAs($admin)->post(route('admin.payments.verify', $payment))->assertRedirect();
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.payments.verify', $payment))->assertRedirect();
 
         $this->assertSame(Team::STATUS_CONFIRMED, $team->fresh()->status);
     }

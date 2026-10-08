@@ -176,7 +176,6 @@
             Calculation: value * 1024 + user_id = 102400<br>
             Part: Part 16 File 1024-1100<br>
             Description: {{ $stats['description'] ?? 'Gameberry gap closure feature 1024' }}<br>
-            Production ready: {{ ($stats['production_ready'] ?? true) ? 'yes' : 'no' }} |
             Existing logic preserved: {{ ($stats['existing_logic_preserved'] ?? true) ? 'yes' : 'no' }}
         </div>
     </div>

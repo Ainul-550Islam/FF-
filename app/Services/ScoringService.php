@@ -155,6 +155,12 @@ class ScoringService
             throw new DomainException('Kills cannot be negative.');
         }
 
+        // AUDIT FIX-08: service-level re-check so direct service callers
+        // (jobs, admin tools, future endpoints) cannot bypass the cap.
+        if ($kills > ScoringRule::MAX_KILLS) {
+            throw new DomainException('Kills cannot exceed '.ScoringRule::MAX_KILLS.' per match.');
+        }
+
         try {
             return DB::transaction(function () use ($match, $team, $kills, $placement, $screenshotPath) {
                 if (Score::where('match_id', $match->id)->where('team_id', $team->id)->exists()) {

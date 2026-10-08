@@ -33,10 +33,19 @@ class PayoutController extends Controller
 {
     public function index(Request $request): View
     {
-        $status = $request->input('status');
-        $tournamentId = $request->input('tournament_id') ? (int) $request->input('tournament_id') : null;
+        // AUDIT FIX-14: validate + whitelist the filters. The raw `status`
+        // string flowed straight into the query (parameterized, so not SQLi —
+        // but an invalid status silently returned an empty page, and
+        // `tournament_id` accepted non-numeric input).
+        $filters = $request->validate([
+            'status' => 'nullable|string|in:pending,approved,processing,completed,failed,cancelled,held',
+            'tournament_id' => 'nullable|integer|min:1|exists:tournaments,id',
+        ]);
 
-        $statuses = ['pending', 'processing', 'completed', 'failed', 'cancelled', 'held'];
+        $status = $filters['status'] ?? null;
+        $tournamentId = isset($filters['tournament_id']) ? (int) $filters['tournament_id'] : null;
+
+        $statuses = ['pending', 'approved', 'processing', 'completed', 'failed', 'cancelled', 'held'];
         $tournaments = Tournament::query()->orderBy('name')->get();
 
         $payouts = Payout::query()

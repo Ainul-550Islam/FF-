@@ -20,6 +20,12 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_KEY" value="base64:bgN0yS08tC5r/rDRWdX8EeqxrkOIJezGxtmpEqXSGhI="/>
+        <!-- The test profile mirrors production: debug output stays off, so a
+             test asserting on error pages sees the production shape. The
+             <server> entry pins it against a leaked process-level
+             APP_DEBUG=true (same reason as the dialect pins below). -->
+        <server name="APP_DEBUG" value="false"/>
+        <env name="APP_DEBUG" value="false" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

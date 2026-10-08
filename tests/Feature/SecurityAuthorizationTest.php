@@ -57,7 +57,7 @@ class SecurityAuthorizationTest extends TestCase
         $t->name = 'Team '.Str::random(6);
         $t->captain_name = $captain?->name ?? 'Captain';
         $t->phone = '01700000000';
-        $t->game_uid = 'UID'.rand(100000, 999999);
+        $t->game_uid = 'UID'.random_int(100000, 999999);
         $t->status = $status;
         $t->save();
 
@@ -397,7 +397,9 @@ class SecurityAuthorizationTest extends TestCase
         $team = $this->makeTeam($tournament, $captain, 'pending');
         $payment = $this->makePayment($tournament, $team);
 
-        $this->actingAs($admin)->post(route('admin.payments.verify', $payment))->assertStatus(302);
+        // Step-up confirmed so this exercises the action, not the gate.
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.payments.verify', $payment))->assertStatus(302);
 
         $this->assertSame('verified', $payment->fresh()->status);
         $this->assertSame('confirmed', $team->fresh()->status);

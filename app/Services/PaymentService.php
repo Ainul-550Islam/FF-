@@ -59,6 +59,8 @@ class PaymentService
             throw new DomainException('This team is not awaiting payment.');
         }
 
+        // Fast-fail duplicate check (authoritative re-check under the team
+        // row lock happens inside the transaction below).
         $existing = Payment::where('team_id', $team->id)
             ->whereIn('status', Payment::ACTIVE_STATUSES)
             ->first();
@@ -74,6 +76,32 @@ class PaymentService
         $idempotencyKey = Str::uuid();
 
         return DB::transaction(function () use ($tournament, $team, $payer, $method, $trxId, $minor, $provider, $providerReference, $idempotencyKey) {
+            // AUDIT FIX (2026-10-07, FIX-06): serialize concurrent payment
+            // intents per team. Previously the "existing active payment" check
+            // ran OUTSIDE the transaction with no row lock, so two concurrent
+            // requests (double-tap, retry, race) could both pass the check and
+            // create duplicate payment rows for one team. The locked re-check
+            // below is the authoritative one.
+            $lockedTeam = Team::query()->where('id', $team->id)->lockForUpdate()->firstOrFail();
+
+            if (! $lockedTeam->belongsToTournament($tournament)) {
+                throw new DomainException('This team does not belong to this tournament.');
+            }
+
+            if ($lockedTeam->status !== Team::STATUS_PENDING) {
+                throw new DomainException('This team is not awaiting payment.');
+            }
+
+            $duplicate = Payment::query()
+                ->where('team_id', $lockedTeam->id)
+                ->whereIn('status', Payment::ACTIVE_STATUSES)
+                ->lockForUpdate()
+                ->first();
+
+            if ($duplicate !== null) {
+                throw new DomainException('This team already has an active payment.');
+            }
+
             $payment = new Payment();
             $payment->tournament_id = $tournament->id;
             $payment->team_id = $team->id;
@@ -142,9 +170,17 @@ class PaymentService
         }
 
         return DB::transaction(function () use ($payment, $admin) {
-            $this->settleSuccess($payment, Payment::STATUS_VERIFIED, $admin);
+            // AUDIT FIX-06: lock + re-check so a concurrent callback/admin
+            // action cannot settle the same payment twice.
+            $fresh = Payment::query()->where('id', $payment->id)->lockForUpdate()->firstOrFail();
 
-            return $payment;
+            if (! in_array($fresh->status, [Payment::STATUS_PENDING, Payment::STATUS_PROCESSING], true)) {
+                throw new DomainException('Only pending payments can be verified.');
+            }
+
+            $this->settleSuccess($fresh, Payment::STATUS_VERIFIED, $admin);
+
+            return $fresh;
         });
     }
 
@@ -158,6 +194,13 @@ class PaymentService
         }
 
         return DB::transaction(function () use ($payment, $actor, $reason) {
+            // AUDIT FIX-06: lock + re-check (see verifyManually).
+            $payment = Payment::query()->where('id', $payment->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($payment->status, [Payment::STATUS_PENDING, Payment::STATUS_PROCESSING], true)) {
+                throw new DomainException('This payment cannot be failed from its current state.');
+            }
+
             $payment->status = Payment::STATUS_FAILED;
             $payment->save();
 
@@ -194,6 +237,13 @@ class PaymentService
         }
 
         return DB::transaction(function () use ($payment, $actor) {
+            // AUDIT FIX-06: lock + re-check (see verifyManually).
+            $payment = Payment::query()->where('id', $payment->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($payment->status, [Payment::STATUS_PENDING, Payment::STATUS_PROCESSING], true)) {
+                throw new DomainException('This payment cannot be cancelled from its current state.');
+            }
+
             $payment->status = Payment::STATUS_CANCELLED;
             $payment->save();
 
@@ -222,7 +272,17 @@ class PaymentService
         $minor = $payment->amountMinor();
 
         return DB::transaction(function () use ($payment, $admin, $reason, $minor) {
-            if (Refund::where('payment_id', $payment->id)->exists()) {
+            // AUDIT FIX-06: the double-refund guard previously ran without a
+            // row lock, so two concurrent admin refunds could both pass the
+            // `exists()` check and double-credit the payer's wallet. The
+            // payment row is now locked first and refundability re-checked.
+            $payment = Payment::query()->where('id', $payment->id)->lockForUpdate()->firstOrFail();
+
+            if (! $payment->isRefundable()) {
+                throw new DomainException('Only settled payments can be refunded.');
+            }
+
+            if (Refund::where('payment_id', $payment->id)->lockForUpdate()->exists()) {
                 throw new DomainException('This payment has already been refunded.');
             }
 
@@ -316,18 +376,23 @@ class PaymentService
             throw new DomainException('Invalid callback status.', 400);
         }
 
-        // Idempotency: an already-settled payment simply reports its state.
-        if ($payment->status === Payment::STATUS_PAID || $payment->status === Payment::STATUS_VERIFIED) {
-            $this->recordEvent($payment, null, PaymentEvent::EVENT_CALLBACK, $amountMinor, ['duplicate' => true, 'reference' => $reference]);
-
-            return $payment;
-        }
-
-        if (! in_array($payment->status, [Payment::STATUS_PENDING, Payment::STATUS_PROCESSING], true)) {
-            throw new DomainException('This payment is no longer actionable.', 400);
-        }
-
         return DB::transaction(function () use ($payment, $status, $amountMinor, $reference) {
+            // AUDIT FIX-06: lock first — the settled/actionable decision must
+            // be made on the locked row, otherwise concurrent webhook retries
+            // double-settle (same race as confirmProviderPayment).
+            $payment = Payment::query()->where('id', $payment->id)->lockForUpdate()->firstOrFail();
+
+            // Idempotency: an already-settled payment simply reports its state.
+            if ($payment->status === Payment::STATUS_PAID || $payment->status === Payment::STATUS_VERIFIED) {
+                $this->recordEvent($payment, null, PaymentEvent::EVENT_CALLBACK, $amountMinor, ['duplicate' => true, 'reference' => $reference]);
+
+                return $payment;
+            }
+
+            if (! in_array($payment->status, [Payment::STATUS_PENDING, Payment::STATUS_PROCESSING], true)) {
+                throw new DomainException('This payment is no longer actionable.', 400);
+            }
+
             if ($status === Payment::STATUS_PAID) {
                 $this->settleSuccess($payment, Payment::STATUS_PAID, null);
             } else {
@@ -384,21 +449,27 @@ class PaymentService
             ? strtoupper(trim((string) $gatewayResult['gateway_transaction_id']))
             : null;
 
-        // Idempotency — an already-settled payment simply reports its state.
-        if (in_array($payment->status, Payment::SUCCESS_STATUSES, true)) {
-            $this->recordEvent($payment, null, PaymentEvent::EVENT_GATEWAY_CONFIRMED, $payment->amountMinor(), [
-                'duplicate' => true,
-                'reference' => $reference,
-            ]);
-
-            return $payment;
-        }
-
-        if (! in_array($payment->status, [Payment::STATUS_PENDING, Payment::STATUS_PROCESSING], true)) {
-            throw new DomainException('This payment is no longer actionable.');
-        }
-
         return DB::transaction(function () use ($payment, $reference, $gatewayTransactionId) {
+            // AUDIT FIX-06: the settled/actionable checks previously ran on a
+            // STALE, unlocked model before the transaction, so two concurrent
+            // provider callbacks could both settle the same payment (double
+            // team-confirm + duplicate events). Lock first, then decide.
+            $payment = Payment::query()->where('id', $payment->id)->lockForUpdate()->firstOrFail();
+
+            // Idempotency — an already-settled payment simply reports its state.
+            if (in_array($payment->status, Payment::SUCCESS_STATUSES, true)) {
+                $this->recordEvent($payment, null, PaymentEvent::EVENT_GATEWAY_CONFIRMED, $payment->amountMinor(), [
+                    'duplicate' => true,
+                    'reference' => $reference,
+                ]);
+
+                return $payment;
+            }
+
+            if (! in_array($payment->status, [Payment::STATUS_PENDING, Payment::STATUS_PROCESSING], true)) {
+                throw new DomainException('This payment is no longer actionable.');
+            }
+
             if ($gatewayTransactionId !== null && $gatewayTransactionId !== '') {
                 $payment->trx_id = $gatewayTransactionId;
             }
@@ -432,6 +503,13 @@ class PaymentService
         }
 
         return DB::transaction(function () use ($payment, $reference, $reason) {
+            // AUDIT FIX-06: lock + re-check (see confirmProviderPayment).
+            $payment = Payment::query()->where('id', $payment->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($payment->status, [Payment::STATUS_PENDING, Payment::STATUS_PROCESSING], true)) {
+                throw new DomainException('This payment cannot be failed from its current state.');
+            }
+
             $payment->status = Payment::STATUS_FAILED;
 
             if ($reference !== '') {

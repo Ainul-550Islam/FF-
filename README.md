@@ -1,5 +1,7 @@
 # 🏆 FF Arena — Free Fire Tournament Platform (Full Laravel System)
 
+[![CI](https://github.com/Ainul-550Islam/FF-/actions/workflows/ci.yml/badge.svg)](https://github.com/Ainul-550Islam/FF-/actions/workflows/ci.yml)
+
 **Bangladesh's Free Fire tournament platform.** Legit, smart, profitable — no hacks, ever.
 
 ---

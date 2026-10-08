@@ -35,7 +35,7 @@ Read this together with:
 | `ops-toolchain` job (pg_dump + age) | **Done — 1 defect fixed** | Fresh PostgreSQL 17 migrate + custom-format dump (485,747 bytes, 120 tables) + `pg_restore --list` + age round-trip; the fail-closed assertion step now passes after F-23 |
 | `mobile` job (Flutter) | **Done — 1 defect fixed, gate added to CI** | Flutter 3.47.6: `flutter analyze --no-pub` → *No issues found!*; `flutter test --no-pub` → **86 tests, all passed**; generated-client gate now runs in CI after F-24; tag builds still fail closed without signing secrets (verified: exit 1, all five names listed) |
 | Redis profile (`phpunit.redis.xml`) | **Done — green end to end** (first time it can start; F-17) | `105 tests, 275 assertions, 0 failures, 3 skipped` (EXIT 0; E-07 receipt, run `20261007T045217Z`); `php8.4-redis 6.2.0` installed here, so the R9 Redis family really executes instead of skipping |
-| C backup / offsite / metrics | **Done — DR drill executed** | `BackupService` (age + offsite + fail-closed + **decrypt-on-restore, F-19**), `config/backup.php`, `config/filesystems.php` (**driver selectable, F-18**), `deploy/postgres-init.sh`, `deploy/prometheus-alerts.yml`; live rehearsal: `pg_dump` → `age` → offsite copy → `pg_restore` into a scratch database (120 tables, 67 migrations) |
+| C backup / offsite / metrics | **Done — DR drill executed** | `BackupService` (age + offsite + fail-closed + **decrypt-on-restore, F-19**), `config/backup.php`, `config/filesystems.php` (**driver selectable, F-18**), `deploy/postgres-init.sh`, `deploy/prometheus-alerts.yml`; live rehearsal: `pg_dump` → `age` → offsite copy → `pg_restore` into a scratch database (120 tables, 67 migrations) Re-applied 2026-10-07 after the F-12 revert: age encryption + offsite mirror re-implemented in `BackupService`, `BackupDrillCommand` + weekly schedule added, `BackupEncryptedRestoreTest` pins the contract. |
 | D mobile release fail-closed | **Done** | `mobile/android/app/build.gradle.kts` (release refuses to build unsigned; placeholder host rejected); `scripts/ci/check-flutter.sh`; release runbooks: `docs/MOBILE-ANDROID-RELEASE-RUNBOOK.md`, `docs/MOBILE-IOS-RELEASE-RUNBOOK.md`, kept in step with `docs/MOBILE_RELEASE.md`; signing secrets are never invented — a missing secret fails the job (verified: exit 1, all five names listed) |
 | E external items E01–E27 | **PENDING — all 27** | `docs/GAP-09-EXTERNAL-VERIFICATION-REGISTER.md`; enforced by the static floor test |
 | A6 deploy gate on the *live* host | **Not performed** | Requires production infrastructure (E01–E03) |
@@ -850,6 +850,11 @@ Three separate defects were behind that one line:
   `bash ../scripts/ci/check-flutter.sh --generated-only`;
 * the mobile job pins the SDK (`flutter-version: '3.47.6'`) — the formatter is
   what defines the canonical layout, so the SDK is part of the contract;
+  [Correction 2026-10-07: no `flutter-version` key ever landed in `ci.yml`
+  (verified via git history — the key never existed); the job floats on
+  `channel: stable` with a pin-after-first-green comment (GAP-R4). The
+  `3.47.6` above is the audit environment's SDK. Determinism comes from
+  the gate's `--language-version` flag, not from a pin.]
 * the committed client was regenerated, because F-22 added the eleven
   companion-service routes to the spec: `openapi_endpoints.dart` now carries
   them (`'Companion Services'`, 11 entries) while `openapi_models.dart` is
@@ -866,11 +871,13 @@ flutter test --no-pub          → 86 tests, All tests passed!
 Flutter 3.47.6 / Dart 3.13.5. The SDK lives outside the workspace
 (`tools/install_flutter_sdk.sh`, default `/opt/flutter`) and the pub cache must
 be disk-backed — a tmpfs `/tmp` produced `OS Error: No space left on device`
-while resolving packages.
+while resolving packages. [Correction 2026-10-07: the installer script was
+never committed (no git history); the audit SDK was provisioned out-of-band.
+Install path: `docs/MOBILE_APP_SETUP.md`.]
 
 **Re-check:**
 ```bash
-export PATH=/opt/flutter/bin:$PATH   # or wherever tools/install_flutter_sdk.sh put it
+export PATH=/opt/flutter/bin:$PATH   # or wherever your SDK lives (see docs/MOBILE_APP_SETUP.md)
 (cd mobile && bash ../scripts/ci/check-flutter.sh)
 ```
 
@@ -1799,7 +1806,7 @@ python3 tools/live_probe.py --expect-production               # LIVE-PROBE: OK (
 | D-2 | The required-test gate tolerates exactly two justified single-test skips | A class covering both SQLite and PostgreSQL necessarily skips the other dialect's scenario. Both entries run with **zero** skips on the PostgreSQL profile that the release gate uses. | A third budget (or a budget above 1) fails the static floor test. |
 | D-3 | `AntiCheatService` is not named `ActionValidationService` | See F-08: the referenced class does not exist in this repo. | A reviewer expecting the literal name must read F-08. |
 | D-4 | Markers were stripped from history-bearing comments rather than leaving prose mentions | Keeps one greppable invariant ("marker strings = 0") instead of a rule with exceptions. | History lives in this register, not in the route file. |
-| D-9 | The committed Dart client is regenerated in this pass, and the mobile job pins Flutter 3.47.6 | F-22 changed the spec and F-24 requires one canonical formatter; the artifact must match both. Pinning the SDK is what makes the layout deterministic rather than accidental. | A Flutter upgrade must regenerate the client explicitly (the gate says so in its error message); `openapi_models.dart` is unchanged from upstream. |
+| D-9 | The committed Dart client is regenerated in this pass [Correction 2026-10-07: the accompanying pin claim (mobile job pins Flutter 3.47.6) never landed — no `flutter-version` in `ci.yml` per git history; GAP-R4 tracks the pin-after-first-green] | F-22 changed the spec and F-24 requires one canonical formatter; the artifact must match both. Determinism comes from the gate's `--language-version` flag (derived from the pubspec floor), not from a pin. | SDK bumps alone do not drift the layout (the flag freezes it); regenerate the client when the spec changes — the gate says so in its error message. `openapi_models.dart` is unchanged from upstream. |
 | D-8 | `composer.lock` and `tools/gen_openapi.py` are changed by this pass, not only `app/` code | F-21/F-22 are dependency-and-spec defects: the fix is the lock file and the generator, and both are covered by a static floor test plus a `--verify`-style script. | A reviewer must run `tools/harden_dependencies.sh --verify` / `bash scripts/ci/check-openapi.sh`; neither touches the money core. |
 | D-7 | The Rust service keeps ~130 pieces of staged code under a module-scoped `#[allow(dead_code)]` instead of wiring or deleting them | Deleting a security service's crypto/audit/worker surface to satisfy a lint would be a product change with real risk; wiring it up is a feature, not a fix. The exemption is explicit, module-scoped, commented, and greppable (`#[allow(dead_code)]` in `src/main.rs` plus F-20). | A reviewer must read F-20; the crate still fails `-D warnings` for every non-dead-code lint. **Re-check:** `tools/harden_rust_service.sh --verify` |
 | D-6 | 3 tests skip on the PostgreSQL profile (was 26 before the `redis` extension was installed here) | Enumerated, not hand-waved: `Phase16\BackupTest::test_backup_fails_honestly_on_in_memory_database` (SQLite-only scenario, the documented two-dialect budget of `GAP10-C-001`) and `R9\DockerAndHealthTest::{test_docker_available_detection,test_go_available_detection}` (no Docker daemon and no Go toolchain in this sandbox). None of them is in the required set: the release gate runs the required tests with `--fail-on-skipped` and 27/27 pass. | A future skip in a required entry still fails the gate. **Re-check:** `php vendor/bin/phpunit -c phpunit.pgsql.xml --display-skipped` and `python3 tools/run_required_tests.py --run --fail-on-skipped --config phpunit.pgsql.xml` |

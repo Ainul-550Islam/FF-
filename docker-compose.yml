@@ -2,6 +2,15 @@
 # Local/staging verification with PostgreSQL 15 + Redis 7 + Go + Rust + Laravel
 # Usage: docker compose up -d --build
 # Health: curl http://localhost:8000/health, :8081/health, :8082/health
+#
+# AUDIT FIX-18 (2026-10-07) hardening notes:
+#  - Go/Rust ports are INTERNAL-ONLY (no `ports:` publish). They are reachable
+#    via the ffarena_net bridge and exposed publicly only through Caddy/nginx
+#    with TLS + HSTS. Publishing :8081/:8082 bypassed every edge control.
+#  - Never ship the `ffarena` default passwords to production: set
+#    POSTGRES_PASSWORD, REDIS_PASSWORD, APP_KEY, JWT_SECRET, WEBHOOK_SECRET
+#    and SERVICE_HMAC_SECRET from a secret manager.
+#  - DATABASE_URL uses sslmode=prefer (TLS when the server offers it).
 
 services:
   postgres:
@@ -35,16 +44,24 @@ services:
     image: redis:7-alpine
     container_name: ffarena-redis-r9
     restart: unless-stopped
+    environment:
+      # AUDIT FIX-18: also used by the healthcheck (REDISCLI_AUTH) so the
+      # password never appears in a process command line.
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-ffarena-redis-secret}
     command: >
       redis-server
       --appendonly yes
       --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
+      # volatile-ttl: only keys WITH an expiry are evicted (nearest first),
+      # so persistent queue/session/cache keys are never silently dropped.
+      --maxmemory-policy volatile-ttl
       --requirepass ${REDIS_PASSWORD:-ffarena-redis-secret}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-ffarena-redis-secret}", "ping"]
+      # AUDIT FIX-18: pass the password via env, not -a (which leaks it into
+      # the container process list visible via `docker top` / /proc).
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -87,6 +104,8 @@ services:
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
       SESSION_DRIVER: redis
+      SESSION_ENCRYPT: true
+      SESSION_SECURE_COOKIE: true
       JWT_SECRET: ${JWT_SECRET}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET}
       SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
@@ -124,7 +143,7 @@ services:
       PORT: 8081
       APP_ENV: production
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://${POSTGRES_USER:-ffarena}:${POSTGRES_PASSWORD:-ffarena}@postgres:5432/${POSTGRES_DB:-ffarena}?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-ffarena}:${POSTGRES_PASSWORD:-ffarena}@postgres:5432/${POSTGRES_DB:-ffarena}?sslmode=prefer
       REDIS_URL: redis://:${REDIS_PASSWORD:-ffarena-redis-secret}@redis:6379/0
       JWT_SECRET: ${JWT_SECRET}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET}
@@ -132,8 +151,10 @@ services:
       SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
       RATE_LIMIT_PER_MIN: 60
       ENABLE_METRICS: true
-    ports:
-      - "${GO_PAYMENT_PORT:-8081}:8081"
+    # AUDIT FIX-18: INTERNAL ONLY — no published ports. Public traffic enters
+    # via Caddy/nginx (TLS + HSTS + rate limits), never directly.
+    expose:
+      - "8081"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health/live"]
       interval: 10s
@@ -168,8 +189,9 @@ services:
       SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
       RATE_LIMIT_PER_MIN: 60
       ENABLE_METRICS: true
-    ports:
-      - "${RUST_SECURITY_PORT:-8082}:8082"
+    # AUDIT FIX-18: INTERNAL ONLY — no published ports (see Go service note).
+    expose:
+      - "8082"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/health"]
       interval: 10s
@@ -199,7 +221,14 @@ services:
       app:
         condition: service_healthy
     environment:
+      # AUDIT FIX-18: the worker previously missed APP_KEY/secrets/cache env,
+      # so queued jobs that decrypt, sign webhooks or touch the cache used
+      # DIFFERENT config than the web app (decrypt failures, signature
+      # mismatches). Mirror the app service env exactly.
       APP_ENV: production
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:8000}
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
@@ -209,7 +238,16 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-ffarena-redis-secret}
+      REDIS_PREFIX: ${REDIS_PREFIX:-ffarena-prod-}
+      CACHE_STORE: redis
       QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      JWT_SECRET: ${JWT_SECRET}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
+      PAYMENT_WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      GO_PAYMENT_URL: http://payment-gateway-go:8081
+      RUST_SECURITY_URL: http://security-rust:8082
     command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=90"]
     networks:
       - ffarena_net

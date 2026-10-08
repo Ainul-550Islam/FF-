@@ -28,7 +28,12 @@ use Illuminate\Support\Facades\Route;
 | gold wallets gem wallets transactions reconciliation
 */
 
-Route::middleware(['auth:sanctum'])->prefix('v1/gameberry')->name('api.v1.gameberry.')->group(function () {
+// AUDIT FIX (2026-10-07, FIX-04): the Gameberry API previously used ONLY
+// `auth:sanctum` — no bearer-token guard, no inactive-account check, no rate
+// limiting and no envelope normalization. A deactivated/banned user holding
+// an old token could keep playing, and bots had an unthrottled surface.
+// This mirrors the main /api/v1 hardening stack exactly.
+Route::middleware(['bearer', 'auth:sanctum', 'api.token', 'throttle:api', 'gameberry.envelope'])->prefix('v1/gameberry')->name('api.v1.gameberry.')->group(function () {
     // Dice Collection - 250+ dice, max 52, Facebook-only, Lucky dice
     Route::prefix('dice')->name('dice.')->group(function () {
         Route::get('/collection', [DiceApiController::class, 'collection'])->name('collection');

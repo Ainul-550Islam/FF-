@@ -43,18 +43,19 @@ class EnsureBearerToken
             $personalAccessToken = PersonalAccessToken::findToken($token);
 
             if (! $personalAccessToken) {
-                // Check if it's a service token (for Go/Rust inter-service)
-                $serviceSecret = config('services_go_rust.service_auth.secret') ?: config('services.service_auth.secret');
-                if ($serviceSecret && $this->isServiceToken($token, $serviceSecret)) {
-                    // Service token valid - allow but log
-                    Log::info('Service token auth', [
-                        'service_id' => $request->header('X-Service-ID', 'unknown'),
-                        'request_id' => $request->header('X-Request-ID', 'unknown'),
-                        'redacted_token' => $this->redactToken($token),
-                    ]);
-
-                    return $next($request);
-                }
+                // AUDIT FIX (2026-10-07, FIX-05): REMOVED the "service token"
+                // bypass. The old path called isServiceToken(), which accepted
+                // ANY string shaped like a JWT (3 dot-separated parts) WITHOUT
+                // verifying the HMAC signature against the service secret —
+                // anyone could mint a fake "service" credential. Go/Rust
+                // inter-service calls must use real Sanctum tokens issued to
+                // a service user (or a dedicated HMAC guard on internal-only
+                // routes), never this middleware. Fail closed:
+                Log::warning('Bearer token not found', [
+                    'redacted_token' => $this->redactToken($token),
+                    'request_id' => $request->header('X-Request-ID', 'unknown'),
+                    'ip' => $request->ip(),
+                ]);
 
                 return response()->json([
                     'error' => 'invalid_token',
@@ -66,6 +67,19 @@ class EnsureBearerToken
                 return response()->json([
                     'error' => 'token_expired',
                     'message' => 'Token expired',
+                ], 401);
+            }
+
+            // P2 (2026-10-07): global lifetime backstop — even a token with a
+            // far-future expires_at dies `sanctum.expiration` minutes after
+            // issuance. Checked here because this middleware resolves the user
+            // before (and regardless of) the `auth:sanctum` guard.
+            $maxLifetime = (int) config('sanctum.expiration', 0);
+
+            if ($maxLifetime > 0 && $personalAccessToken->created_at !== null && $personalAccessToken->created_at->addMinutes($maxLifetime)->isPast()) {
+                return response()->json([
+                    'error' => 'token_expired',
+                    'message' => 'Token exceeded the maximum lifetime',
                 ], 401);
             }
 
@@ -131,29 +145,6 @@ class EnsureBearerToken
                 'message' => 'Token validation failed',
             ], 401);
         }
-    }
-
-    protected function isServiceToken(string $token, string $secret): bool
-    {
-        // Service tokens are JWTs signed with service secret
-        // Check format: should be JWT with 3 parts separated by .
-        if (substr_count($token, '.') !== 2) {
-            return false;
-        }
-
-        if (strlen($token) < 20) {
-            return false;
-        }
-
-        // In production, verify JWT signature with secret
-        // For now, check if token looks like JWT and length is reasonable
-        // Real implementation would:
-        // $payload = explode('.', $token);
-        // $header = json_decode(base64_decode($payload[0]), true);
-        // $claims = json_decode(base64_decode($payload[1]), true);
-        // Verify signature with HMAC SHA256 using secret
-
-        return strlen($token) > 20 && str_contains($token, '.');
     }
 
     protected function redactToken(string $token): string

@@ -24,9 +24,10 @@
 #
 # Comparing raw generator output against formatted committed files (what this
 # script used to do) can never pass, and it left the tree dirty on failure.
-# The formatter defines the layout, so the mobile CI job pins the Flutter
-# version (.github/workflows/ci.yml → mobile.flutter-version) instead of
-# floating on `stable`.
+# The layout stays deterministic across SDK bumps because of the explicit
+# --language-version flag below (derived from the pubspec floor), NOT because
+# of a pin: the mobile CI job floats on `channel: stable` until the first
+# green run pins it (GAP-R4 in docs/RUNTIME_EVIDENCE_RUNBOOK.md).
 #
 set -euo pipefail
 
@@ -44,7 +45,7 @@ fi
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "flutter not found on PATH — skipping mobile checks."
-  echo "Install it with tools/install_flutter_sdk.sh (CI installs it in the mobile job)."
+  echo "Install it per docs/MOBILE_APP_SETUP.md (CI installs it in the mobile job)."
   exit 0
 fi
 
@@ -64,8 +65,8 @@ tmpdir="$(mktemp -d)"
 # never leave the tree modified (F-24).
 restore() {
   if [[ -n "${DRIFTED:-}" ]]; then
-    cp "$tmpdir/openapi_models.dart" "$MODELS"
-    cp "$tmpdir/openapi_endpoints.dart" "$ENDPOINTS"
+    cp "$tmpdir/pristine_openapi_models.dart" "$MODELS"
+    cp "$tmpdir/pristine_openapi_endpoints.dart" "$ENDPOINTS"
     echo "    (committed artifacts restored — the tree is unchanged)"
   fi
   rm -rf "$tmpdir"
@@ -74,6 +75,12 @@ trap restore EXIT
 
 cp "$MODELS" "$tmpdir/openapi_models.dart"
 cp "$ENDPOINTS" "$tmpdir/openapi_endpoints.dart"
+# Pristine byte-copies for the EXIT trap: the files above are formatted
+# in place by the canonicalisation step, so restoring from them would
+# rewrite the tree into canonical layout on a drift failure instead of
+# leaving it byte-identical (the trap's own contract, F-24).
+cp "$MODELS" "$tmpdir/pristine_openapi_models.dart"
+cp "$ENDPOINTS" "$tmpdir/pristine_openapi_endpoints.dart"
 
 # Both sides are copied into the temp dir and formatted there with an EXPLICIT
 # language version. `dart format` picks its style from the language version of

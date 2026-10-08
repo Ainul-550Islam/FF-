@@ -14,18 +14,24 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    /**
+     * AUDIT FIX (2026-10-07, FIX-01): privileged attributes are NEVER
+     * mass-assignable. `is_admin`, `is_staff`, `is_active`, `is_banned`,
+     * `banned_at`, `ban_reason`, `account_status`, `phone_verified_at` and
+     * `email_verified_at` were previously in $fillable, so any present or
+     * future `User::create($validated)` / `$user->update($validated)` call
+     * (or a FormRequest that forgets to strip them) would let a caller
+     * self-promote to admin, ban other users, or forge verifications.
+     * These fields may only be changed attribute-by-attribute in services
+     * (e.g. RestrictionService, AccountLifecycleService) with an audit row.
+     */
     protected $fillable = [
         'name',
         'username',
         'display_name',
         'email',
         'password',
-        'is_admin',
-        'is_staff',
-        'is_active',
         'phone',
-        'phone_verified_at',
-        'email_verified_at',
         'avatar_path',
         'bio',
         'date_of_birth',
@@ -35,10 +41,6 @@ class User extends Authenticatable
         'locale',
         'last_seen_at',
         'username_changed_at',
-        'is_banned',
-        'banned_at',
-        'ban_reason',
-        'account_status',
         'deactivated_at',
     ];
 

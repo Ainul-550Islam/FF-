@@ -59,9 +59,10 @@ return [
         | point BACKUP_OFFSITE_ROOT at a path that outlives the host.
         |
         | Set BACKUP_OFFSITE_DRIVER=s3 to use object storage; that needs
-        | `composer require league/flysystem-aws-s3-v3` plus the keys below
-        | (the deployment gate refuses to promote a release with
-        | BACKUP_OFFSITE_REQUIRED=true and no bucket).
+        | `composer require league/flysystem-aws-s3-v3` plus the keys below.
+        | (No automated check enforces this yet — verify by hand that
+        | BACKUP_OFFSITE_REQUIRED=true always ships with a bucket. GAP-R7:
+        | docs/RUNTIME_EVIDENCE_RUNBOOK.md.)
         |
         */
 

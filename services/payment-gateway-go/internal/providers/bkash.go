@@ -166,6 +166,10 @@ func (p *BkashProvider) ValidateConfig() error {
     if p.Config.Password == "" {
         return errors.New("bkash password required")
     }
+    if p.Config.Secret == "" {
+        // Webhook callbacks verify HMAC against Secret; empty voids the check.
+        return errors.New("bkash secret required")
+    }
     if p.Config.BaseURL == "" {
         return errors.New("bkash base_url required")
     }

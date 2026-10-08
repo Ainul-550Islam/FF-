@@ -14,9 +14,12 @@ class TournamentRepository {
     String? status,
     String? gameMode,
   }) async {
+    // AUDIT FIX-12b: the server reads the search term from `q`, not `search`
+    // (TournamentController@index) — the old key was silently ignored, so
+    // mobile search never filtered anything.
     final envelope = await _api.get('/tournaments', query: {
       'page': '$page',
-      if (search != null && search.isNotEmpty) 'search': search,
+      if (search != null && search.isNotEmpty) 'q': search,
       if (status != null && status.isNotEmpty) 'status': status,
       if (gameMode != null && gameMode.isNotEmpty) 'game_mode': gameMode,
     });

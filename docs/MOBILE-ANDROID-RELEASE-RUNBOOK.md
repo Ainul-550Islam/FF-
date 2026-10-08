@@ -57,7 +57,7 @@ key. **Never use it in a release pipeline, and never upload its output.**
 
 | Requirement | Notes |
 | --- | --- |
-| Flutter **3.47.6**, `channel: stable` | pinned in CI (F-24): the committed Dart client is stored in the formatter's canonical layout for the pubspec's language version, so a floating SDK can rewrite artifacts and turn the build red with no code change |
+| Flutter **3.47.x** stable (GAP-10 verification ran 3.47.6) | UNPINNED in CI until the first green run (GAP-R4): match the CI log's SDK when diagnosing a CI-only failure; the drift gate canonicalises to the pubspec's language version, so patch drift is safe — never reformat the generated client to silence a failure |
 | JDK 17 | Gradle 8.x toolchain; `flutter doctor` reports a mismatch as a warning, the build as an error |
 | Android SDK with the API level the Flutter version requires | `flutter doctor --android-licenses` once per machine |
 | Play Console access with **release manager** rights | needed for the upload and the staged rollout controls |
@@ -263,5 +263,5 @@ worse than no runbook:
 | `Refusing a release build with the placeholder App Link host` | `FFARENA_APP_LINK_HOST` still `*.example.com` | set the production origin; deploy `assetlinks.json` there |
 | Upload rejected: "version code already used" | `versionCode` not bumped | bump the pubspec build number and rebuild |
 | Upload rejected: signature mismatch | signed with the wrong key | re-sign with the upload key; do not rotate blindly |
-| `flutter analyze` fails only in CI | SDK not pinned to 3.47.6 | reinstall the pinned SDK rather than reformatting the generated client |
+| `flutter analyze` fails only in CI | CI floats on `channel: stable` (no pin until the first green run — GAP-R4), so its SDK differs from yours | compare `flutter --version` against the CI log's SDK, reproduce locally with the matching SDK, record both versions in `docs/TEST_EVIDENCE.md`; never reformat the generated client to silence a failure |
 | Build succeeds but deep links do nothing | `assetlinks.json` missing or stale fingerprint | fix the host, then verify with `curl` |

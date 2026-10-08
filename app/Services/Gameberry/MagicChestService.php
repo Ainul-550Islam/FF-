@@ -51,12 +51,12 @@ class MagicChestService
         }
 
         $config = self::CHEST_TYPES[$type];
-        $goldReward = rand($config['gold_min'], $config['gold_max']);
-        $gemReward = rand($config['gem_min'], $config['gem_max']);
+        $goldReward = random_int($config['gold_min'], $config['gold_max']);
+        $gemReward = random_int($config['gem_min'], $config['gem_max']);
 
         // Chance for dice reward
         $diceRewards = [];
-        if (rand(1, 100) <= 30) { // 30% chance for dice
+        if (random_int(1, 100) <= 30) { // 30% chance for dice
             $randomDice = Dice::inRandomOrder()->first();
             if ($randomDice) {
                 $diceRewards[] = $randomDice->id;
@@ -121,10 +121,10 @@ class MagicChestService
         ];
 
         $chance = $chances[$gameMode] ?? 15;
-        if (rand(1, 100) <= $chance) {
+        if (random_int(1, 100) <= $chance) {
             $types = ['bronze', 'silver', 'gold'];
             $weights = [60, 30, 10];
-            $rand = rand(1, 100);
+            $rand = random_int(1, 100);
             $selected = 'bronze';
             $current = 0;
             foreach ($types as $i => $type) {

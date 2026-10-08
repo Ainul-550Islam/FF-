@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use PDO;
 use Throwable;
@@ -20,7 +21,8 @@ use Throwable;
  * SQLite uses "VACUUM INTO" for a crash-consistent snapshot (works while the
  * app is live); MySQL/PostgreSQL delegates to mysqldump/pg_dump when present
  * and fails honestly otherwise. A backup never reports success it did not
- * achieve, and never writes outside the private disk.
+ * achieve, and never writes outside the private disk except to the configured
+ * offsite mirror (GAP-10 C).
  */
 class BackupService
 {
@@ -46,18 +48,31 @@ class BackupService
 
             $private = $this->copyPrivateFiles($dir);
 
-            $manifest = $this->writeManifest($dir, $name, $db, $private);
-
+            // The integrity check runs on the CLEARTEXT dump. After this point
+            // the database file may be age-encrypted (GAP-10 C), and running
+            // PRAGMA integrity_check on ciphertext would fail a healthy backup.
             if (config('backup.integrity_check', true) && $db['driver'] === 'sqlite') {
                 if (! $this->integrityCheck($db['path'])) {
                     throw new \RuntimeException('SQLite integrity check failed on the freshly written snapshot.');
                 }
             }
 
+            // GAP-10 C — encrypt the database file when a recipient is
+            // configured. On success the cleartext is deleted and the manifest
+            // records the ciphertext; cleartext never leaves this block.
+            $db = $this->maybeEncryptDatabase($db);
+
+            $manifest = $this->writeManifest($dir, $name, $db, $private);
+
+            // GAP-10 C — mirror the finished backup off-host. When the mirror
+            // is required, a failed copy fails the whole backup (fail closed);
+            // the catch below deletes the half-written local directory.
+            $this->mirrorOffsite($name, $dir);
+
             $this->prune();
 
             $this->audit->recordQuietly(null, 'ops.backup_created', 'backup', null, [
-                'metadata' => ['name' => $name, 'db_driver' => $db['driver'], 'sha256' => $manifest['db_sha256']],
+                'metadata' => ['name' => $name, 'db_driver' => $db['driver'], 'sha256' => $manifest['db_sha256'], 'encrypted' => isset($db['encryption'])],
             ]);
 
             return [
@@ -138,7 +153,11 @@ class BackupService
         $sha = is_file($dbFile) ? hash_file('sha256', $dbFile) : null;
         $checks[] = ['check' => 'checksum', 'ok' => $sha !== null && hash_equals((string) ($manifest['db_sha256'] ?? ''), (string) $sha)];
 
-        if (($manifest['db_driver'] ?? '') === 'sqlite' && is_file($dbFile)) {
+        // Encrypted database files are ciphertext: the checksum above already
+        // proves the blob is intact, and PRAGMA integrity_check on ciphertext
+        // would fail a healthy backup. Plaintext integrity for encrypted
+        // backups is proven by a restore dry-run with the age identity.
+        if (($manifest['db_driver'] ?? '') === 'sqlite' && is_file($dbFile) && empty($manifest['encrypted'])) {
             $checks[] = ['check' => 'integrity', 'ok' => $this->integrityCheck($dbFile)];
         }
 
@@ -169,9 +188,13 @@ class BackupService
      * PostgreSQL, validate the custom-format dump with `pg_restore --list`
      * (no data is actually restored). Never touches the live database.
      *
-     * @return array{ok: bool, target?: string, validated?: bool, error?: string}
+     * When the backup is age-encrypted the database file is decrypted to a
+     * scratch file (always deleted afterwards) before validation; without an
+     * identity the dry-run fails closed.
+     *
+     * @return array{ok: bool, target?: string, validated?: bool, reason?: string, error?: string}
      */
-    public function restoreDryRun(string $name, ?string $targetPath = null): array
+    public function restoreDryRun(string $name, ?string $targetPath = null, ?string $identityPath = null): array
     {
         $backups = $this->list();
         $found = null;
@@ -203,6 +226,82 @@ class BackupService
             return ['ok' => false, 'error' => 'Database snapshot missing.'];
         }
 
+        // GAP-10 C — encrypted backups decrypt to a scratch file inside the
+        // backup directory; the finally block always removes it so cleartext
+        // never persists on the host.
+        $scratchFile = null;
+
+        if (is_array($manifest) && ! empty($manifest['encrypted'])) {
+            $decrypted = $this->decryptDatabaseFile($manifest, $dbFile, $dir, $identityPath);
+
+            if (! ($decrypted['ok'] ?? false)) {
+                return $decrypted;
+            }
+
+            $scratchFile = (string) $decrypted['path'];
+            $dbFile = $scratchFile;
+        }
+
+        try {
+            return $this->validateRestoredDatabase($driver, $name, $dir, $dbFile, $targetPath);
+        } finally {
+            if ($scratchFile !== null) {
+                @unlink($scratchFile);
+            }
+        }
+    }
+
+    /**
+     * Run an automated restore drill against the newest backup: a full
+     * non-destructive dry-run, exactly as an operator would run it.
+     *
+     * Encrypted backups without an identity on the host cannot be decrypted
+     * by design, so the drill falls back to blob verification (checksum) and
+     * reports mode `blob-only` instead of failing.
+     *
+     * @return array{ok: bool, mode?: string, backup?: string, target?: string, validated?: bool, note?: string, error?: string}
+     */
+    public function drill(): array
+    {
+        $backups = $this->list();
+
+        if ($backups === []) {
+            return ['ok' => false, 'error' => 'No backups found — nothing to drill.'];
+        }
+
+        $name = (string) $backups[0]['name'];
+        $result = $this->restoreDryRun($name);
+
+        if (($result['reason'] ?? null) === 'encrypted_no_identity') {
+            $verify = $this->verify($name);
+
+            return [
+                'ok' => (bool) ($verify['ok'] ?? false),
+                'mode' => 'blob-only',
+                'backup' => $name,
+                'note' => 'Backup is age-encrypted and no identity is configured on this host; blob checksum verified, the decryption drill needs an operator with the key.',
+            ];
+        }
+
+        $result['mode'] = 'full';
+        $result['backup'] = $name;
+
+        if (! ($result['ok'] ?? false)) {
+            $this->notifyAdmins('backup.drill_failed', 'Restore drill failed: '.$name, 'Automated restore drill failed: '.substr((string) ($result['error'] ?? 'unknown'), 0, 200));
+        }
+
+        return $result;
+    }
+
+    /**
+     * Validate a cleartext database file for a restore dry-run. Split out of
+     * restoreDryRun so encrypted backups can be decrypted to scratch first
+     * and then take the exact same validation path as unencrypted ones.
+     *
+     * @return array{ok: bool, target?: string, validated?: bool, error?: string}
+     */
+    protected function validateRestoredDatabase(string $driver, string $name, string $dir, string $dbFile, ?string $targetPath): array
+    {
         if ($driver === 'pgsql') {
             return $this->validatePgsqlDump($dbFile, $name, $dir);
         }
@@ -511,6 +610,13 @@ class BackupService
             'checksum' => (string) config('backup.checksum', 'sha256'),
         ];
 
+        // Only present on encrypted backups, so unencrypted manifests keep
+        // their exact historical shape.
+        if (isset($db['encryption']) && is_array($db['encryption'])) {
+            $manifest['encrypted'] = true;
+            $manifest['encryption'] = $db['encryption'];
+        }
+
         File::put($dir.'/manifest.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
         // Tighten permissions on the whole backup directory.
@@ -524,9 +630,212 @@ class BackupService
         return $manifest;
     }
 
+    /**
+     * GAP-10 C — encrypt the dumped database file with age when a recipient
+     * is configured. Returns the dump descriptor with the ciphertext file,
+     * hash and size plus an `encryption` block for the manifest. Without a
+     * recipient the descriptor passes through untouched.
+     *
+     * @param  array{driver: string, file: string, path: string, sha256: string, size: int}  $db
+     * @return array{driver: string, file: string, path: string, sha256: string, size: int, encryption?: array{tool: string, recipient_fingerprint: string, plaintext_sha256: string}}
+     */
+    protected function maybeEncryptDatabase(array $db): array
+    {
+        $recipient = trim((string) config('backup.encryption_recipient', ''));
+
+        if ($recipient === '') {
+            return $db;
+        }
+
+        $bin = $this->findBinary('age');
+
+        if ($bin === null) {
+            throw new \RuntimeException('BACKUP_ENCRYPTION_RECIPIENT is set but the age binary was not found on PATH — refusing to write an unencrypted backup.');
+        }
+
+        $cipherPath = $db['path'].'.age';
+
+        $cmd = sprintf(
+            '%s --encrypt --recipient %s --output %s %s',
+            escapeshellarg($bin),
+            escapeshellarg($recipient),
+            escapeshellarg($cipherPath),
+            escapeshellarg($db['path'])
+        );
+
+        exec($cmd.' 2>&1', $output, $code);
+
+        if ($code !== 0 || ! is_file($cipherPath) || filesize($cipherPath) === 0) {
+            @unlink($cipherPath);
+
+            throw new \RuntimeException('age encryption failed: '.implode(' ', array_slice($output, 0, 3)));
+        }
+
+        $plaintextSha = $db['sha256'];
+
+        // Cleartext must not survive next to the ciphertext.
+        @unlink($db['path']);
+
+        $db['file'] = $db['file'].'.age';
+        $db['path'] = $cipherPath;
+        $db['sha256'] = (string) hash_file('sha256', $cipherPath);
+        $db['size'] = (int) filesize($cipherPath);
+        $db['encryption'] = [
+            'tool' => 'age',
+            'recipient_fingerprint' => 'age-recipient:'.substr(hash('sha256', $recipient), 0, 16),
+            'plaintext_sha256' => $plaintextSha,
+        ];
+
+        return $db;
+    }
+
+    /**
+     * GAP-10 C — decrypt an encrypted database file to a scratch file inside
+     * the backup directory. The caller must delete the scratch file. Fails
+     * closed: no identity, no age binary, a wrong identity or tampered
+     * ciphertext all return ok:false, never cleartext.
+     *
+     * @return array{ok: bool, path?: string, reason?: string, error?: string}
+     */
+    protected function decryptDatabaseFile(array $manifest, string $dbFile, string $dir, ?string $identityPath): array
+    {
+        $identity = trim($identityPath ?? (string) config('backup.decryption_identity', ''));
+
+        if ($identity === '') {
+            return [
+                'ok' => false,
+                'reason' => 'encrypted_no_identity',
+                'error' => 'Backup is age-encrypted and no decryption identity was provided. Re-run with --identity=/path/to/age-key.txt or set BACKUP_DECRYPTION_IDENTITY.',
+            ];
+        }
+
+        $bin = $this->findBinary('age');
+
+        if ($bin === null) {
+            return ['ok' => false, 'error' => 'Backup is age-encrypted but the age binary was not found on PATH — install age to restore it.'];
+        }
+
+        $scratch = $dir.'/database.restore-'.uniqid('', true).'.tmp';
+
+        $cmd = sprintf(
+            '%s --decrypt --identity %s --output %s %s',
+            escapeshellarg($bin),
+            escapeshellarg($identity),
+            escapeshellarg($scratch),
+            escapeshellarg($dbFile)
+        );
+
+        exec($cmd.' 2>&1', $output, $code);
+
+        if ($code !== 0 || ! is_file($scratch)) {
+            @unlink($scratch);
+
+            return ['ok' => false, 'error' => 'could not decrypt the backup (wrong identity or corrupted ciphertext): '.implode(' ', array_slice($output, 0, 2))];
+        }
+
+        $expected = (string) ($manifest['encryption']['plaintext_sha256'] ?? '');
+
+        if ($expected === '' || ! hash_equals($expected, (string) hash_file('sha256', $scratch))) {
+            @unlink($scratch);
+
+            return ['ok' => false, 'error' => 'Decrypted plaintext does not match the manifest checksum — manifest and ciphertext disagree.'];
+        }
+
+        return ['ok' => true, 'path' => $scratch];
+    }
+
+    /**
+     * GAP-10 C — mirror a finished backup to the offsite disk and verify the
+     * copy by checksum. When the mirror is required a failure throws (failing
+     * the backup, fail closed); otherwise the miss is logged and the local
+     * backup still counts.
+     */
+    protected function mirrorOffsite(string $name, string $dir): void
+    {
+        $diskName = trim((string) config('backup.offsite_disk', ''));
+
+        if ($diskName === '') {
+            return;
+        }
+
+        $required = (bool) config('backup.offsite_required', false);
+
+        try {
+            $offsite = Storage::disk($diskName);
+            $prefix = trim((string) config('backup.offsite_prefix', 'backups'), '/').'/'.trim($name, '/');
+
+            foreach (File::allFiles($dir) as $file) {
+                $relative = ltrim(substr($file->getPathname(), strlen($dir)), '/');
+                $offsite->put($prefix.'/'.$relative, file_get_contents($file->getPathname()));
+            }
+
+            // Read the copy back and prove it matches, file by file.
+            foreach (File::allFiles($dir) as $file) {
+                $relative = ltrim(substr($file->getPathname(), strlen($dir)), '/');
+                $key = $prefix.'/'.$relative;
+
+                if (! $offsite->exists($key)) {
+                    throw new \RuntimeException("Offsite copy is missing [{$key}].");
+                }
+
+                $localSha = hash_file('sha256', $file->getPathname());
+                $remoteSha = hash('sha256', (string) $offsite->get($key));
+
+                if (! hash_equals((string) $localSha, $remoteSha)) {
+                    throw new \RuntimeException("Offsite copy checksum mismatch on [{$key}].");
+                }
+            }
+        } catch (Throwable $e) {
+            if ($required) {
+                throw new \RuntimeException('Offsite mirror failed (BACKUP_OFFSITE_REQUIRED=true): '.$e->getMessage(), 0, $e);
+            }
+
+            Log::warning('Backup offsite mirror failed; local backup retained.', [
+                'backup' => $name,
+                'disk' => $diskName,
+                'error' => substr($e->getMessage(), 0, 200),
+            ]);
+        }
+    }
+
+    /**
+     * GAP-10 C — apply the same retention to the offsite mirror. Best effort:
+     * a mirror that cannot be pruned is logged, never fatal to the backup.
+     */
+    protected function pruneOffsite(int $retention): void
+    {
+        $diskName = trim((string) config('backup.offsite_disk', ''));
+
+        if ($diskName === '') {
+            return;
+        }
+
+        try {
+            $offsite = Storage::disk($diskName);
+            $prefix = trim((string) config('backup.offsite_prefix', 'backups'), '/');
+
+            $sets = $offsite->directories($prefix);
+            rsort($sets);
+
+            foreach (array_slice($sets, $retention) as $stale) {
+                $offsite->deleteDirectory($stale);
+            }
+        } catch (Throwable $e) {
+            Log::warning('Backup offsite prune failed; stale mirrors retained.', [
+                'disk' => $diskName,
+                'error' => substr($e->getMessage(), 0, 200),
+            ]);
+        }
+    }
+
     protected function prune(): void
     {
         $retention = (int) config('backup.retention', 14);
+
+        // Offsite retention is enforced on every run, not only when the local
+        // directory overflows — a no-op when no offsite disk is configured.
+        $this->pruneOffsite($retention);
+
         $backups = $this->list();
 
         if (count($backups) <= $retention) {

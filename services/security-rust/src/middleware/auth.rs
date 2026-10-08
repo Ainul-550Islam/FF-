@@ -179,72 +179,103 @@ pub fn with_staff_auth(
     })
 }
 
-/// HMAC service auth for inter-service communication
-/// Validates X-Service-ID, X-Timestamp, X-Nonce, X-Signature
+/// Strict HMAC service auth for inter-service calls (R9).
+///
+/// Verifies the Laravel service signature over method + full path + raw body
+/// + auth headers. Pure function (no warp types) so unit tests need no
+/// filter harness. `now` is unix seconds.
+///
+/// Header contract (mirrors ServiceAuthenticator::generateHeaders):
+/// X-Service-ID (required present, informational — the single shared secret
+/// authenticates, not the id), X-Timestamp (unix seconds, +-300s), X-Nonce
+/// (required present; replay tracking is future work — the timestamp window
+/// bounds replays), X-Signature (hex HMAC-SHA256 over
+/// "METHOD:path:body:timestamp:nonce", path with a leading slash and no
+/// query string, raw body bytes).
+///
+/// An empty secret disables verification (dev-open). Production boot refuses
+/// empty secrets (Config::load -> validate_secret_strength), so that branch
+/// is unreachable in production.
+pub fn verify_service_signature(
+    secret: &str,
+    method: &str,
+    path: &str,
+    body: &[u8],
+    service_id: &str,
+    timestamp: &str,
+    nonce: &str,
+    signature: &str,
+    now: i64,
+) -> Result<(), String> {
+    if secret.is_empty() {
+        return Ok(());
+    }
+    if service_id.is_empty() || timestamp.is_empty() || nonce.is_empty() || signature.is_empty() {
+        return Err("Missing service auth headers".to_string());
+    }
+    let ts: i64 = timestamp
+        .parse()
+        .map_err(|_| "Invalid timestamp".to_string())?;
+    if (now - ts).abs() > 300 {
+        return Err("Timestamp out of tolerance".to_string());
+    }
+    // The timestamp is re-encoded from the parsed int so this matches
+    // sprintf('%d') exactly (no leading-zero variants).
+    let body_str = String::from_utf8_lossy(body);
+    let message = format!("{}:{}:{}:{}:{}", method, path, body_str, ts, nonce);
+    if crate::security::hmac::verify_hmac_hex(secret, &message, signature) {
+        Ok(())
+    } else {
+        Err("Invalid service signature".to_string())
+    }
+}
+
+/// Warp filter: verifies the service signature over method + full path +
+/// raw body + auth headers, and yields the raw body for the handler to
+/// parse. Missing or bad credentials reject with `Unauthorized`, which maps
+/// to 401 via `handle_auth_rejection` (wired with `.recover()` on the
+/// evaluate routes).
+///
+/// The extract is a 1-tuple `(Vec<u8>,)` — warp requires every filter
+/// extract to implement `Tuple`, so a bare `Vec<u8>` cannot be yielded
+/// (fixed 2026-10-07 after the compiler rejected `.untuple_one()`).
 pub fn with_service_auth(
     hmac_secret: String,
-) -> impl Filter<Extract = (), Error = Rejection> + Clone {
-    warp::header::optional::<String>("x-service-id")
+) -> impl Filter<Extract = (Vec<u8>,), Error = Rejection> + Clone {
+    warp::method()
+        .and(warp::path::full())
+        .and(warp::header::optional::<String>("x-service-id"))
         .and(warp::header::optional::<String>("x-timestamp"))
         .and(warp::header::optional::<String>("x-nonce"))
         .and(warp::header::optional::<String>("x-signature"))
-        .and(warp::header::optional::<String>("x-request-id"))
+        .and(warp::body::bytes().map(|body: warp::hyper::body::Bytes| body.to_vec()))
         .and_then(
-            move |service_id: Option<String>,
+            move |method: warp::http::Method,
+                  full_path: warp::path::FullPath,
+                  service_id: Option<String>,
                   timestamp: Option<String>,
                   nonce: Option<String>,
                   signature: Option<String>,
-                  _request_id: Option<String>| {
+                  body: Vec<u8>| {
                 let secret = hmac_secret.clone();
                 async move {
-                    // For health endpoints, allow missing service auth
-                    // Actual enforcement happens in handler
-                    if service_id.is_none() {
-                        return Ok(());
-                    }
-
-                    let service_id = service_id.unwrap();
-                    let timestamp = timestamp.unwrap_or_default();
-                    let nonce = nonce.unwrap_or_default();
-                    let signature = signature.unwrap_or_default();
-
-                    if service_id.is_empty()
-                        || timestamp.is_empty()
-                        || nonce.is_empty()
-                        || signature.is_empty()
-                    {
-                        return Err(warp::reject::custom(Unauthorized {
-                            reason: "Missing service auth headers".to_string(),
-                        }));
-                    }
-
-                    // Validate timestamp - 5 minute tolerance
-                    if let Ok(ts) = timestamp.parse::<i64>() {
-                        let now = chrono::Utc::now().timestamp();
-                        if (now - ts).abs() > 300 {
-                            return Err(warp::reject::custom(Unauthorized {
-                                reason: "Timestamp out of tolerance".to_string(),
-                            }));
-                        }
-                    } else {
-                        return Err(warp::reject::custom(Unauthorized {
-                            reason: "Invalid timestamp".to_string(),
-                        }));
-                    }
-
-                    // Validate signature - HMAC SHA256 of service_id + timestamp + nonce
-                    let message = format!("{}{}{}", service_id, timestamp, nonce);
-                    if crate::security::hmac::verify_hmac(&secret, &message, &signature) {
-                        Ok(())
-                    } else {
-                        Err(warp::reject::custom(Unauthorized {
-                            reason: "Invalid service signature".to_string(),
-                        }))
-                    }
+                    let now = chrono::Utc::now().timestamp();
+                    verify_service_signature(
+                        &secret,
+                        method.as_str(),
+                        full_path.as_str(),
+                        &body,
+                        service_id.as_deref().unwrap_or(""),
+                        timestamp.as_deref().unwrap_or(""),
+                        nonce.as_deref().unwrap_or(""),
+                        signature.as_deref().unwrap_or(""),
+                        now,
+                    )
+                    .map_err(|reason| warp::reject::custom(Unauthorized { reason }))?;
+                    Ok::<Vec<u8>, Rejection>(body)
                 }
             },
         )
-        .untuple_one()
 }
 
 /// Handle auth rejections with proper JSON responses and redaction
@@ -300,4 +331,128 @@ pub fn validate_secret_strength(secret: &str, name: &str) -> Result<(), String> 
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::verify_service_signature;
+    use crate::security::hmac::generate_hmac_hex;
+
+    const SECRET: &str = "service-auth-test-secret-0123456789ab";
+    const METHOD: &str = "POST";
+    const PATH: &str = "/api/v1/fraud/evaluate";
+    const BODY: &[u8] = b"{\"user_id\":7}";
+    const SERVICE_ID: &str = "ffarena-laravel";
+    const NONCE: &str = "8f3a2c1d-0000-4000-8000-000000000000";
+    const NOW: i64 = 1_789_000_000;
+
+    fn sign(secret: &str, method: &str, path: &str, body: &[u8], ts: i64, nonce: &str) -> String {
+        let message = format!(
+            "{}:{}:{}:{}:{}",
+            method,
+            path,
+            String::from_utf8_lossy(body),
+            ts,
+            nonce
+        );
+        generate_hmac_hex(secret, &message)
+    }
+
+    fn check(
+        secret: &str,
+        method: &str,
+        path: &str,
+        body: &[u8],
+        service_id: &str,
+        ts: &str,
+        nonce: &str,
+        sig: &str,
+        now: i64,
+    ) -> Result<(), String> {
+        verify_service_signature(secret, method, path, body, service_id, ts, nonce, sig, now)
+    }
+
+    #[test]
+    fn valid_signature_passes() {
+        let ts = NOW.to_string();
+        let sig = sign(SECRET, METHOD, PATH, BODY, NOW, NONCE);
+        assert!(check(SECRET, METHOD, PATH, BODY, SERVICE_ID, &ts, NONCE, &sig, NOW).is_ok());
+    }
+
+    #[test]
+    fn valid_get_with_empty_body_passes() {
+        let ts = NOW.to_string();
+        let sig = sign(SECRET, "GET", "/api/v1/fraud/overall/7", b"", NOW, NONCE);
+        assert!(check(
+            SECRET,
+            "GET",
+            "/api/v1/fraud/overall/7",
+            b"",
+            SERVICE_ID,
+            &ts,
+            NONCE,
+            &sig,
+            NOW
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn wrong_secret_rejected() {
+        let ts = NOW.to_string();
+        let sig = sign("wrong-secret", METHOD, PATH, BODY, NOW, NONCE);
+        assert!(check(SECRET, METHOD, PATH, BODY, SERVICE_ID, &ts, NONCE, &sig, NOW).is_err());
+    }
+
+    #[test]
+    fn tampered_body_rejected() {
+        let ts = NOW.to_string();
+        let sig = sign(SECRET, METHOD, PATH, BODY, NOW, NONCE);
+        assert!(check(SECRET, METHOD, PATH, b"{\"user_id\":8}", SERVICE_ID, &ts, NONCE, &sig, NOW)
+            .is_err());
+    }
+
+    #[test]
+    fn wrong_path_rejected() {
+        let ts = NOW.to_string();
+        let sig = sign(SECRET, METHOD, PATH, BODY, NOW, NONCE);
+        assert!(check(SECRET, METHOD, "/api/v1/fraud/overall/7", BODY, SERVICE_ID, &ts, NONCE, &sig, NOW)
+            .is_err());
+    }
+
+    #[test]
+    fn stale_timestamp_rejected() {
+        let old = NOW - 301;
+        let ts = old.to_string();
+        let sig = sign(SECRET, METHOD, PATH, BODY, old, NONCE);
+        assert!(check(SECRET, METHOD, PATH, BODY, SERVICE_ID, &ts, NONCE, &sig, NOW).is_err());
+    }
+
+    #[test]
+    fn future_timestamp_rejected() {
+        let future = NOW + 301;
+        let ts = future.to_string();
+        let sig = sign(SECRET, METHOD, PATH, BODY, future, NONCE);
+        assert!(check(SECRET, METHOD, PATH, BODY, SERVICE_ID, &ts, NONCE, &sig, NOW).is_err());
+    }
+
+    #[test]
+    fn unparsable_timestamp_rejected() {
+        assert!(check(SECRET, METHOD, PATH, BODY, SERVICE_ID, "not-a-number", NONCE, "sig", NOW)
+            .is_err());
+    }
+
+    #[test]
+    fn missing_headers_rejected() {
+        let ts = NOW.to_string();
+        let sig = sign(SECRET, METHOD, PATH, BODY, NOW, NONCE);
+        assert!(check(SECRET, METHOD, PATH, BODY, "", &ts, NONCE, &sig, NOW).is_err());
+        assert!(check(SECRET, METHOD, PATH, BODY, SERVICE_ID, &ts, "", &sig, NOW).is_err());
+        assert!(check(SECRET, METHOD, PATH, BODY, SERVICE_ID, &ts, NONCE, "", NOW).is_err());
+    }
+
+    #[test]
+    fn empty_secret_is_dev_open() {
+        assert!(check("", METHOD, PATH, BODY, "", "", "", "", NOW).is_ok());
+    }
 }

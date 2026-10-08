@@ -43,7 +43,7 @@ class WalletController extends Controller
         $entries = $wallet->ledgerEntries()->orderByDesc('id')->paginate($perPage);
 
         return ApiResponse::data(
-            LedgerEntryResource::collection($entries),
+            LedgerEntryResource::collection($entries->items()), // AUDIT FIX-11: flat data[] per OpenAPI
             [
                 'pagination' => [
                     'current_page' => $entries->currentPage(),
@@ -68,7 +68,7 @@ class WalletController extends Controller
             ->paginate($perPage);
 
         return ApiResponse::data(
-            PayoutResource::collection($payouts),
+            PayoutResource::collection($payouts->items()), // AUDIT FIX-11: flat data[] per OpenAPI
             [
                 'pagination' => [
                     'current_page' => $payouts->currentPage(),

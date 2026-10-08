@@ -206,7 +206,8 @@ Rust:1.78 builder cargo build --release, debian:bookworm-slim runtime ca-certifi
 ## Security Preservation
 
 - Bearer auth: Laravel Sanctum + Go BearerAuth + Rust Bearer (skip health/webhooks)
-- HMAC: Go HMACVerify middleware, Rust HMAC via headers, Laravel PaymentService verifySignature raw-body HMAC SHA256
+- HMAC: Go HMACVerify middleware, Rust HMAC via headers, Laravel PaymentService verifySignature raw-body HMAC SHA256; Laravel→service calls sign X-Service-ID/X-Timestamp/X-Nonce/X-Signature via ServiceAuthenticator (P2-3: adapters now sign with the service hmac_secret, not the method string)
+- Inbound service calls (P2-3): Go/Rust→Laravel routes use the `service.hmac` middleware (EnsureServiceHmac) — never user bearer tokens. Same 5-part header contract, timestamp tolerance + nonce replay protection, fail-closed on placeholder secrets
 - Idempotency: Go Idempotency middleware map + Laravel EnsureIdempotency ApiIdempotencyKey
 - Rate limiting: Go RateLimiter 60/min per IP + Laravel RateLimiter api 60/min + Rust RateLimiter 60/min
 - Security headers: Go SecurityHeaders nosniff SAMEORIGIN + Rust SecurityHeaders + Laravel SecurityHeaders

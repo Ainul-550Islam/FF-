@@ -76,6 +76,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // P2 (2026-10-07): production guardrail — a placeholder sender
+        // fails SPF and burns deliverability. Set MAIL_FROM_ADDRESS via
+        // .env (see docs/DEPLOYMENT.md §1).
+        if (app()->environment('production') && str_ends_with((string) config('mail.from.address', ''), '@example.com')) {
+            Log::warning('MAIL_FROM_ADDRESS still uses an @example.com placeholder in production — set the real sender.');
+        }
+
         // Phase 15 — use the app's PersonalAccessToken subclass so the
         // api_client_id link (grouped revocation) is available on tokens.
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);

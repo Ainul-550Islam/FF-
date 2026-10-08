@@ -30,7 +30,12 @@ class BankGateway implements PaymentGatewayInterface
     {
         $config = (array) config('payments.providers.bank', []);
 
-        return $config['enabled'] ?? false;
+        // Providers gap (2026-10-07): the method is only offerable when ops
+        // has filled the destination account details — an enabled flag alone
+        // must not advertise a transfer target that renders blank.
+        return ($config['enabled'] ?? false)
+            && ! empty($config['account_name'])
+            && ! empty($config['account_number']);
     }
 
     public function supportsCallbacks(): bool

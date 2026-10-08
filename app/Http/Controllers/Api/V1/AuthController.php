@@ -52,13 +52,15 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
+            // AUDIT FIX-13: parity with the web RegisterController — the API
+            // previously allowed 6-char passwords and unconstrained usernames.
             'name' => 'required|string|max:255',
-            'username' => 'required|string|max:60|unique:users,username',
-            'email' => 'required|email|unique:users,email',
-            'phone' => 'nullable|string|max:20',
-            'game_uid' => 'nullable|string|max:30',
+            'username' => 'required|string|min:3|max:30|unique:users,username|regex:/^[a-zA-Z0-9_\\.]+$/',
+            'email' => 'required|email|max:255|unique:users,email',
+            'phone' => 'nullable|string|max:20|regex:/^[+0-9][0-9\\-\\s]{5,19}$/',
+            'game_uid' => 'nullable|string|max:30|regex:/^[A-Za-z0-9]{4,30}$/',
             'role' => ['required', Rule::in(['player', 'organizer'])],
-            'password' => 'required|min:6|confirmed',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         // role is validated above (player|organizer only) and set explicitly —

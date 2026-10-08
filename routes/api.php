@@ -65,6 +65,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('tournaments/{tournament}/leaderboard', [TournamentController::class, 'leaderboard'])->name('tournaments.leaderboard');
         Route::get('tournaments/{tournament}/bracket', [TournamentController::class, 'bracket'])->name('tournaments.bracket');
         Route::get('matches/{match}', [MatchController::class, 'show'])->name('matches.show');
+        // AUDIT FIX-12: score list the mobile client already calls.
+        Route::get('matches/{match}/scores', [MatchController::class, 'scores'])->name('matches.scores');
         Route::get('players/{user}', [PlayerController::class, 'show'])->name('players.show');
         Route::get('players/{user}/ranking', [LeaderboardController::class, 'playerRanking'])->name('players.ranking');
         Route::get('leaderboards', [LeaderboardController::class, 'index'])->name('leaderboards.index');

@@ -54,7 +54,7 @@ class AuthController extends Controller
             'username' => 'required|string|max:60|unique:users,username',
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:20',
-            'game_uid' => 'nullable|string|max:30',
+            'game_uid' => ['nullable', 'string', 'max:30', 'regex:/^[A-Za-z0-9]{4,30}$/'],
             'role' => 'required|in:player,organizer',
             'password' => 'required|min:6|confirmed',
         ]);

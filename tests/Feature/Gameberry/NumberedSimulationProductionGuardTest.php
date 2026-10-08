@@ -22,7 +22,7 @@ use Tests\TestCase;
  *
  *     APP_ENV=production
  *     POST /v1/gameberry/core/feature-192/play
- *     → 200, and the caller's gold wallet mutated via rand(0, 1)
+ *     → 200, and the caller's gold wallet mutated via random_int(0, 1)
  *
  * while `final9` was refused. The guard matched `gameberry/final…` only, so the
  * `core` and `stats` families — which mutate the same virtual wallets — were
@@ -340,7 +340,9 @@ class NumberedSimulationProductionGuardTest extends TestCase
         $response = $this->postJson(self::CORE_URI, $this->playPayload());
 
         $response->assertOk();
-        $response->assertJsonPath('success', true);
+        // Standard envelope: gameberry.envelope normalizes the legacy
+        // {"success":true,"data":...} shape to {data, meta}.
+        $response->assertJsonStructure(['data' => ['is_win'], 'meta']);
 
         // The write really happened: exactly one bet was placed for this user.
         $this->assertSame(

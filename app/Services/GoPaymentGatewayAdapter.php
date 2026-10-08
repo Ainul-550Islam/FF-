@@ -34,7 +34,8 @@ class GoPaymentGatewayAdapter
             $body = json_encode($data);
 
             // Service authentication: X-Service-ID, X-Timestamp, X-Nonce, X-Signature, X-Request-ID
-            $headers = $this->authenticator->generateHeaders('POST', '/api/v1/payments', $body);
+            // P2-3 (2026-10-07): sign with the service HMAC secret (was: the HTTP method string).
+            $headers = $this->authenticator->generateHeaders((string) config('services_go_rust.go_payment.hmac_secret'), 'POST', '/api/v1/payments', $body);
             $headers['Authorization'] = 'Bearer '.config('services_go_rust.go_payment.token');
             $headers['Idempotency-Key'] = $idempotencyKey;
             $headers['X-Request-ID'] = $requestId;
@@ -77,7 +78,7 @@ class GoPaymentGatewayAdapter
             $url = config('services_go_rust.go_payment.url').'/api/v1/payments/'.$externalId;
             $requestId = (string) Str::uuid();
             $body = '';
-            $headers = $this->authenticator->generateHeaders('GET', '/api/v1/payments/'.$externalId, $body);
+            $headers = $this->authenticator->generateHeaders((string) config('services_go_rust.go_payment.hmac_secret'), 'GET', '/api/v1/payments/'.$externalId, $body);
             $headers['Authorization'] = 'Bearer '.config('services_go_rust.go_payment.token');
             $headers['X-Request-ID'] = $requestId;
 
@@ -100,7 +101,7 @@ class GoPaymentGatewayAdapter
             $idempotencyKey = $data['idempotency_key'] ?? (string) Str::uuid();
             $requestId = (string) Str::uuid();
             $body = json_encode($data);
-            $headers = $this->authenticator->generateHeaders('POST', '/api/v1/payments/refund', $body);
+            $headers = $this->authenticator->generateHeaders((string) config('services_go_rust.go_payment.hmac_secret'), 'POST', '/api/v1/payments/refund', $body);
             $headers['Authorization'] = 'Bearer '.config('services_go_rust.go_payment.token');
             $headers['Idempotency-Key'] = $idempotencyKey;
             $headers['X-Request-ID'] = $requestId;
@@ -123,7 +124,7 @@ class GoPaymentGatewayAdapter
         try {
             $url = config('services_go_rust.go_payment.url').'/api/v1/payments/methods';
             $requestId = (string) Str::uuid();
-            $headers = $this->authenticator->generateHeaders('GET', '/api/v1/payments/methods', '');
+            $headers = $this->authenticator->generateHeaders((string) config('services_go_rust.go_payment.hmac_secret'), 'GET', '/api/v1/payments/methods', '');
             $headers['Authorization'] = 'Bearer '.config('services_go_rust.go_payment.token');
             $headers['X-Request-ID'] = $requestId;
 

@@ -109,7 +109,7 @@ class MarketingExperimentService
 
     /**
      * Deterministic bucket in [0,100) for an identity — md5 keeps the
-     * split stable across PHP versions and servers (no rand() anywhere).
+     * split stable across PHP versions and servers (no random_int() anywhere).
      */
     protected function bucket(string $key): int
     {

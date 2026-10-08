@@ -267,16 +267,50 @@ def format_if_available(path):
     Best-effort: when the Dart SDK is not on PATH (e.g. a backend-only
     checkout) the file is still written, just unformatted. In mobile CI the
     SDK is always present, so committed and regenerated files stay identical.
+
+    The language version is passed EXPLICITLY (parsed from the pubspec SDK
+    floor, mirroring scripts/ci/check-flutter.sh) instead of relying on
+    `dart format`'s package resolution: without
+    `.dart_tool/package_config.json` — i.e. on every fresh checkout, where
+    the drift gate runs BEFORE `pub get` — the formatter cannot resolve the
+    package and silently formats at the SDK's latest language version (tall
+    style), producing bytes that differ from the canonical gate comparison
+    and failing the REQUIRED drift gate on clean CI checkouts. An explicit
+    flag makes the output independent of `.dart_tool/` state.
     """
     dart = shutil.which("dart")
     if not dart:
         return
+    floor = _pubspec_language_floor()
+    cmd = (
+        [dart, "format", path]
+        if floor is None
+        else [dart, "format", f"--language-version={floor}", path]
+    )
     subprocess.run(
-        [dart, "format", path],
+        cmd,
         check=False,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+def _pubspec_language_floor():
+    """`major.minor` SDK floor from mobile/pubspec.yaml (e.g. '3.4'), or None.
+
+    Same derivation as the drift gate's `sed` in check-flutter.sh: the first
+    `sdk: '>=x.y...'` lower bound. None (→ unflagged format) only when the
+    pubspec cannot be read — fail-open by design, never fail the generation.
+    """
+    try:
+        with open(os.path.join(ROOT, "mobile", "pubspec.yaml")) as fh:
+            for line in fh:
+                m = re.search(r"^\s*sdk:\s*'?>=\s*([0-9]+)\.([0-9]+)", line)
+                if m:
+                    return f"{m.group(1)}.{m.group(2)}"
+    except OSError:
+        pass
+    return None
 
 
 def main():

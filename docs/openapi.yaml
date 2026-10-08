@@ -167,6 +167,12 @@ paths:
         - {name: page, in: query, schema: {type: integer}}
         - {name: per_page, in: query, schema: {type: integer}}
         - {name: status, in: query, schema: {type: string}}
+        # AUDIT FIX-12b: documented 2026-10-07 — the mobile client sent
+        # `search`, which the server ignores; the correct key is `q`.
+        - {name: q, in: query, schema: {type: string}}
+        - {name: game_mode, in: query, schema: {type: string, enum: [squad, duo, solo]}}
+        - {name: sort, in: query, schema: {type: string, enum: [starts_at, prize_pool, entry_fee, name]}}
+        - {name: direction, in: query, schema: {type: string, enum: [asc, desc]}}
       responses:
         '200':
           description: List
@@ -287,6 +293,18 @@ paths:
       responses:
         '200': {description: Match}
   /matches/{match}/scores:
+    # AUDIT FIX-12: this read endpoint existed in the mobile client but was
+    # missing server-side (every call 404'd). Added 2026-10-07.
+    get:
+      summary: List match scores
+      operationId: listMatchScores
+      security: []
+      tags: [Matches]
+      parameters:
+        - {name: match, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Score list}
+        '404': {$ref: '#/components/responses/NotFound'}
     post:
       summary: Submit score
       operationId: submitScore
@@ -302,7 +320,7 @@ paths:
               type: object
               properties:
                 team_id: {type: integer}
-                kills: {type: integer}
+                kills: {type: integer, minimum: 0, maximum: 60}
                 placement: {type: integer}
       responses:
         '200': {description: Score submitted}

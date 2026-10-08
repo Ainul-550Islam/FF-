@@ -23,87 +23,105 @@ class PrivateTableService
 
     public function createTable(int $hostId, array $options = []): PrivateTable
     {
+        // AUDIT FIX-16: service-level validation (defense in depth — the
+        // controllers validate too, but the service must never trust its
+        // callers with money-adjacent values).
         $gameMode = $options['game_mode'] ?? $options['mode'] ?? 'classic'; // classic, master, quick, team_up
+
+        if (! in_array($gameMode, ['classic', 'master', 'quick', 'team_up'], true)) {
+            throw new \InvalidArgumentException('Unknown game mode.');
+        }
+
         $maxPlayers = $this->getMaxPlayersForMode($gameMode);
-        $betAmount = $options['bet_amount'] ?? $options['bet_amount_minor'] ?? 100;
-        $isTeamUp = $options['is_team_up'] ?? ($gameMode === 'team_up') ?? false;
+        $betAmount = (int) ($options['bet_amount'] ?? $options['bet_amount_minor'] ?? 100);
+
+        if ($betAmount < 100 || $betAmount > 100000) {
+            throw new \InvalidArgumentException('Bet amount must be between 100 and 100000 gold.');
+        }
+
+        $isTeamUp = (bool) ($options['is_team_up'] ?? ($gameMode === 'team_up'));
         $variation = $options['variation'] ?? $options['game_variation'] ?? $gameMode;
 
         // Normalize variation to classic/master/quick
         $gameVariation = in_array($variation, ['classic', 'master', 'quick', 'team_up']) ? $variation : 'classic';
         $mode = $isTeamUp ? 'team_up' : ($maxPlayers == 2 ? '1vs1' : '4_player');
 
-        $code = $this->generateUniqueCode();
-        $link = url('/private-tables/join/'.$code);
+        return DB::transaction(function () use ($hostId, $gameMode, $gameVariation, $mode, $betAmount, $maxPlayers, $isTeamUp, $options) {
+            $code = $this->generateUniqueCode();
+            $link = url('/private-tables/join/'.$code);
 
-        $table = PrivateTable::create([
-            'creator_id' => $hostId,
-            'code' => $code,
-            'link' => $link,
-            'game_variation' => $gameVariation,
-            'mode' => $mode,
-            'bet_amount_minor' => $betAmount,
-            'max_players' => $maxPlayers,
-            'is_team_up' => $isTeamUp,
-            'status' => 'waiting',
-            'expires_at' => now()->addHours(self::EXPIRY_HOURS),
-            'settings' => [
-                'game_mode' => $gameMode,
-                'is_private' => $options['is_private'] ?? true,
-                'allow_spectators' => $options['allow_spectators'] ?? true,
-                'bet_amount' => $betAmount,
-            ],
-        ]);
+            $table = PrivateTable::create([
+                'creator_id' => $hostId,
+                'code' => $code,
+                'link' => $link,
+                'game_variation' => $gameVariation,
+                'mode' => $mode,
+                'bet_amount_minor' => $betAmount,
+                'max_players' => $maxPlayers,
+                'is_team_up' => $isTeamUp,
+                'status' => 'waiting',
+                'expires_at' => now()->addHours(self::EXPIRY_HOURS),
+                'settings' => [
+                    'game_mode' => $gameMode,
+                    'is_private' => $options['is_private'] ?? true,
+                    'allow_spectators' => $options['allow_spectators'] ?? true,
+                    'bet_amount' => $betAmount,
+                ],
+            ]);
 
-        // Add host as participant
-        PrivateTableParticipant::create([
-            'private_table_id' => $table->id,
-            'user_id' => $hostId,
-            'role' => 'creator',
-            'status' => 'joined',
-            'is_ready' => false,
-            'team' => $isTeamUp ? 'team_a' : null,
-        ]);
+            // Add host as participant (the host stakes when the game starts,
+            // not at creation — see leaveTable: only staked seats refund).
+            PrivateTableParticipant::create([
+                'private_table_id' => $table->id,
+                'user_id' => $hostId,
+                'role' => 'creator',
+                'status' => 'joined',
+                'is_ready' => false,
+                'team' => $isTeamUp ? 'team_a' : null,
+            ]);
 
-        return $table;
+            return $table;
+        });
     }
 
     public function joinTable(int $userId, string $code): PrivateTableParticipant
     {
-        $table = PrivateTable::where('code', strtoupper($code))->where('status', 'waiting')->first();
-        if (! $table) {
-            throw new \Exception('Table not found or not available');
-        }
+        // AUDIT FIX-16: the old flow checked capacity/expiry/duplicates on
+        // UNLOCKED rows (TOCTOU overfill), then SWALLOWED gold-deduction
+        // failures — a broke player still got a seat, and leaveTable later
+        // refunded a bet that was never paid (gold duplication). Now: lock
+        // the table row, re-check everything inside the transaction, and let
+        // a failed stake roll the seat back.
+        return DB::transaction(function () use ($userId, $code) {
+            $table = PrivateTable::query()
+                ->where('code', strtoupper($code))
+                ->lockForUpdate()
+                ->first();
 
-        if ($table->isExpired()) {
-            throw new \Exception('Table expired');
-        }
-
-        // Check full - use canJoin or count
-        $count = $table->participants()->count();
-        if ($count >= $table->max_players) {
-            throw new \Exception('Table is full');
-        }
-
-        $existing = PrivateTableParticipant::where('private_table_id', $table->id)->where('user_id', $userId)->first();
-        if ($existing) {
-            return $existing;
-        }
-
-        // Check gold - if GoldEconomyService exists
-        try {
-            $goldService = app(GoldEconomyService::class);
-            if (! $goldService->canAffordBet($userId, $table->bet_amount_minor)) {
-                throw new \Exception('Insufficient gold to join table');
+            if (! $table || $table->status !== 'waiting') {
+                throw new \Exception('Table not found or not available');
             }
-        } catch (\Exception $e) {
-            if (str_contains($e->getMessage(), 'Insufficient gold')) {
-                throw $e;
-            }
-            // If service missing method, ignore for test
-        }
 
-        return DB::transaction(function () use ($table, $userId) {
+            if ($table->isExpired()) {
+                throw new \Exception('Table expired');
+            }
+
+            $existing = PrivateTableParticipant::query()
+                ->where('private_table_id', $table->id)
+                ->where('user_id', $userId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            $count = $table->participants()->lockForUpdate()->count();
+
+            if ($count >= $table->max_players) {
+                throw new \Exception('Table is full');
+            }
+
             $participant = PrivateTableParticipant::create([
                 'private_table_id' => $table->id,
                 'user_id' => $userId,
@@ -113,20 +131,16 @@ class PrivateTableService
                 'team' => $table->is_team_up ? $this->assignTeam($table) : null,
             ]);
 
-            // Deduct gold at stake - if service available
-            try {
-                app(GoldEconomyService::class)->placeBet($userId, $table->bet_amount_minor, $table->code);
-            } catch (\Exception $e) {
-                // Ignore if method missing or insufficient - test expects deduction
-                // Try alternative method names
-                try {
-                    $svc = app(GoldEconomyService::class);
-                    if (method_exists($svc, 'deductGold')) {
-                        $svc->deductGold($userId, $table->bet_amount_minor, 'private_table_join', $table->code);
-                    }
-                } catch (\Exception $e2) {
-                }
-            }
+            // Stake the gold. placeBet re-checks affordability under the
+            // wallet row lock; an \Exception here rolls the seat back, so a
+            // seat NEVER exists without its stake.
+            $stake = app(GoldEconomyService::class)->placeBet($userId, $table->bet_amount_minor, $table->code);
+
+            $participant->metadata = array_merge($participant->metadata ?? [], [
+                'staked_minor' => $table->bet_amount_minor,
+                'stake_txn_id' => $stake->id,
+            ]);
+            $participant->save();
 
             return $participant;
         });
@@ -134,17 +148,29 @@ class PrivateTableService
 
     public function leaveTable(int $userId, string $code): void
     {
-        $table = PrivateTable::where('code', strtoupper($code))->firstOrFail();
-        $participant = PrivateTableParticipant::where('private_table_id', $table->id)->where('user_id', $userId)->firstOrFail();
+        // AUDIT FIX-16: the old code refunded the FULL bet to ANYONE who left
+        // a waiting table — including the host (who never staked at creation)
+        // and players whose stake had failed. Only the actually-staked amount
+        // recorded on the seat is refunded, and the seat row is locked so two
+        // concurrent leaves cannot double-refund.
+        DB::transaction(function () use ($userId, $code) {
+            $table = PrivateTable::query()
+                ->where('code', strtoupper($code))
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        DB::transaction(function () use ($table, $participant, $userId) {
-            // Refund if game not started
-            if ($table->status === 'waiting') {
-                try {
-                    app(GoldEconomyService::class)->refundBet($userId, $table->bet_amount_minor, $table->code, 'left table');
-                } catch (\Exception $e) {
-                }
+            $participant = PrivateTableParticipant::query()
+                ->where('private_table_id', $table->id)
+                ->where('user_id', $userId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $staked = (int) ($participant->metadata['staked_minor'] ?? 0);
+
+            if ($table->status === 'waiting' && $staked > 0) {
+                app(GoldEconomyService::class)->refundBet($userId, $staked, $table->code, 'left table');
             }
+
             $participant->delete();
 
             if ($table->participants()->count() === 0) {

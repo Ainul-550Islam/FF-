@@ -35,7 +35,9 @@ services:
       redis-server
       --appendonly yes
       --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
+      # volatile-ttl: only keys WITH an expiry are evicted (nearest first),
+      # so persistent queue/session/cache keys are never silently dropped.
+      --maxmemory-policy volatile-ttl
       --requirepass ${REDIS_PASSWORD:-ffarena-redis-secret}
     volumes:
       - redis_data:/data
@@ -69,10 +71,10 @@ services:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://${POSTGRES_USER:-ffarena}:${POSTGRES_PASSWORD:-ffarena}@postgres:5432/${POSTGRES_DB:-ffarena}?sslmode=disable
       REDIS_URL: redis://:${REDIS_PASSWORD:-ffarena-redis-secret}@redis:6379/0
-      JWT_SECRET: ${JWT_SECRET:-change-me-jwt-secret}
-      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-change-me-webhook-secret}
+      JWT_SECRET: ${JWT_SECRET}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
       SERVICE_ID: payment-gateway-go
-      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET:-change-me-hmac-secret}
+      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
       RATE_LIMIT_PER_MIN: 60
     ports:
       - "8081:8081"
@@ -102,10 +104,10 @@ services:
       PORT: 8082
       APP_ENV: production
       REDIS_URL: redis://:${REDIS_PASSWORD:-ffarena-redis-secret}@redis:6379/0
-      JWT_SECRET: ${JWT_SECRET:-change-me-jwt-secret}
-      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-change-me-webhook-secret}
+      JWT_SECRET: ${JWT_SECRET}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
       SERVICE_ID: security-rust
-      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET:-change-me-hmac-secret}
+      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
       RATE_LIMIT_PER_MIN: 60
     ports:
       - "8082:8082"

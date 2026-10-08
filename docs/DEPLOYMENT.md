@@ -12,7 +12,13 @@ assumed; nginx + PHP-FPM + supervisor/systemd templates are provided in
 
 ## 1. Production environment checklist
 
-From `.env.example` (never commit a real `.env`):
+From `.env.example` (never commit a real `.env`). The full key reference is
+`docs/ENVIRONMENT.md`; validate the finished file with the production gate
+before deploying (`deploy/deploy.sh production` runs this fatally):
+
+```bash
+python3 deploy/validate-env.py --env-file .env.production --production
+```
 
 ```dotenv
 APP_ENV=production
@@ -63,6 +69,9 @@ WEBHOOK_SSLCOMMERZ_SECRET=… WEBHOOK_CARD_SECRET=…
 
 SMS_GATEWAY_ENDPOINT=… SMS_GATEWAY_API_KEY=… SMS_GATEWAY_SENDER=…
 GOOGLE_CLIENT_ID=… GOOGLE_CLIENT_SECRET=…
+
+MAIL_FROM_ADDRESS=noreply@arena.example.com   # REQUIRED — never @example.com
+MAIL_FROM_NAME="FF Arena"
 
 BACKUP_RETENTION=14
 BACKUP_INCLUDE_PRIVATE_FILES=true

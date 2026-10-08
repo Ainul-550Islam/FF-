@@ -12,18 +12,34 @@ type SecretsManager struct {
     jwtSecret     string
     webhookSecret string
     hmacSecret    string
+    production    bool
 }
 
 func NewSecretsManager(cfg *Config) *SecretsManager {
-    return &SecretsManager{jwtSecret: cfg.JWTSecret, webhookSecret: cfg.WebhookSecret, hmacSecret: cfg.HMACSecret}
+    return &SecretsManager{jwtSecret: cfg.JWTSecret, webhookSecret: cfg.WebhookSecret, hmacSecret: cfg.HMACSecret, production: cfg.IsProduction()}
 }
 
 func (s *SecretsManager) ValidateStrength() error {
-    if len(s.jwtSecret) > 0 && len(s.jwtSecret) < 32 {
-        return fmt.Errorf("JWT secret must be at least 32 chars, got %d", len(s.jwtSecret))
-    }
-    if len(s.hmacSecret) > 0 && len(s.hmacSecret) < 32 {
-        return fmt.Errorf("HMAC secret must be at least 32 chars, got %d", len(s.hmacSecret))
+    for _, item := range []struct {
+        secret string
+        name   string
+    }{
+        {s.jwtSecret, "JWT secret"},
+        {s.hmacSecret, "HMAC secret"},
+        {s.webhookSecret, "Webhook secret"},
+    } {
+        if item.secret == "" {
+            // Empty is dev-open. Production refuses: an empty key voids
+            // every HMAC verified against it, and the webhook path accepts
+            // unsigned traffic when no secret is configured (R9).
+            if s.production {
+                return fmt.Errorf("%s must be set in production", item.name)
+            }
+            continue
+        }
+        if err := ValidateSecretStrength(item.secret, item.name); err != nil {
+            return err
+        }
     }
     return nil
 }
@@ -79,12 +95,15 @@ func ValidateSecretStrength(secret, name string) error {
     if len(secret) < 32 {
         return fmt.Errorf("%s must be at least 32 chars for security, got %d", name, len(secret))
     }
-    // Check for common weak secrets
-    weak := []string{"secret", "password", "123456", "test", "default"}
+    // Reject placeholder-shaped secrets. Substring (not exact) match: every
+    // exact word is shorter than the 32-char minimum above, so an exact match
+    // after the length check could never fire. Case-insensitive; a random
+    // value that trips this should simply be regenerated.
+    weak := []string{"secret", "password", "123456", "test", "default", "changeme", "change-me", "placeholder"}
     lower := strings.ToLower(secret)
     for _, w := range weak {
-        if lower == w {
-            return fmt.Errorf("%s is too weak, cannot be '%s'", name, w)
+        if strings.Contains(lower, w) {
+            return fmt.Errorf("%s contains weak word '%s', generate a random value", name, w)
         }
     }
     return nil

@@ -25,6 +25,19 @@ fi
 if [[ -z "${DB_PASSWORD:-}" ]]; then echo "Error: DB_PASSWORD must be set"; exit 1; fi
 if [[ -z "${REDIS_PASSWORD:-}" ]]; then echo "Error: REDIS_PASSWORD must be set"; exit 1; fi
 
+# Production-only fatal gate (F-001): the production env file plus the
+# deploy-time process environment must jointly satisfy the production
+# validator before anything is built or pushed. Merged mode is deliberate
+# here — production secrets are injected via the process environment (see
+# the checks above) — while tests and CI assert the gate hermetically
+# with --no-process-env. Staging deploys skip this gate.
+if [[ "$ENVIRONMENT" == "production" ]]; then
+  if ! command -v python3 >/dev/null 2>&1; then echo "Error: python3 is required for the production env gate"; exit 1; fi
+  PROD_ENV_FILE="${PROD_ENV_FILE:-.env.production}"
+  echo "Validating production environment: $PROD_ENV_FILE (+ process env)"
+  python3 deploy/validate-env.py --env-file "$PROD_ENV_FILE" --production
+fi
+
 # Functions
 build_image() {
   echo "Building image $APP_NAME:$VERSION..."

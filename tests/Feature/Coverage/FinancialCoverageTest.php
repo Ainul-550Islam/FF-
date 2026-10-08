@@ -120,7 +120,9 @@ class FinancialCoverageTest extends TestCase
         );
 
         $admin = $this->makeUser('admin');
-        app(PaymentService::class)->verifyManually($payment, $admin);
+        // verifyManually returns the settled instance (the passed object keeps
+        // its stale 'pending' status), so the return must be kept.
+        $payment = app(PaymentService::class)->verifyManually($payment, $admin);
 
         $refund = app(PaymentService::class)->refund($payment, $admin, 'Coverage refund');
 

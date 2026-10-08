@@ -97,13 +97,14 @@ return [
     | second administrator, whatever its size. Payouts that were created
     | already-approved as part of a batch prize-distribution approval are not
     | gated by this key — the distribution approval is a separate, separately
-    | audited maker action (see PayoutService::makerFor()).
+    | audited maker action (see PayoutService::queueMaker()).
     |
     | `payout_reference_max_length` bounds the reviewed external reference a
     | manual completion must carry, so an operator cannot paste an unbounded
     | blob into the audit trail. The payouts.provider_reference column stores
-    | at most 80 characters; the full reviewed value is kept in the payout
-    | event metadata.
+    | up to 255 characters (the 80-char limit applies to the payments table,
+    | not payouts); the full reviewed value is always kept in the payout
+    | event metadata as well.
     |
     */
 
@@ -126,8 +127,9 @@ return [
     | another's budget.
     |
     | Set through the environment because the right ceiling depends on the
-    | provider's retry policy; `0` disables the limit, which
-    | deploy/validate-env.py refuses in production.
+    | provider's retry policy; `0` disables the limit, which production
+    | deploys must refuse — no automated check exists yet (GAP-R7:
+    | docs/RUNTIME_EVIDENCE_RUNBOOK.md), so verify by hand before promoting.
     |
     */
 
@@ -139,6 +141,22 @@ return [
         // Hosted-gateway payer return: GET/POST /payments/callback/{provider}
         'callback' => (int) env('PAYMENT_CALLBACK_RATE_LIMIT', 120),
 
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Hosted-gateway return hardening (AUDIT FIX-03)
+    |--------------------------------------------------------------------------
+    |
+    | `require_state` (default true): reject payer returns that do not carry
+    | a valid HMAC `state` token minted for the payment. Set to false ONLY if
+    | a provider is proven to strip query parameters from the redirect URL —
+    | the bypass is logged loudly and server-to-server verification still
+    | applies.
+    |
+    */
+    'callback' => [
+        'require_state' => (bool) env('PAYMENTS_CALLBACK_REQUIRE_STATE', true),
     ],
 
 ];

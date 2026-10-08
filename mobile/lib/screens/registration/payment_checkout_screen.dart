@@ -36,7 +36,14 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
   @override
   void initState() {
     super.initState();
-    _start();
+    // _start() reads Localizations (an inherited widget) on its first line,
+    // which initState is forbidden to depend on (throws in debug/test) — so
+    // defer past the first frame, when `context` is fully mounted.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _start();
+      }
+    });
   }
 
   Future<void> _start() async {
@@ -93,9 +100,16 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
         return;
       }
       setState(() {
-        _status = switch (terminal.status ?? '') {
-          'PAID' => l10n.paymentPaid,
-          'FAILED' || 'CANCELLED' || 'EXPIRED' => l10n.paymentFailed,
+        // P2-5: the server reports LOWERCASE statuses (paid, failed, ...) —
+        // compare case-insensitively or every real payment renders "pending".
+        // Success/failure sets mirror WalletRepository.isSuccessful/isTerminal.
+        _status = switch ((terminal.status ?? '').toLowerCase()) {
+          'paid' || 'verified' || 'succeeded' => l10n.paymentPaid,
+          'failed' ||
+          'cancelled' ||
+          'expired' ||
+          'refunded' =>
+            l10n.paymentFailed,
           _ => l10n.paymentPending,
         };
       });

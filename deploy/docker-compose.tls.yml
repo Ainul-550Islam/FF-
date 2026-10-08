@@ -31,7 +31,9 @@ services:
       redis-server
       --appendonly yes
       --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
+      # volatile-ttl: only keys WITH an expiry are evicted (nearest first),
+      # so persistent queue/session/cache keys are never silently dropped.
+      --maxmemory-policy volatile-ttl
       --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
       --tls-port 6380
       --port 0

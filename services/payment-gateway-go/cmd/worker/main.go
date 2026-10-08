@@ -4,6 +4,11 @@ func main(){
     cfg,err:=config.Load()
     if err!=nil{log.Fatalf("Failed to load config: %v",err)}
     logger:=observability.NewLogger(cfg.ServiceID,cfg.Env,cfg.Version)
+    secretsManager:=config.NewSecretsManager(cfg)
+    if err:=secretsManager.ValidateStrength();err!=nil{
+        logger.Error("secret strength validation failed",map[string]interface{}{"error":err.Error()})
+        if cfg.IsProduction(){log.Fatalf("Secret validation failed in production: %v",err)}
+    }
     metrics:=observability.NewInMemoryMetrics()
     store:=storage.NewMemoryStore()
     q:=queue.NewQueue()

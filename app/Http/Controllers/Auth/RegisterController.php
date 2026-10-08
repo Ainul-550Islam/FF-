@@ -54,7 +54,7 @@ class RegisterController extends Controller
             'username' => 'nullable|string|min:3|max:30|unique:users,username|regex:/^[a-zA-Z0-9_\.]+$/',
             'email' => 'required|email|max:255|unique:users,email',
             'phone' => 'nullable|string|max:20',
-            'game_uid' => 'nullable|string|max:30',
+            'game_uid' => ['nullable', 'string', 'max:30', 'regex:/^[A-Za-z0-9]{4,30}$/'],
             // Reserved staff roles are refused at validation time: the
             // elevated roles (`admin`, `moderator`) can never be self-assigned.
             'role' => ['nullable', Rule::in(['player', 'organizer'])],

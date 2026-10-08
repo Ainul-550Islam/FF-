@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\BackupCreateCommand;
+use App\Console\Commands\BackupDrillCommand;
 use App\Console\Commands\BackupVerifyCommand;
 use App\Console\Commands\CleanupFailedJobsCommand;
 use App\Console\Commands\CleanupIdempotencyCommand;
@@ -48,9 +49,15 @@ Schedule::command(ReconcileGameSessions::class)->everyThirtyMinutes()
     ->onOneServer()
     ->withoutOverlapping();
 
-// Backup (daily, off-peak) + weekly verification.
+// Backup (daily, off-peak) + weekly verification and restore drill. The drill
+// runs after verification and proves the newest backup actually restores.
 Schedule::command(BackupCreateCommand::class)->dailyAt('03:00')->withoutOverlapping();
 Schedule::command(BackupVerifyCommand::class, ['--all'])->weeklyOn(1, '04:00')->withoutOverlapping();
+Schedule::command(BackupDrillCommand::class)->weeklyOn(1, '05:00')->withoutOverlapping();
+
+// P2 (2026-10-07): prune tokens that expired over a day ago so the
+// personal_access_tokens table cannot grow without bound.
+Schedule::command('sanctum:prune-expired', ['--hours' => 24])->dailyAt('04:30')->withoutOverlapping();
 
 // Operational cleanup (hourly/daily windows).
 Schedule::command(CleanupOtpCommand::class)->hourly();

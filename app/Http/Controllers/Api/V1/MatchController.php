@@ -46,6 +46,24 @@ class MatchController extends Controller
     }
 
     /**
+     * GET /api/v1/matches/{match}/scores
+     *
+     * AUDIT FIX (2026-10-07, FIX-12): the mobile client calls this endpoint
+     * (MatchRepository.scores) but it never existed server-side — every call
+     * 404'd. Read-only, same public-visibility rule as show().
+     */
+    public function scores(Request $request, GameMatch $match): JsonResponse
+    {
+        if (! $this->matchIsPublic($match)) {
+            return ApiResponse::error('not_found', 'Match not found.', [], 404);
+        }
+
+        $scores = $match->scores()->with('team')->orderByDesc('points')->orderBy('id')->get();
+
+        return ApiResponse::data(ScoreResource::collection($scores));
+    }
+
+    /**
      * POST /api/v1/matches/{match}/scores
      */
     public function submitScore(Request $request, GameMatch $match): JsonResponse
@@ -56,7 +74,9 @@ class MatchController extends Controller
 
         $data = $request->validate([
             'team_id' => 'required|integer|exists:teams,id',
-            'kills' => 'required|integer|min:0',
+            // AUDIT FIX-08: upper-bound kills (was min:0 only → arbitrary
+            // point manufacturing).
+            'kills' => 'required|integer|min:0|max:'.ScoringRule::MAX_KILLS,
             'placement' => 'required|integer|min:1|max:'.ScoringRule::MAX_PLACEMENT,
             // Authoritative totals and match state can never be supplied by a
             // client — they are computed server-side by the scoring engine.

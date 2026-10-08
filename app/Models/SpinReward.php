@@ -50,7 +50,7 @@ class SpinReward extends Model
         ];
 
         $totalWeight = array_sum(array_column($results, 'weight'));
-        $rand = rand(1, $totalWeight);
+        $rand = random_int(1, $totalWeight);
         $current = 0;
         $selected = $results[0];
 

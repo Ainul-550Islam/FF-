@@ -61,7 +61,7 @@ class TournamentLifecycleTest extends TestCase
         $t->name = 'Team '.Str::random(6);
         $t->captain_name = $captain?->name ?? 'Captain';
         $t->phone = '01700000000';
-        $t->game_uid = 'UID'.rand(100000, 999999);
+        $t->game_uid = 'UID'.random_int(100000, 999999);
         $t->status = $status;
         $t->save();
 
@@ -491,7 +491,9 @@ class TournamentLifecycleTest extends TestCase
         $payment = Payment::where('team_id', $team->id)->firstOrFail();
         $this->assertSame('pending', $payment->status);
 
-        $this->actingAs($admin)->post(route('admin.payments.verify', $payment))->assertRedirect();
+        // Step-up (password.recent): the admin has confirmed their password.
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.payments.verify', $payment))->assertRedirect();
         $this->assertSame('verified', $payment->fresh()->status);
         $this->assertSame('confirmed', $team->fresh()->status);
     }

@@ -51,7 +51,35 @@ class MatchController extends Controller
                 || $match->participantTeamFor(auth()->user()) !== null;
         }
 
-        return view('matches.show', compact('tournament', 'match', 'canOpenDispute'));
+        // AUDIT FIX (2026-10-07, FIX-10): the room id/password were rendered
+        // to EVERY visitor (including guests) while the API correctly gates
+        // them in MatchResource. Mirror that rule here: ready/live matches
+        // only, and only staff / the organizer / a participating captain.
+        $canSeeRoom = $this->viewerCanSeeRoom($tournament, $match);
+
+        return view('matches.show', compact('tournament', 'match', 'canOpenDispute', 'canSeeRoom'));
+    }
+
+    /**
+     * Web mirror of the MatchResource room-visibility rule (FIX-10).
+     */
+    protected function viewerCanSeeRoom(Tournament $tournament, GameMatch $match): bool
+    {
+        $viewer = auth()->user();
+
+        if ($viewer === null) {
+            return false;
+        }
+
+        if (! in_array($match->status, [GameMatch::STATUS_READY, GameMatch::STATUS_LIVE], true)) {
+            return false;
+        }
+
+        if ($viewer->isStaff() || (int) $tournament->organizer_id === (int) $viewer->id) {
+            return true;
+        }
+
+        return $match->participantTeamFor($viewer) !== null;
     }
 
     /**
@@ -88,7 +116,9 @@ class MatchController extends Controller
 
         $data = $request->validate([
             'team_id' => 'required|integer|exists:teams,id',
-            'kills' => 'required|integer|min:0',
+            // AUDIT FIX-08: upper-bound kills (was min:0 only → arbitrary
+            // point manufacturing).
+            'kills' => 'required|integer|min:0|max:'.ScoringRule::MAX_KILLS,
             'placement' => 'required|integer|min:1|max:'.ScoringRule::MAX_PLACEMENT,
             'screenshot' => 'nullable|image|max:2048',
         ]);

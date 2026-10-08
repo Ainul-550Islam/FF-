@@ -88,10 +88,14 @@ return [
     | Default and maximum personal-access-token lifetimes. A client may ask
     | for a shorter life; the server clamps it to this maximum.
     |
+    | P2 (2026-10-07): aligned with the Sanctum global ceiling
+    | (`sanctum.expiration`) — issuing beyond it would mint tokens that die
+    | at first use.
+    |
     */
     'token' => [
         'default_days' => 30,
-        'max_days' => 365,
+        'max_days' => 90,
     ],
 
     /*

@@ -2,6 +2,7 @@ package providers
 
 import (
     "context"
+    "errors"
     "time"
 
     "github.com/ffarena/payment-gateway-go/internal/observability"
@@ -31,7 +32,16 @@ func (p *ManualProvider) Metadata() map[string]interface{} {
     }
 }
 func (p *ManualProvider) IsEnabled() bool { return true } // Manual always enabled as fallback
-func (p *ManualProvider) ValidateConfig() error { return nil }
+func (p *ManualProvider) ValidateConfig() error {
+    // Manual is always enabled as a fallback (IsEnabled is hard true and the
+    // server registers it unconditionally), so there is no disabled state to
+    // skip: its webhook secret is always required. Callbacks verify HMAC
+    // against Secret, and an empty secret voids the check.
+    if p.Config.Secret == "" {
+        return errors.New("manual secret required")
+    }
+    return nil
+}
 func (p *ManualProvider) HealthCheck(ctx context.Context) error { return nil }
 func (p *ManualProvider) CreatePayment(ctx context.Context, req CreatePaymentRequest) (*CreatePaymentResponse, error) {
     // Manual provider - requires manual review, no external API call

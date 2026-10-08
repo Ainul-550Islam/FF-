@@ -93,6 +93,9 @@ class WebhookRaceTest extends TestCase
         );
 
         $this->webhook = [
+            // The ingress only processes `payment.*` event types — anything
+            // else is logged and ignored, so the race would settle nothing.
+            'event' => 'payment.succeeded',
             'payment_id' => $this->payment->id,
             'provider_reference' => 'HOOKTRX1',
             'amount_minor' => $this->payment->amount_minor,
@@ -170,7 +173,9 @@ class WebhookRaceTest extends TestCase
             [],
             [],
             [],
-            ['HTTP_X-Signature' => $this->signature, 'CONTENT_TYPE' => 'application/json'],
+            // A missing X-Timestamp reads as 0 (stale) and is refused with 401,
+            // so every delivery carries a fresh timestamp.
+            ['HTTP_X-Signature' => $this->signature, 'HTTP_X-Timestamp' => (string) time(), 'CONTENT_TYPE' => 'application/json'],
             json_encode($this->webhook),
         );
 

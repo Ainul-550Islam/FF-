@@ -103,7 +103,9 @@ class AuditIntegrationTest extends TestCase
         $admin = $this->makeUser('admin');
         $user = $this->makeUser('player');
 
-        $this->actingAs($admin)->post(route('admin.wallet.credit', $user), [
+        // Step-up (password.recent): the admin has confirmed their password.
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.wallet.credit', $user), [
             'amount' => '100.00',
             'description' => 'Support credit',
         ])->assertRedirect();
@@ -166,7 +168,8 @@ class AuditIntegrationTest extends TestCase
         $payout->provider = 'wallet';
         $payout->save();
 
-        $this->actingAs($admin)->post(route('admin.payouts.approve', $payout))->assertRedirect();
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.payouts.approve', $payout))->assertRedirect();
 
         $log = AuditLog::where('action', 'payout.approved')->firstOrFail();
 

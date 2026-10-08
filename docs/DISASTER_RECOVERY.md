@@ -29,9 +29,48 @@ storage/app/private/backups/ffarena-YYYYmmdd-HHMMSS/
 └── private-files/         # copy of storage/app/private (if enabled)
 ```
 
+With `BACKUP_ENCRYPTION_RECIPIENT` set, the database file is stored as
+`database.sqlite.age` (or `database.sql.age`) and the manifest gains an
+`encryption` block (tool, recipient fingerprint, plaintext SHA-256) — the
+cleartext is deleted at creation time.
+
 ---
 
-## 3. Database restore (SQLite)
+## 3. Encrypted backups and the restore drill
+
+When `BACKUP_ENCRYPTION_RECIPIENT` is set, the database file is encrypted with
+[`age`](https://github.com/FiloSottile/age) before it is stored: the backup
+holds `database.sqlite.age` (or `database.sql.age`) plus a manifest
+`encryption` block. The cleartext is deleted; `verify` checks the ciphertext
+checksum, and plaintext integrity is proven by a dry-run with the identity.
+
+Key handling:
+
+```bash
+# 1. Generate a key OFFLINE (never on the web host, never in the repo)
+age-keygen -o age-backup-key.txt
+# 2. Deploy the RECIPIENT (public half) to the host
+BACKUP_ENCRYPTION_RECIPIENT=age1...
+# 3. Keep the IDENTITY (private half) in key escrow; mount it only for a restore
+php artisan ffarena:backup:restore <name> --identity=/mnt/escrow/age-backup-key.txt --target=/tmp/restore.sqlite
+# or: BACKUP_DECRYPTION_IDENTITY=/mnt/escrow/age-backup-key.txt php artisan ffarena:backup:restore <name>
+```
+
+Without an identity, restoring an encrypted backup fails closed with an error
+that names both options. The weekly automated drill
+(`ffarena:backup:drill`, Mondays 05:00) dry-runs the newest backup and alerts
+on failure; for encrypted backups without an identity on the host it verifies
+the blob checksum and reports `blob-only` — the decryption half still needs a
+quarterly manual drill with the escrowed key (record the date in the ops log).
+
+Offsite: when `BACKUP_OFFSITE_DISK` names the `backup-offsite` disk, every
+backup is mirrored there and verified by checksum; with
+`BACKUP_OFFSITE_REQUIRED=true` a failed mirror fails the backup. Retention
+applies to the mirror too (or manage it with bucket lifecycle rules).
+
+---
+
+## 4. Database restore (SQLite)
 
 ```bash
 # 1. Find the backup
@@ -60,7 +99,7 @@ php artisan config:cache && php artisan cache:clear
 
 ---
 
-## 4. Database restore (MySQL / PostgreSQL)
+## 5. Database restore (MySQL / PostgreSQL)
 
 The backup contains a logical dump (`mysqldump` single-transaction SQL, or
 `pg_dump --format=custom`).
@@ -77,7 +116,7 @@ Followed by `php artisan config:cache && php artisan cache:clear`.
 
 ---
 
-## 5. Private files restore
+## 6. Private files restore
 
 ```bash
 cp -a storage/app/private/backups/ffarena-YYYYmmdd-HHMMSS/private-files/. storage/app/private/
@@ -87,7 +126,7 @@ Do not overwrite the live `backups/` directory with the backup copy.
 
 ---
 
-## 6. Configuration recovery
+## 7. Configuration recovery
 
 `.env` is not in backups (it must not contain secrets in public storage).
 Recover it from your secret store / configuration management, or rebuild from
@@ -101,7 +140,7 @@ php artisan ffarena:health --production
 
 ---
 
-## 7. Application restart
+## 8. Application restart
 
 ```bash
 sudo systemctl reload php8.4-fpm            # or: service php-fpm reload
@@ -111,7 +150,7 @@ php artisan queue:restart
 
 ---
 
-## 8. Cache warmup
+## 9. Cache warmup
 
 Public caches rebuild on first read; to avoid a cold-start spike:
 
@@ -123,7 +162,7 @@ curl -fsS https://<host>/api/v1/leaderboards >/dev/null
 
 ---
 
-## 9. Smoke verification
+## 10. Smoke verification
 
 ```bash
 php artisan ffarena:health --production
@@ -136,7 +175,7 @@ php artisan route:list --quiet >/dev/null && echo "routes OK"
 
 ---
 
-## 10. Escalation
+## 11. Escalation
 
 | Failure | Action |
 |---|---|

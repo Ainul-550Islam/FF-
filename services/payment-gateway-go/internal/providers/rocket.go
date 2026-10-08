@@ -64,6 +64,10 @@ func (p *RocketProvider) ValidateConfig() error {
     if p.Config.MerchantID == "" {
         return errors.New("rocket merchant_id required")
     }
+    if p.Config.Secret == "" {
+        // Webhook callbacks verify HMAC against Secret; empty voids the check.
+        return errors.New("rocket secret required")
+    }
     if p.Config.BaseURL == "" {
         // BaseURL is optional for Rocket as sandbox is not publicly available
         // But if enabled, we should have base URL for future M2M integration
