@@ -57,9 +57,36 @@ class ConfigValidationTest extends Phase16TestCase
             'queue.default' => 'database',
             'database.default' => 'pgsql',
             'database.connections.pgsql.sslmode' => 'require',
+            // AUDIT FIX (2026-10-08, GAPS-01): a SAFE production config now
+            // additionally requires a real webhook trust root — see the
+            // companion test below for the failure side.
+            'services.payments.webhook_secret' => 'a-real-rotated-secret-for-this-fixture',
         ], function () {
             $this->assertSame([], app(HealthService::class)->productionIssues());
         });
+    }
+
+    public function test_production_flags_a_missing_or_placeholder_webhook_secret(): void
+    {
+        $cases = ['', 'CHANGE_ME_replace_with_64_hex_chars'];
+
+        foreach ($cases as $secret) {
+            $this->withConfig([
+                'app.env' => 'production',
+                'app.debug' => false,
+                'app.key' => 'base64:ok',
+                'app.url' => 'https://arena.example.com',
+                'cache.default' => 'redis',
+                'queue.default' => 'database',
+                'database.default' => 'pgsql',
+                'database.connections.pgsql.sslmode' => 'require',
+                'services.payments.webhook_secret' => $secret,
+            ], function () use ($secret) {
+                $keys = array_column(app(HealthService::class)->productionIssues(), 'key');
+
+                $this->assertContains('PAYMENT_WEBHOOK_SECRET', $keys, "Secret [{$secret}] must be reported.");
+            });
+        }
     }
 
     public function test_unshared_cache_store_is_flagged(): void

@@ -22,6 +22,20 @@ use Illuminate\Support\Str;
  * Single authority for payment intents, state transitions, manual/admin
  * verification, refunds and provider callbacks. Amounts are integer minor
  * units (poisha), always derived from the tournament — never from clients.
+ *
+ * AUDIT FIX (2026-10-08, GAPS-02/03/06) — the webhook callback layer:
+ *
+ *   - the business signature now verifies per provider (businessSecretFor(),
+ *     webhooks.business.providers.{provider} falling back to the Phase 08
+ *     shared secret), so one provider's leaked key can neither forge for
+ *     another provider nor keep working after rotation;
+ *   - an optional signed timestamp ({timestamp}.{raw_body} HMAC) is honoured
+ *     with a freshness window; a stale or future timestamp is refused outright
+ *     and never downgraded to the legacy scheme;
+ *   - a replayed callback on an already-settled payment no longer appends a
+ *     second `payment.callback` event — the original row is marked with the
+ *     duplicate metadata, so the event trail stays a 1:1 history of real
+ *     state transitions.
  */
 class PaymentService
 {
@@ -334,14 +348,16 @@ class PaymentService
 
     /**
      * Process a provider callback/webhook. Signature is verified against the
-     * configured secret, then amount/currency/payment are validated and the
-     * state transition applied. Fully idempotent: repeated or replayed
-     * callbacks return the current state without double effects.
+     * provider's business secret (with an optional signed timestamp window),
+     * then amount/currency/payment are validated and the state transition
+     * applied. Fully idempotent: repeated or replayed callbacks return the
+     * current state without double effects — and without appending a second
+     * event row (the original callback event is marked instead).
      */
-    public function handleProviderCallback(string $provider, array $payload, string $signature, string $rawBody): Payment
+    public function handleProviderCallback(string $provider, array $payload, string $signature, string $rawBody, ?int $timestamp = null): Payment
     {
-        if (! $this->verifySignature($rawBody, $signature)) {
-            throw new DomainException('Invalid webhook signature.');
+        if (! $this->verifySignature($rawBody, $signature, $provider, $timestamp)) {
+            throw new DomainException('Invalid webhook signature.', 401);
         }
 
         $paymentId = (int) ($payload['payment_id'] ?? 0);
@@ -382,9 +398,14 @@ class PaymentService
             // double-settle (same race as confirmProviderPayment).
             $payment = Payment::query()->where('id', $payment->id)->lockForUpdate()->firstOrFail();
 
-            // Idempotency: an already-settled payment simply reports its state.
+            // Idempotency: an already-settled payment simply reports its
+            // state. AUDIT FIX (2026-10-08, GAPS-06): no NEW event row is
+            // appended — the trail stays append-only for real transitions.
+            // The original callback event carries the duplicate marker
+            // instead, so "how many times was this replayed" remains
+            // answerable without inflating the settlement history.
             if ($payment->status === Payment::STATUS_PAID || $payment->status === Payment::STATUS_VERIFIED) {
-                $this->recordEvent($payment, null, PaymentEvent::EVENT_CALLBACK, $amountMinor, ['duplicate' => true, 'reference' => $reference]);
+                $this->markCallbackReplay($payment, $reference);
 
                 return $payment;
             }
@@ -543,16 +564,93 @@ class PaymentService
     }
 
     /**
-     * Verify an HMAC-SHA256 webhook signature against the configured secret.
+     * The business signing secret for a provider (GAP-10 A5).
+     *
+     * `webhooks.business.providers.{provider}` wins when configured; the
+     * Phase 08 shared secret is the documented fallback so deployments that
+     * never rolled out per-provider keys keep working unchanged.
      */
-    public function verifySignature(string $rawBody, string $signature): bool
+    public function businessSecretFor(string $provider): string
     {
-        $secret = (string) config('services.payments.webhook_secret', '');
+        $providerSecret = config("webhooks.business.providers.{$provider}");
 
+        if ($providerSecret !== null && trim((string) $providerSecret) !== '') {
+            return trim((string) $providerSecret);
+        }
+
+        return trim((string) config('services.payments.webhook_secret', ''));
+    }
+
+    /**
+     * Verify the business signature of a provider callback.
+     *
+     * Schemes (both keyed with businessSecretFor($provider)):
+     *   - timestamped (preferred when the sender ships one):
+     *       signature = HMAC("{timestamp}.{raw_body}")
+     *       The timestamp must be within `webhooks.business.timestamp_tolerance`
+     *       seconds (±) of server time; outside the window the request is
+     *       refused outright — a stale signed timestamp is exactly the replay
+     *       the window exists to stop, so it NEVER falls back to the legacy
+     *       scheme (falling back would make "attach an old timestamp header"
+     *       a free replay oracle).
+     *   - legacy raw-body (senders that never shipped timestamps):
+     *       signature = HMAC(raw_body)
+     *
+     * Fail closed everywhere else: no secret configured (or a placeholder
+     * one), an empty/malformed signature, or a signature that matches no
+     * accepted scheme. Surrounding whitespace on a valid digest is tolerated
+     * (header trimming happens in transit).
+     */
+    public function verifySignature(string $rawBody, string $signature, ?string $provider = null, ?int $timestamp = null): bool
+    {
+        $secret = $provider !== null
+            ? $this->businessSecretFor($provider)
+            : trim((string) config('services.payments.webhook_secret', ''));
+
+        // AUDIT FIX (2026-10-08, GAPS-01): an unset secret never verifies
+        // anything. In production a committed placeholder never verifies
+        // either — mirroring ServiceAuthenticator's fail-closed policy — so
+        // a deployment that forgot to rotate cannot settle payments while
+        // local/CI (where .env ships the documented placeholder) still works.
         if ($secret === '') {
             return false;
         }
 
+        if (str_starts_with($secret, 'CHANGE_ME') && app()->environment('production')) {
+            return false;
+        }
+
+        $signature = strtolower(trim($signature));
+
+        // A webhook digest is exactly a 64-char hex SHA-256. Rejecting any
+        // other shape before comparison removes oracle noise (length probes,
+        // scheme-prefix tricks) from the verify path.
+        if (! preg_match('/^[0-9a-f]{64}$/', $signature)) {
+            return false;
+        }
+
+        $tolerance = (int) config('webhooks.business.timestamp_tolerance', 300);
+
+        if ($tolerance < 1) {
+            $tolerance = 300;
+        }
+
+        if ($timestamp !== null && $timestamp > 0) {
+            // Freshness first: an out-of-window timestamp is a refusal, not a
+            // scheme-selection hint.
+            if (abs(time() - $timestamp) > $tolerance) {
+                return false;
+            }
+
+            $timestamped = hash_hmac('sha256', $timestamp.'.'.$rawBody, $secret);
+
+            if (hash_equals($timestamped, $signature)) {
+                return true;
+            }
+        }
+
+        // Legacy raw-body scheme (also accepted for senders that ship a fresh
+        // X-Timestamp but sign the body only — Phase 08 compatibility).
         $expected = hash_hmac('sha256', $rawBody, $secret);
 
         return hash_equals($expected, $signature);
@@ -599,6 +697,54 @@ class PaymentService
         $this->recordMarketingConversion('payment_success', $payment);
     }
 
+    /**
+     * AUDIT FIX (2026-10-08, GAPS-06): absorb a replayed callback on the
+     * ORIGINAL `payment.callback` event row — marking it duplicate and
+     * counting the replay — instead of appending a new event. The payment
+     * state machine treats replays as no-ops, so replay volume is still
+     * observable in `payment_events` (metadata.replay_count), but it can no
+     * longer inflate the settlement audit trail.
+     */
+    protected function markCallbackReplay(Payment $payment, string $reference): void
+    {
+        $original = PaymentEvent::query()
+            ->where('payment_id', $payment->id)
+            ->where('event', PaymentEvent::EVENT_CALLBACK)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($original === null) {
+            // No prior callback event exists (e.g. the payment was settled by
+            // manual verification and this is the first provider callback).
+            // Recording it once is the honest audit outcome; later replays
+            // fold into it.
+            $this->recordEvent($payment, null, PaymentEvent::EVENT_CALLBACK, $payment->amountMinor(), [
+                'duplicate' => true,
+                'reference' => $reference,
+            ]);
+
+            return;
+        }
+
+        $metadata = is_array($original->metadata) ? $original->metadata : [];
+        $metadata['duplicate'] = true;
+        $metadata['replay_count'] = (int) ($metadata['replay_count'] ?? 1) + 1;
+
+        if ($reference !== '') {
+            $metadata['reference'] = $reference;
+        }
+
+        $original->metadata = $metadata;
+
+        // PaymentEvent rows are immutable history; the metadata fold is the
+        // one sanctioned annotation (append-only counter, no amount/state
+        // rewrite). Guarded mass assignment stays intact — attributes only.
+        $original->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
     protected function recordEvent(Payment $payment, ?User $actor, string $event, int $amountMinor, array $metadata = []): void
     {
         $record = new PaymentEvent();

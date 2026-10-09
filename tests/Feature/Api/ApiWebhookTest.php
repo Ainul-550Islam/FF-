@@ -12,7 +12,20 @@ use App\Services\PaymentService;
  */
 class ApiWebhookTest extends ApiTestCase
 {
-    protected string $secret = 'ffarena-local-webhook-secret';
+    // AUDIT FIX (2026-10-08): the secret used to be the literal dev value
+    // shipped in .env.example — an accidental coupling between the repo-wide
+    // trust root and one test file (and it broke the moment deployments
+    // rotated the key, and the moment config/services.php dropped its
+    // committed default). The test now PINS its own secret into config, so it
+    // is self-contained in every environment (including CI with no .env).
+    protected string $secret = 'api-webhook-test-secret';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['services.payments.webhook_secret' => $this->secret]);
+    }
 
     protected function sign(string $rawBody): string
     {

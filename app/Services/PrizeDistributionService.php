@@ -565,6 +565,24 @@ class PrizeDistributionService
     }
 
     /**
+     * Whether prize tiers can still be edited for this tournament — the
+     * query form of assertTiersEditable().
+     *
+     * AUDIT FIX (2026-10-08, GAPS-09): the admin settlement page
+     * (SettlementController::show) renders its edit affordances from a
+     * `tiersEditable` view flag and called THIS method — which never existed,
+     * so every settlement page was a 500. The read model and the write guard
+     * are one rule: tiers stay editable while there is no active distribution
+     * or that distribution is still a draft.
+     */
+    public function tiersEditable(Tournament $tournament): bool
+    {
+        $active = $this->activeDistribution($tournament);
+
+        return $active === null || $active->status === PrizeDistribution::STATUS_DRAFT;
+    }
+
+    /**
      * Prize tiers can only be edited while there is no active distribution or
      * the active distribution is still a draft. Once calculated, the snapshot
      * is authoritative and the tiers are locked.

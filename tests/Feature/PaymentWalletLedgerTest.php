@@ -325,9 +325,9 @@ class PaymentWalletLedgerTest extends TestCase
 
         $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
             ->post(route('admin.wallet.credit', $player), [
-            'amount' => '150.50',
-            'description' => 'Prize credit',
-        ])->assertRedirect();
+                'amount' => '150.50',
+                'description' => 'Prize credit',
+            ])->assertRedirect();
 
         $wallet = $this->wallets()->walletFor($player);
         $this->assertSame(15050, $wallet->balanceMinor());
@@ -341,9 +341,9 @@ class PaymentWalletLedgerTest extends TestCase
 
         $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
             ->post(route('admin.wallet.debit', $player), [
-            'amount' => '50.00',
-            'description' => 'overdraw',
-        ])->assertSessionHas('error');
+                'amount' => '50.00',
+                'description' => 'overdraw',
+            ])->assertSessionHas('error');
 
         $this->assertSame(0, $this->wallets()->walletFor($player)->balanceMinor());
     }
@@ -361,7 +361,10 @@ class PaymentWalletLedgerTest extends TestCase
         $team = $this->makeTeam($tournament, $captain);
 
         $payment = $this->payments()->createForTeam($tournament, $team, $captain, 'bkash', 'BTRX1');
-        $this->payments()->verifyManually($payment, $admin);
+        // verifyManually settles a LOCKED re-read instance and returns it —
+        // use the returned model, the pre-verification one is stale (its
+        // in-memory status is still 'pending', which trips the refund guard).
+        $payment = $this->payments()->verifyManually($payment, $admin);
 
         return [$payment, $captain, $admin];
     }
@@ -370,9 +373,11 @@ class PaymentWalletLedgerTest extends TestCase
     {
         [$payment, $captain, $admin] = $this->settledPayment();
 
-        $this->actingAs($admin)->post(route('admin.payments.refund', $payment), [
-            'reason' => 'Team withdrew',
-        ])->assertRedirect();
+        // Step-up (password.recent): the admin has confirmed their password.
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.payments.refund', $payment), [
+                'reason' => 'Team withdrew',
+            ])->assertRedirect();
 
         $payment->refresh();
         $this->assertSame(Payment::STATUS_REFUNDED, $payment->status);
@@ -423,11 +428,11 @@ class PaymentWalletLedgerTest extends TestCase
     {
         [$payment, $captain, $admin] = $this->settledPayment();
 
-        $this->actingAs($admin)->post(route('admin.paymis->settledPayment();
-
-        $this->actingAs($admin)->post(route('admin.payments.refund', $payment), [
-            'reason' => '',
-        ])->assertSessionHasErrors('reason');
+        // Step-up (password.recent): the admin has confirmed their password.
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('admin.payments.refund', $payment), [
+                'reason' => '',
+            ])->assertSessionHasErrors('reason');
 
         $this->assertSame(Payment::STATUS_VERIFIED, $payment->fresh()->status);
     }

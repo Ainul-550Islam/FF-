@@ -73,6 +73,12 @@ class AuditLogService
         'settlement.processed',
         'settlement.cancelled',
         'settlement.adjusted',
+        // AUDIT FIX (2026-10-08, GAPS-08): the reconciliation command and the
+        // ReconcileSettlement job both record `settlement.reconciled`; the
+        // vocabulary entry was missing, so recordQuietly swallowed the
+        // "Unknown audit action" rejection and the whole reconciliation trail
+        // silently vanished (4 Finance/Reconcile tests red).
+        'settlement.reconciled',
         'tournament.published',
         'tournament.registration_closed',
         'tournament.started',
@@ -102,6 +108,9 @@ class AuditLogService
         'identity.rejected',
         'anti_cheat.opened',
         'anti_cheat.resolved',
+        // AUDIT FIX (2026-10-08, GAPS-03): staff overrides of league trophies
+        // (the only legitimate path now that the self-grant endpoint is closed).
+        'league.trophy_grant',
         'support.created',
         'support.replied',
         'support.assigned',

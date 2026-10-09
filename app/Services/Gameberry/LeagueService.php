@@ -7,6 +7,7 @@ use App\Models\LeagueHistory;
 use App\Models\TitanBadge;
 use App\Models\UserLeague;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -52,7 +53,23 @@ class LeagueService
         return $query->get();
     }
 
+    /**
+     * AUDIT FIX (2026-10-08, GAPS-17): read-modify-write of the trophy column
+     * (`$userLeague->trophies + $trophies`) had no serialization — two
+     * concurrent settlements (or a settlement racing a staff adjustment) lost
+     * one update outright. The row may not even exist yet (getOrCreate
+     * semantics), so a per-user cache lock around the whole transaction is
+     * the correct guard; settlement traffic per player is trivially rare, so
+     * the lock costs nothing.
+     */
     public function addTrophies(int $userId, int $trophies, bool $isWin = true): UserLeague
+    {
+        return Cache::lock("gameberry:league:trophy:{$userId}", 10)->block(5, function () use ($userId, $trophies, $isWin) {
+            return $this->addTrophiesLocked($userId, $trophies, $isWin);
+        });
+    }
+
+    protected function addTrophiesLocked(int $userId, int $trophies, bool $isWin): UserLeague
     {
         return DB::transaction(function () use ($userId, $trophies, $isWin) {
             $userLeague = $this->getOrCreateUserLeague($userId);

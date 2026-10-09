@@ -37,12 +37,38 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Payments (Phase 08)
+    | Payments (Phase 08 — AUDIT FIX 2026-10-08, GAPS-01)
     |--------------------------------------------------------------------------
+    |
+    | `webhook_secret` signs/verifies provider webhook callbacks
+    | (HMAC-SHA256 over the raw body) and is the trust root for payment
+    | settlement. It deliberately has NO committed default: the previous
+    | fallback ('ffarena-local-webhook-secret') was published in this
+    | repository, which let anyone who read the source forge a signed
+    | webhook against any deployment that never rotated the value.
+    |
+    | Unset now means *disabled*:
+    |   - PaymentService::verifySignature() fails closed on an empty secret.
+    |   - WebhookIngressService refuses all inbound webhooks and logs a loud
+    |     configuration warning.
+    |   - HealthService::productionIssues() reports it as a critical finding.
+    |
+    | Generate a per-environment value with, e.g.:
+    |   php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
+    | and set it as PAYMENT_WEBHOOK_SECRET. Local development may pin any
+    | string; a CHANGE_ME_* placeholder is accepted only outside production.
+    |
+    | `callback_secret` (AUDIT FIX, GAPS-01b) is the dedicated key for the
+    | hosted-gateway redirect `state` token (PaymentCallbackState). It was
+    | documented in .env.example and read by PaymentCallbackState but never
+    | wired into config, so the documented override could not actually be
+    | used. It now falls back through: callback secret → webhook secret →
+    | APP_KEY-derived secret (still server-local, still unique per install).
+    |
     */
     'payments' => [
-        // Secret used to sign/verify provider webhook callbacks (HMAC-SHA256).
-        'webhook_secret' => env('PAYMENT_WEBHOOK_SECRET', 'ffarena-local-webhook-secret'),
+        'webhook_secret' => env('PAYMENT_WEBHOOK_SECRET'),
+        'callback_secret' => env('PAYMENT_CALLBACK_SECRET'),
     ],
 
     /*

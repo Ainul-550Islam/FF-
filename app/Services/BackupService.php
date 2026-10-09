@@ -34,7 +34,7 @@ class BackupService
     /**
      * Create one backup.
      *
-     * @return array{ok: bool, name?: string, path?: string, size?: int, sha256?: string, error?: string}
+     * @return array{ok: bool, name?: string, path?: string, size?: int, sha256?: string, error?: string, offsite?: array<string, mixed>|null}
      */
     public function create(): array
     {
@@ -64,15 +64,57 @@ class BackupService
 
             $manifest = $this->writeManifest($dir, $name, $db, $private);
 
-            // GAP-10 C — mirror the finished backup off-host. When the mirror
-            // is required, a failed copy fails the whole backup (fail closed);
-            // the catch below deletes the half-written local directory.
-            $this->mirrorOffsite($name, $dir);
+            // GAP-10 C / AUDIT FIX (2026-10-08, GAPS-13/14) — mirror the
+            // finished backup off-host. The mirror now RETURNS A PROVEN REPORT
+            // instead of being a fire-and-forget side effect, and the report
+            // is recorded in the manifest (locally AND on the offsite copy, so
+            // the two manifest.json files stay byte-identical). When the
+            // mirror is required, a failed copy fails the whole backup —
+            // but the verified local directory is KEPT: it is the only copy
+            // left, and the old behaviour (throw into the outer catch, which
+            // deletes the half-written directory) destroyed exactly the data
+            // the operator needs to recover from.
+            $offsite = $this->mirrorOffsite($name, $dir, $manifest);
+
+            if (is_array($offsite)) {
+                $manifest['offsite'] = $offsite;
+                $bytes = $this->putManifest($dir, $manifest);
+
+                if (! empty($offsite['ok']) && ! empty($offsite['manifest_key'])) {
+                    try {
+                        Storage::disk((string) $offsite['disk'])->put((string) $offsite['manifest_key'], $bytes);
+                    } catch (Throwable $e) {
+                        $offsite['ok'] = false;
+                        $offsite['error'] = 'Offsite manifest refresh failed: '.substr($e->getMessage(), 0, 200);
+                        $manifest['offsite'] = $offsite;
+                        $this->putManifest($dir, $manifest);
+                    }
+                }
+            }
+
+            if (is_array($offsite) && ! (bool) ($offsite['ok'] ?? false) && ! empty($offsite['required'])) {
+                $error = 'Offsite mirror failed (BACKUP_OFFSITE_REQUIRED=true): '.substr((string) ($offsite['error'] ?? 'unknown error'), 0, 200);
+
+                $this->notifyAdmins('backup.failed', 'Backup offsite mirror failed: '.$name, substr($error, 0, 255));
+
+                $this->audit->recordQuietly(null, 'ops.backup_created', 'backup', null, [
+                    'metadata' => ['name' => $name, 'failed' => true, 'stage' => 'offsite', 'error' => substr($error, 0, 200)],
+                ]);
+
+                return [
+                    'ok' => false,
+                    'name' => $name,
+                    'path' => $dir,
+                    'sha256' => (string) $manifest['db_sha256'],
+                    'error' => substr($error, 0, 255),
+                    'offsite' => $offsite,
+                ];
+            }
 
             $this->prune();
 
             $this->audit->recordQuietly(null, 'ops.backup_created', 'backup', null, [
-                'metadata' => ['name' => $name, 'db_driver' => $db['driver'], 'sha256' => $manifest['db_sha256'], 'encrypted' => isset($db['encryption'])],
+                'metadata' => ['name' => $name, 'db_driver' => $db['driver'], 'sha256' => $manifest['db_sha256'], 'encrypted' => isset($db['encryption']), 'offsite' => $offsite === null ? 'none' : (($offsite['ok'] ?? false) ? 'ok' : 'failed')],
             ]);
 
             return [
@@ -81,6 +123,7 @@ class BackupService
                 'path' => $dir,
                 'size' => $manifest['size'],
                 'sha256' => $manifest['db_sha256'],
+                'offsite' => $offsite,
             ];
         } catch (Throwable $e) {
             // Never leave a half-written backup behind.
@@ -159,6 +202,41 @@ class BackupService
         // backups is proven by a restore dry-run with the age identity.
         if (($manifest['db_driver'] ?? '') === 'sqlite' && is_file($dbFile) && empty($manifest['encrypted'])) {
             $checks[] = ['check' => 'integrity', 'ok' => $this->integrityCheck($dbFile)];
+        }
+
+        // AUDIT FIX (2026-10-08, GAPS-14): when the manifest claims an offsite
+        // copy, verification proves the claim — a backup that "was mirrored"
+        // to a bucket that has since been wiped must not verify as healthy.
+        $offsite = is_array($manifest['offsite'] ?? null) ? $manifest['offsite'] : null;
+
+        if ($offsite !== null) {
+            $offsiteExists = false;
+            $offsiteChecksum = false;
+
+            $diskName = trim((string) ($offsite['disk'] ?? ''));
+            $remotePath = trim((string) ($offsite['path'] ?? ''));
+
+            if ($diskName !== '' && $remotePath !== '') {
+                try {
+                    $offsiteDisk = Storage::disk($diskName);
+                    $offsiteExists = $offsiteDisk->exists($remotePath);
+
+                    if ($offsiteExists) {
+                        $remoteSha = hash('sha256', (string) $offsiteDisk->get($remotePath));
+                        $offsiteChecksum = hash_equals((string) ($offsite['sha256'] ?? ''), (string) $remoteSha);
+                    }
+                } catch (Throwable $e) {
+                    // Unresolvable disk: both checks fail; the reason is
+                    // surfaced through the failing check, never as a crash.
+                    Log::info('Backup verification could not reach the offsite disk.', [
+                        'disk' => $diskName,
+                        'error' => substr($e->getMessage(), 0, 200),
+                    ]);
+                }
+            }
+
+            $checks[] = ['check' => 'offsite_present', 'ok' => $offsiteExists];
+            $checks[] = ['check' => 'offsite_checksum', 'ok' => $offsiteChecksum];
         }
 
         $allOk = true;
@@ -608,26 +686,47 @@ class BackupService
             'private_size' => $private['size'],
             'size' => $db['size'] + $private['size'],
             'checksum' => (string) config('backup.checksum', 'sha256'),
+            // AUDIT FIX (2026-10-08, GAPS-13): `encrypted` is ALWAYS present.
+            // Verification and restore tooling branch on it ("skip the
+            // integrity probe on ciphertext"); a missing key made plaintext
+            // blobs and forgotten blobs indistinguishable and forced every
+            // reader to invent its own default. An explicit false is a
+            // positive statement: this artifact was written without
+            // encryption, deliberately.
+            'encrypted' => isset($db['encryption']) && is_array($db['encryption']),
         ];
 
-        // Only present on encrypted backups, so unencrypted manifests keep
-        // their exact historical shape.
         if (isset($db['encryption']) && is_array($db['encryption'])) {
-            $manifest['encrypted'] = true;
             $manifest['encryption'] = $db['encryption'];
         }
 
-        File::put($dir.'/manifest.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->putManifest($dir, $manifest);
 
         // Tighten permissions on the whole backup directory.
         chmod($dir, 0700);
-        chmod($dir.'/manifest.json', 0600);
 
         if (isset($db['path']) && is_file($db['path'])) {
             chmod($db['path'], 0600);
         }
 
         return $manifest;
+    }
+
+    /**
+     * Serialize the manifest to disk with locked-down permissions and return
+     * the exact bytes written (the offsite mirror writes the same bytes so
+     * both copies of manifest.json stay byte-identical).
+     *
+     * @param  array<string, mixed>  $manifest
+     */
+    protected function putManifest(string $dir, array $manifest): string
+    {
+        $bytes = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        File::put($dir.'/manifest.json', $bytes);
+        chmod($dir.'/manifest.json', 0600);
+
+        return (string) $bytes;
     }
 
     /**
@@ -750,19 +849,55 @@ class BackupService
      * the backup, fail closed); otherwise the miss is logged and the local
      * backup still counts.
      */
-    protected function mirrorOffsite(string $name, string $dir): void
+    /**
+     * AUDIT FIX (2026-10-08, GAPS-14): the mirror now returns a proven
+     * report instead of void. create() records it in the manifest, decides
+     * the fail-closed verdict on it, and hands it to the caller — a silent
+     * "we think we copied it" was the whole failure mode: operators read
+     * `ok: true` and had no offsite copy at all.
+     *
+     * Null is returned ONLY when offsite is not part of this deployment at
+     * all (no disk and nothing required). A configured-but-broken mirror
+     * always yields a report, ok:false included, so the misconfiguration is
+     * inspectable instead of inferred.
+     *
+     * @param  array<string, mixed>  $manifest
+     * @return array{ok: bool, required: bool, disk: string, path: string, manifest_key: string, sha256: string, error?: string}|null
+     */
+    protected function mirrorOffsite(string $name, string $dir, array $manifest): ?array
     {
         $diskName = trim((string) config('backup.offsite_disk', ''));
+        $required = (bool) config('backup.offsite_required', false);
 
         if ($diskName === '') {
-            return;
+            if (! $required) {
+                return null;
+            }
+
+            return [
+                'ok' => false,
+                'required' => true,
+                'disk' => '',
+                'path' => '',
+                'manifest_key' => '',
+                'sha256' => (string) ($manifest['db_sha256'] ?? ''),
+                'error' => 'BACKUP_OFFSITE_DISK is not configured while BACKUP_OFFSITE_REQUIRED=true.',
+            ];
         }
 
-        $required = (bool) config('backup.offsite_required', false);
+        $prefix = trim((string) config('backup.offsite_prefix', 'backups'), '/').'/'.trim($name, '/');
+
+        $report = [
+            'ok' => false,
+            'required' => $required,
+            'disk' => $diskName,
+            'path' => $prefix.'/'.(string) ($manifest['db_file'] ?? 'database.sqlite'),
+            'manifest_key' => $prefix.'/manifest.json',
+            'sha256' => (string) ($manifest['db_sha256'] ?? ''),
+        ];
 
         try {
             $offsite = Storage::disk($diskName);
-            $prefix = trim((string) config('backup.offsite_prefix', 'backups'), '/').'/'.trim($name, '/');
 
             foreach (File::allFiles($dir) as $file) {
                 $relative = ltrim(substr($file->getPathname(), strlen($dir)), '/');
@@ -785,16 +920,36 @@ class BackupService
                     throw new \RuntimeException("Offsite copy checksum mismatch on [{$key}].");
                 }
             }
-        } catch (Throwable $e) {
-            if ($required) {
-                throw new \RuntimeException('Offsite mirror failed (BACKUP_OFFSITE_REQUIRED=true): '.$e->getMessage(), 0, $e);
+
+            // The DB artifact itself re-proved: the recorded offsite checksum
+            // must match what the report promises to verify().
+            $remoteDb = $offsite->get($report['path']);
+
+            if ($remoteDb === null || ! hash_equals((string) $report['sha256'], hash('sha256', (string) $remoteDb))) {
+                throw new \RuntimeException('Offsite database artifact failed the final checksum proof.');
             }
 
-            Log::warning('Backup offsite mirror failed; local backup retained.', [
-                'backup' => $name,
-                'disk' => $diskName,
-                'error' => substr($e->getMessage(), 0, 200),
-            ]);
+            $report['ok'] = true;
+
+            return $report;
+        } catch (Throwable $e) {
+            $report['error'] = substr($e->getMessage(), 0, 255);
+
+            if ($required) {
+                Log::error('Backup offsite mirror failed; the run is marked failed and the local copy is retained.', [
+                    'backup' => $name,
+                    'disk' => $diskName,
+                    'error' => $report['error'],
+                ]);
+            } else {
+                Log::warning('Backup offsite mirror failed; local backup retained.', [
+                    'backup' => $name,
+                    'disk' => $diskName,
+                    'error' => $report['error'],
+                ]);
+            }
+
+            return $report;
         }
     }
 

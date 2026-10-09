@@ -33,6 +33,7 @@ class IdentityVerificationService
     public function __construct(
         ManualIdentityProvider $manual,
         protected NotificationService $notifications,
+        protected AuditLogService $audit,
     ) {
         $this->providers[$manual->id()] = $manual;
     }
@@ -128,6 +129,25 @@ class IdentityVerificationService
             NotificationService::link('wallet.index'),
         );
 
+        // AUDIT FIX (2026-10-08, GAPS-07): a manual KYC approval is a
+        // privilege decision — it must name the reviewing admin and the
+        // expiry it granted. The vocabulary entry existed for two releases
+        // with no producer; now the trail is real.
+        $this->audit->recordQuietly(
+            $admin,
+            'identity.verified',
+            'user',
+            $user->id,
+            [
+                'target_user' => $user,
+                'metadata' => [
+                    'provider' => 'manual',
+                    'expires_at' => $expiresAt?->toIso8601String(),
+                    'notes_present' => $record->notes !== null && $record->notes !== '',
+                ],
+            ],
+        );
+
         return $record;
     }
 
@@ -154,6 +174,22 @@ class IdentityVerificationService
             'Identity verification rejected',
             'Your identity verification was rejected.',
             NotificationService::link('wallet.index'),
+        );
+
+        // AUDIT FIX (2026-10-08, GAPS-07): rejection is as attributable as
+        // approval.
+        $this->audit->recordQuietly(
+            $admin,
+            'identity.rejected',
+            'user',
+            $user->id,
+            [
+                'target_user' => $user,
+                'metadata' => [
+                    'provider' => (string) $record->provider,
+                    'notes_present' => $record->notes !== null && $record->notes !== '',
+                ],
+            ],
         );
 
         return $record;

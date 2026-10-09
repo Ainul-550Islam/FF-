@@ -120,7 +120,11 @@ class MatchController extends Controller
             // point manufacturing).
             'kills' => 'required|integer|min:0|max:'.ScoringRule::MAX_KILLS,
             'placement' => 'required|integer|min:1|max:'.ScoringRule::MAX_PLACEMENT,
-            'screenshot' => 'nullable|image|max:2048',
+            // AUDIT FIX (2026-10-08, GAPS-12): `image` alone also accepts
+            // SVG — an XML container that browsers render (scripts included)
+            // when the stored file is opened from the public disk. Score
+            // proof screenshots are raster formats only.
+            'screenshot' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $team = Team::find($data['team_id']);

@@ -10,16 +10,43 @@ use App\Services\ScoringService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * Demo seeder. Creates accounts with WELL-KNOWN passwords on purpose — this
+ * is a local/staging fixture, never a bootstrap for production.
+ *
+ * AUDIT FIX (2026-10-08, GAPS-14): `php artisan db:seed` on a production
+ * deployment previously planted `admin@ffarena.test` / `password` with no
+ * prompt and no warning — a standing backdoor entry if anyone ever seeds a
+ * live box. The seeder now refuses to run in production without explicit
+ * interactive confirmation, and honours SEED_ADMIN_PASSWORD so any
+ * deliberately-seeded environment can avoid the published password entirely.
+ */
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->environment('production')) {
+            $proceed = $this->command !== null
+                && $this->command->confirm(
+                    'DatabaseSeeder creates DEMO accounts with well-known passwords. Run it on PRODUCTION anyway?',
+                    false,
+                );
+
+            if (! $proceed) {
+                $this->command?->error('Refusing to seed demo accounts into a production environment.');
+
+                return;
+            }
+        }
+
+        $password = (string) env('SEED_ADMIN_PASSWORD', 'password');
+
         // Admin — role set explicitly (not mass-assignable)
         $admin = new User();
         $admin->name = 'FF Arena Admin';
         $admin->username = 'admin';
         $admin->email = 'admin@ffarena.test';
-        $admin->password = Hash::make('password');
+        $admin->password = Hash::make($password);
         $admin->role = 'admin';
         $admin->save();
 
@@ -28,7 +55,7 @@ class DatabaseSeeder extends Seeder
         $organizer->name = 'Rafsan Esports';
         $organizer->username = 'rafsan';
         $organizer->email = 'organizer@ffarena.test';
-        $organizer->password = Hash::make('password');
+        $organizer->password = Hash::make($password);
         $organizer->role = 'organizer';
         $organizer->phone = '01700000000';
         $organizer->save();

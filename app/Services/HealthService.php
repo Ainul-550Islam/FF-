@@ -129,6 +129,43 @@ class HealthService
                     'message' => 'APP_URL is not set to the production origin.',
                 ];
             }
+
+            // AUDIT FIX (2026-10-08, GAPS-01) — the payment webhook trust
+            // root must be a real, environment-injected secret. The old
+            // committed fallback ('ffarena-local-webhook-secret') let anyone
+            // who read the public source forge a settlement webhook; the
+            // ingress now fails closed without a configured key, so an
+            // unset/placeholder secret is a CRITICAL deploy blocker, not a
+            // silent downgrade.
+            $webhookSecret = trim((string) config('services.payments.webhook_secret', ''));
+
+            if ($webhookSecret === '' || str_starts_with($webhookSecret, 'CHANGE_ME')) {
+                $issues[] = [
+                    'severity' => 'critical',
+                    'key' => 'PAYMENT_WEBHOOK_SECRET',
+                    'message' => 'Payment webhook secret is unset or still a placeholder — inbound provider webhooks fail closed and no payment settles from a callback. Generate one (php -r "echo bin2hex(random_bytes(32));") and set PAYMENT_WEBHOOK_SECRET.',
+                ];
+            }
+
+            // The hosted-gateway `state` token proves a payer redirect belongs
+            // to a payment. Disabling the check is an explicit ops escape
+            // hatch — it must never be an unnoticed production default.
+            if (! (bool) config('payments.callback.require_state', true)) {
+                $issues[] = [
+                    'severity' => 'warning',
+                    'key' => 'PAYMENTS_CALLBACK_REQUIRE_STATE',
+                    'message' => 'payment-callback state tokens are bypassed (PAYMENTS_CALLBACK_REQUIRE_STATE=false). Only acceptable while a provider is proven to strip query params; server-to-server verification still applies.',
+                ];
+            }
+
+            // Sanctum bearer tokens must expire in production (0 = forever).
+            if ((int) config('sanctum.expiration', 0) === 0) {
+                $issues[] = [
+                    'severity' => 'warning',
+                    'key' => 'SANCTUM_EXPIRATION',
+                    'message' => 'sanctum.expiration is unlimited — leaked bearer tokens stay valid forever. Set SANCTUM_EXPIRATION (minutes, e.g. 10080 for 7 days) in production.',
+                ];
+            }
         }
 
         if (in_array($cacheStore, ['array', 'null'], true)) {

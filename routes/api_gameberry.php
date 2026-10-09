@@ -54,7 +54,14 @@ Route::middleware(['bearer', 'auth:sanctum', 'api.token', 'throttle:api', 'gameb
         Route::get('/history', [LeagueApiController::class, 'history'])->name('history');
         Route::get('/{slug}', [LeagueApiController::class, 'show'])->name('show');
         Route::get('/{slug}/leaderboard', [LeagueApiController::class, 'leaderboard'])->name('leaderboard');
-        Route::post('/trophies', [LeagueApiController::class, 'addTrophies'])->name('trophies');
+        // AUDIT FIX (2026-10-08, GAPS-03): manual trophy adjustment is staff
+        // reconciliation, not a player surface — the endpoint previously let
+        // any authenticated user grant themselves up to 1000 trophies/call.
+        // The controller re-checks the role and audits every grant; this
+        // middleware is the belt.
+        Route::post('/trophies', [LeagueApiController::class, 'addTrophies'])
+            ->middleware('admin')
+            ->name('trophies');
     });
 
     // Private Tables - Code/Link sharing, Challenge, Team-up, Gold at stake, Auto mode

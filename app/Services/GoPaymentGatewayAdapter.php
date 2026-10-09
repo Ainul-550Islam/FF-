@@ -64,7 +64,7 @@ class GoPaymentGatewayAdapter
                 'provider' => $data['provider'] ?? 'unknown',
             ]);
 
-            return ['status' => 'failed', 'fallback' => true, 'error' => $e->getMessage()];
+            return ['status' => 'failed', 'fallback' => true, 'error' => 'gateway_error']; // AUDIT FIX GAPS-20: detail is logged, not returned
         }
     }
 
@@ -90,7 +90,7 @@ class GoPaymentGatewayAdapter
         } catch (\Throwable $e) {
             Log::error('Go payment gateway query error', ['error' => $e->getMessage()]);
 
-            return ['status' => 'failed', 'error' => $e->getMessage()];
+            return ['status' => 'failed', 'error' => 'gateway_error']; // AUDIT FIX GAPS-20: logged only
         }
     }
 
@@ -115,7 +115,7 @@ class GoPaymentGatewayAdapter
         } catch (\Throwable $e) {
             Log::error('Go payment gateway refund error', ['error' => $e->getMessage()]);
 
-            return ['status' => 'failed', 'error' => $e->getMessage()];
+            return ['status' => 'failed', 'error' => 'gateway_error']; // AUDIT FIX GAPS-20: logged only
         }
     }
 
@@ -132,7 +132,7 @@ class GoPaymentGatewayAdapter
 
             return $response->json() ?? ['methods' => ['manual']];
         } catch (\Throwable $e) {
-            return ['methods' => ['manual'], 'error' => $e->getMessage()];
+            return ['methods' => ['manual'], 'error' => 'gateway_error'];
         }
     }
 
@@ -144,7 +144,7 @@ class GoPaymentGatewayAdapter
 
             return $response->json() ?? ['status' => 'unknown'];
         } catch (\Throwable $e) {
-            return ['status' => 'down', 'error' => $e->getMessage()];
+            return ['status' => 'down', 'error' => 'health_probe_failed'];
         }
     }
 

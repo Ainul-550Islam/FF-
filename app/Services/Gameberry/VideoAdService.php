@@ -4,6 +4,8 @@ namespace App\Services\Gameberry;
 
 use App\Models\VideoAdReward;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class VideoAdService
@@ -42,7 +44,26 @@ class VideoAdService
         return max(0, self::COOLDOWN_MINUTES - $elapsed);
     }
 
+    /**
+     * AUDIT FIX (2026-10-08, GAPS-15): the daily-limit/cooldown checks and
+     * the reward insert were a check-then-act pair with nothing between them
+     * — N parallel requests could each pass `canWatch()` and each be paid.
+     * A per-user cache lock serializes the whole gate+reward section (the
+     * Gameberry tables have no unique guard for "one reward per window", so
+     * the lock IS the guard).
+     */
     public function watchAd(int $userId, string $provider = 'admob'): VideoAdReward
+    {
+        try {
+            return Cache::lock("gameberry:video_ad:{$userId}", 15)->block(5, function () use ($userId, $provider) {
+                return $this->watchAdGuarded($userId, $provider);
+            });
+        } catch (LockTimeoutException) {
+            throw new \Exception('Please wait a moment — another ad reward request is still processing.');
+        }
+    }
+
+    protected function watchAdGuarded(int $userId, string $provider): VideoAdReward
     {
         if (! $this->canWatch($userId)) {
             $todayCount = VideoAdReward::todayCount($userId);

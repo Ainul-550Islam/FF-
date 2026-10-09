@@ -16,10 +16,13 @@ class EnsureBearerToken
         $auth = $request->header('Authorization');
 
         if (! $auth || ! str_starts_with($auth, 'Bearer ')) {
-            return response()->json([
-                'error' => 'unauthorized',
-                'message' => 'Bearer token required',
-            ], 401);
+            // No credential presented at all: this is the standard API
+            // error envelope (error.code = 'unauthenticated'), matching what
+            // the `auth:sanctum` guard emits for guests. The flat
+            // {error: <code>} shapes below are the reserved contract for
+            // MALFORMED/previously-issued credentials.
+            // AUDIT FIX (2026-10-08, GAPS-24).
+            return ApiResponse::error('unauthenticated', 'Authentication is required.', [], 401);
         }
 
         $token = substr($auth, 7);

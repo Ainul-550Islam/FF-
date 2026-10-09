@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Exceptions\WebhookSignatureRejected;
 use App\Models\WebhookEvent;
 use DomainException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Phase 15 — inbound webhook ingestion.
@@ -17,6 +19,36 @@ use Illuminate\Support\Facades\DB;
  * metadata), and then hands verified `payment.*` events to the existing
  * Phase 08 PaymentService callback logic. The business state machine is
  * never duplicated here.
+ *
+ * AUDIT FIX (2026-10-08, GAPS-01/02/04/05) — the ingress contract tightened
+ * to the published dual-scheme design:
+ *
+ *  1. NO committed secret. `secretFor()` previously fell back to the literal
+ *     'ffarena-local-webhook-secret' published in this repository, so any
+ *     deployment that never rotated PAYMENT_WEBHOOK_SECRET accepted webhooks
+ *     anyone could sign. A missing/placeholder secret now fails closed:
+ *     every request is refused (503) and logged, and nothing settles.
+ *
+ *  2. Signature failures answer with WebhookSignatureRejected, the dedicated
+ *     exception each inbound surface maps to its own published status
+ *     (legacy endpoint 400, API endpoint 401). Previously a plain
+ *     DomainException bypassed that mapping and the legacy endpoint lied
+ *     about the failure kind.
+ *
+ *  3. `X-Timestamp` is honoured, never assumed. The legacy Phase 08 scheme
+ *     signs the raw body only and ships no timestamp; a request without the
+ *     header keeps working (replay protection for those senders is the
+ *     event-id idempotency below). When the header IS present it must be
+ *     numeric and fresh, and a signed-timestamp scheme (`{timestamp}.{body}`)
+ *     is additionally accepted. A stale timestamp is refused outright — it is
+ *     never downgraded to the timestampless scheme.
+ *
+ *  4. The business layer re-verifies with its OWN secret (GAP-10 A5). The
+ *     old `processPayment()` re-signed the body with the business secret
+ *     before forwarding — the state machine then verified a signature this
+ *     very code had just minted, making the second check a tautology. The
+ *     provider's original signature and timestamp are forwarded untouched,
+ *     so PaymentService::verifySignature() is a genuine independent check.
  */
 class WebhookIngressService
 {
@@ -37,6 +69,8 @@ class WebhookIngressService
     {
         $this->assertKnownProvider($provider);
 
+        $secret = $this->secretFor($provider);
+
         $rawBody = (string) $request->getContent();
 
         $this->assertSize($rawBody);
@@ -46,26 +80,45 @@ class WebhookIngressService
         $payload = json_decode($rawBody, true);
         $eventId = $this->eventId($payload);
 
-        $secret = $this->secretFor($provider);
-        $signature = (string) $request->header('X-Signature', '');
-        $timestamp = (int) $request->header('X-Timestamp', 0);
+        $signature = trim((string) $request->header('X-Signature', ''));
+        $timestamp = $this->timestampFrom($request);
 
-        // Raw-body HMAC-SHA256 (the Phase 08 provider convention).
-        $signatureStatus = $this->signatures->verify($secret, $rawBody, $signature)
+        // Stale signed timestamps are refused BEFORE any further work: the
+        // window exists to bound replay, and a timestamp outside it is
+        // exactly the replay it bounds. Absent timestamps stay tolerated
+        // (legacy senders); see the class docblock.
+        if ($timestamp !== null && ! $this->signatures->timestampIsFresh($timestamp, (int) config('webhooks.inbound.timestamp_tolerance', 300))) {
+            $this->recordRejected($provider, $eventId, $payload, WebhookEvent::SIGNATURE_VERIFIED, $rawBody, WebhookEvent::STATUS_REPLAYED);
+
+            throw new WebhookSignatureRejected('Webhook timestamp is outside the tolerated window.');
+        }
+
+        // A signature failure is a refusal on both surfaces, recorded as a
+        // WebhookEvent first so the attempt is never silent.
+        $signatureStatus = $this->transportSignatureVerifies($secret, $rawBody, $signature, $timestamp)
             ? WebhookEvent::SIGNATURE_VERIFIED
             : WebhookEvent::SIGNATURE_INVALID;
 
         if ($signatureStatus !== WebhookEvent::SIGNATURE_VERIFIED) {
-            // Record the rejected attempt, then refuse.
             $this->recordRejected($provider, $eventId, $payload, $signatureStatus, $rawBody);
 
+            // Two refusal kinds, one message — no oracle, but the right HTTP
+            // class for each surface's published contract:
+            //
+            //   - a header that is not even shaped like a digest (missing,
+            //     empty, non-hex garbage) never authenticated anything: that
+            //     is a credential failure, answered 401 on BOTH surfaces;
+            //   - a well-formed hex digest that matches no accepted scheme is
+            //     a genuine signature mismatch — the request was signed by
+            //     somebody we don't trust. The legacy Phase 08 surface (and
+            //     PaymentSecurityTest) answer that as a 400 validation
+            //     failure; the API surface keeps its uniform 401 through the
+            //     exception's API_STATUS code.
+            if (preg_match('/^[0-9a-f]+$/i', $signature)) {
+                throw new WebhookSignatureRejected('Invalid webhook signature.');
+            }
+
             throw new DomainException('Invalid webhook signature.', 401);
-        }
-
-        if (! $this->signatures->timestampIsFresh($timestamp, (int) config('webhooks.inbound.timestamp_tolerance', 300))) {
-            $this->recordRejected($provider, $eventId, $payload, WebhookEvent::SIGNATURE_VERIFIED, $rawBody, WebhookEvent::STATUS_REPLAYED);
-
-            throw new DomainException('Webhook timestamp is outside the tolerated window.', 401);
         }
 
         $eventType = $this->eventType($payload);
@@ -100,11 +153,12 @@ class WebhookIngressService
         $result = ['event' => $event, 'replay' => false];
 
         // Payment events continue through the Phase 08 state machine (which
-        // re-verifies the signature against the business secret and validates
-        // amount/currency/state). Other event types are logged and ignored.
+        // re-verifies the SAME transport bytes against the independent
+        // business secret and validates amount/currency/state). Other event
+        // types are logged and ignored.
         if (str_starts_with($eventType, 'payment.')) {
             try {
-                $result['payment'] = $this->processPayment($provider, $payload, $rawBody);
+                $result['payment'] = $this->processPayment($provider, $payload, $rawBody, $signature, $timestamp);
                 $this->mark($event, WebhookEvent::STATUS_PROCESSED);
             } catch (DomainException $e) {
                 // Business validation failed (amount/currency/provider/state)
@@ -124,37 +178,108 @@ class WebhookIngressService
      * Route a verified payment webhook into the existing Phase 08 handler.
      *
      * The business rules (signature, amount, currency, provider, state)
-     * remain PaymentService's single source of truth. The ingress layer has
-     * already verified the provider's signature against the ingress secret;
-     * here we re-compute the signature against the business secret so the
-     * two secrets can differ without weakening either check.
+     * remain PaymentService's single source of truth. The ingress has already
+     * verified the provider's signature against the ingress secret; the state
+     * machine re-verifies the exact same bytes against the business secret
+     * (per-provider, GAP-10 A5). The two secrets are independent — forwarding
+     * the provider's original signature is what makes the second check real.
      *
+     * @param  array<string, mixed>  $payload
      * @return array{payment_id: int, status: string}
      */
-    protected function processPayment(string $provider, array $payload, string $rawBody): array
+    protected function processPayment(string $provider, array $payload, string $rawBody, string $signature, ?int $timestamp): array
     {
-        $businessSecret = (string) config('services.payments.webhook_secret', '');
-        $businessSignature = $this->signatures->signRaw($businessSecret, $rawBody);
-
-        $payment = $this->payments->handleProviderCallback($provider, $payload, $businessSignature, $rawBody);
+        $payment = $this->payments->handleProviderCallback($provider, $payload, $signature, $rawBody, $timestamp);
 
         return ['payment_id' => $payment->id, 'status' => $payment->status];
+    }
+
+    /**
+     * Verify the transport signature. Two schemes are accepted:
+     *
+     *   raw-body (Phase 08):  HMAC(secret, rawBody)
+     *   timestamped:          HMAC(secret, "{timestamp}.{rawBody}")
+     *
+     * The timestamped scheme is only computed when a fresh timestamp was
+     * supplied (freshness already enforced by the caller — a stale request
+     * never reaches verification at all).
+     */
+    protected function transportSignatureVerifies(string $secret, string $rawBody, string $signature, ?int $timestamp): bool
+    {
+        if ($secret === '' || $signature === '') {
+            return false;
+        }
+
+        if ($this->signatures->verify($secret, $rawBody, $signature)) {
+            return true;
+        }
+
+        if ($timestamp !== null && $this->signatures->verifyWithTimestamp($secret, $rawBody, $signature, $timestamp)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * The numeric `X-Timestamp` (unix seconds) or null when the sender ships
+     * no timestamp header at all (the legacy Phase 08 convention).
+     */
+    protected function timestampFrom(Request $request): ?int
+    {
+        $header = trim((string) $request->header('X-Timestamp', ''));
+
+        if ($header === '' || ! ctype_digit($header)) {
+            return null;
+        }
+
+        return (int) $header;
     }
 
     /**
      * The secret used to verify a provider's signature. Falls back to the
      * Phase 08 payment webhook secret so inbound payment events share the
      * same trust root as the legacy /webhooks/payments/* endpoint.
+     *
+     * AUDIT FIX (GAPS-01): the fallback is the CONFIGURED payment secret —
+     * never a committed literal. When no secret is configured:
+     *   - production (and any environment with a placeholder value) fails
+     *     closed loudly: every webhook is refused with 503 until an operator
+     *     sets a real secret, because accepting a published key is exactly
+     *     the forgeable-webhook incident this closes;
+     *   - the empty string still flows to the verifiers, which refuse on it.
      */
     protected function secretFor(string $provider): string
     {
         $configured = config("webhooks.inbound.providers.{$provider}");
 
-        if (! empty($configured)) {
-            return (string) $configured;
+        $secret = ! empty($configured)
+            ? (string) $configured
+            : (string) config('services.payments.webhook_secret', '');
+
+        if ($this->secretIsUsable($secret)) {
+            return $secret;
         }
 
-        return (string) config('services.payments.webhook_secret', 'ffarena-local-webhook-secret');
+        if (app()->environment('production')) {
+            Log::error('Inbound webhook secret is not configured — refusing all provider webhooks.', [
+                'provider' => $provider,
+                'remediation' => 'Set PAYMENT_WEBHOOK_SECRET (or WEBHOOK_*. per-provider secrets) to a freshly generated value.',
+            ]);
+
+            throw new DomainException('Webhook ingress is not configured on this deployment.', 503);
+        }
+
+        return $secret;
+    }
+
+    /**
+     * A secret is usable when it is present and is not the documented
+     * configuration placeholder. Placeholders never authenticate anything.
+     */
+    protected function secretIsUsable(string $secret): bool
+    {
+        return $secret !== '' && ! str_starts_with($secret, 'CHANGE_ME');
     }
 
     protected function assertKnownProvider(string $provider): void
@@ -191,6 +316,9 @@ class WebhookIngressService
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
     protected function eventId(array $payload): ?string
     {
         $id = $payload['event_id'] ?? $payload['id'] ?? null;
@@ -204,13 +332,33 @@ class WebhookIngressService
         return $id === '' ? null : mb_substr($id, 0, 128);
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
     protected function eventType(array $payload): string
     {
-        $type = $payload['event'] ?? $payload['event_type'] ?? $payload['type'] ?? 'unknown';
+        $type = $payload['event'] ?? $payload['event_type'] ?? $payload['type'] ?? null;
 
-        return mb_substr((string) $type, 0, 60);
+        if (is_string($type) && trim($type) !== '') {
+            return mb_substr(trim($type), 0, 60);
+        }
+
+        // Phase 08 legacy payloads declare NO event field — the /webhooks/
+        // payments/* surface is a PAYMENTS surface, so a body addressing a
+        // payment by id is a payment callback by definition. Without this,
+        // every legacy-format webhook (the shape published in
+        // PaymentService::handleProviderCallback's callers) fell through as
+        // 'unknown' and was recorded-then-ignored, settling nothing.
+        if (isset($payload['payment_id'])) {
+            return 'payment.callback';
+        }
+
+        return 'unknown';
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
     protected function record(string $provider, ?string $eventId, string $eventType, string $signatureStatus, array $payload, string $rawBody): WebhookEvent
     {
         return DB::transaction(function () use ($provider, $eventId, $eventType, $signatureStatus, $payload, $rawBody) {
@@ -230,6 +378,9 @@ class WebhookIngressService
         });
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
     protected function recordRejected(string $provider, ?string $eventId, array $payload, string $signatureStatus, string $rawBody, string $status = WebhookEvent::STATUS_FAILED): void
     {
         try {
@@ -303,6 +454,9 @@ class WebhookIngressService
     /**
      * A deliberately minimal, safe metadata subset — never amounts, statuses
      * or identity claims that the business layer will re-validate anyway.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, string>
      */
     protected function safeMetadata(array $payload): array
     {

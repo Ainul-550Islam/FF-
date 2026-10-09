@@ -26,6 +26,7 @@ class RestrictionService
     public function __construct(
         protected FraudRiskService $risk,
         protected NotificationService $notifications,
+        protected AuditLogService $audit,
     ) {}
 
     /**
@@ -91,6 +92,27 @@ class RestrictionService
                 ['restriction_id' => $restriction->id, 'type' => $type],
             );
 
+            // AUDIT FIX (2026-10-08, GAPS-07): every enforcement action must
+            // be attributable in the central trail. Restrictions previously
+            // wrote risk events + notifications but NO audit log, so
+            // `restriction.applied` — a long-standing vocabulary entry — had
+            // zero producers and admin moderation was unaudited.
+            $this->audit->recordQuietly(
+                $actor,
+                'restriction.applied',
+                'restriction',
+                $restriction->id,
+                [
+                    'target_user' => $user,
+                    'metadata' => [
+                        'type' => $type,
+                        'source' => $source,
+                        'reason' => $reason,
+                        'expires_at' => $expiresAt?->toIso8601String(),
+                    ],
+                ],
+            );
+
             return $restriction;
         });
     }
@@ -134,6 +156,22 @@ class RestrictionService
                 'A restriction on your account has been lifted.',
                 null,
                 ['restriction_id' => $restriction->id, 'type' => $restriction->type],
+            );
+
+            // AUDIT FIX (2026-10-08, GAPS-07): the override must be as
+            // attributable as the enforcement it reverses.
+            $this->audit->recordQuietly(
+                $actor,
+                'restriction.lifted',
+                'restriction',
+                $restriction->id,
+                [
+                    'target_user' => $restriction->user,
+                    'metadata' => [
+                        'type' => $restriction->type,
+                        'source' => $restriction->source,
+                    ],
+                ],
             );
 
             return $restriction;

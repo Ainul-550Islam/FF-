@@ -28,12 +28,12 @@ class P2BacklogRegressionTest extends ApiTestCase
         return $user;
     }
 
-    protected function makeTournament(User $organizer, string $status = 'open'): Tournament
+    protected function makeTournament(User $organizer, string $status = 'open', array $o = []): Tournament
     {
         $t = new Tournament();
         $t->organizer_id = $organizer->id;
-        $t->name = 'P2 Tournament';
-        $t->slug = 'p2-'.Str::random(8);
+        $t->name = $o['name'] ?? 'P2 Tournament';
+        $t->slug = $o['slug'] ?? ('p2-'.Str::random(8));
         $t->game_mode = 'squad';
         $t->map = 'Bermuda';
         $t->entry_fee = 100;
